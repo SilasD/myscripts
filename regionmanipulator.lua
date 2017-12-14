@@ -242,7 +242,9 @@ function regionmanipulator ()
     downright = {key = "CURSOR_DOWNRIGHT",
                  desc = "Shifts focus 1 step down to the right"},
     help = {key = "HELP",
-            desc= " Show this help/info"}}
+            desc= " Show this help/info"},
+    print_help = {key = "CUSTOM_P",
+                  desc = "Print help screen to console"}}
             
    --============================================================
 
@@ -651,7 +653,12 @@ function regionmanipulator ()
   --============================================================
 
   function Disclaimer ()
-    local helptext = {{text = "Help/Info"}, NEWLINE, NEWLINE}
+    local helptext = {"Help/Info", 
+                      {text = "",
+                       key = keybindings.print_help.key,
+                       key_sep = '()'},
+                       " Print this screen to DFHack console.",
+                       NEWLINE, NEWLINE}
      
     table.insert (helptext, NEWLINE)
     local dsc = 
@@ -713,7 +720,7 @@ function regionmanipulator ()
        "The tool allows the modification of cavern lake abundance. This is specified as 4 bits", NEWLINE,
        "represented as a Hex value. It's unclear if the bits indicate geographic location of the", NEWLINE,
        "water or not (If so NW, NE, SW, SE for 1/2/4/8) and it's subject to other restrictions.", NEWLINE,
-       "Version 0.11, 2017-12-14", NEWLINE,
+       "Version 0.12, 2017-12-14", NEWLINE,
        "Caveats: As indicated above, region manipulation has the potential to mess up adventure", NEWLINE,
        "mode seriously. Similarly, changing things in silly ways can result in any kind of", NEWLINE,
        "reaction from DF, so don't be surprised if DF crashes (no crashes have been noted so far)", NEWLINE,
@@ -1557,6 +1564,32 @@ function regionmanipulator ()
                               NIL,
                               self:callback ("flattenRegion"))
       
+    elseif keys [keybindings.print_help.key] and Focus == "Help" then
+      local helptext = Disclaimer ()
+            
+      for i, item in ipairs (helptext) do
+        if type (item) == "string" then
+          dfhack.print (item)
+      
+        else  --  table
+          if item.pen then
+            dfhack.color (item.pen.fg)
+            dfhack.print (item.text)
+            dfhack.color (COLOR_RESET)
+      
+          else  --  Has to be a key, and we know the format used.
+            dfhack.print (" (")
+            dfhack.color (COLOR_LIGHTGREEN)
+            dfhack.print (item.key)
+            dfhack.color (COLOR_RESET)
+            dfhack.print (')')
+          end
+        end
+      end
+  
+      dfhack.println ()
+      dfhack.println ()
+     
     elseif keys [keybindings.up.key] and not keys._STRING then
       if focus ~= "Help" then
         if y > 0 then
