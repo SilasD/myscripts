@@ -713,7 +713,7 @@ function regionmanipulator ()
        "The tool allows the modification of cavern lake abundance. This is specified as 4 bits", NEWLINE,
        "represented as a Hex value. It's unclear if the bits indicate geographic location of the", NEWLINE,
        "water or not (If so NW, NE, SW, SE for 1/2/4/8) and it's subject to other restrictions.", NEWLINE,
-       "Version 0.10, 2017-11-20", NEWLINE,
+       "Version 0.11, 2017-12-14", NEWLINE,
        "Caveats: As indicated above, region manipulation has the potential to mess up adventure", NEWLINE,
        "mode seriously. Similarly, changing things in silly ways can result in any kind of", NEWLINE,
        "reaction from DF, so don't be surprised if DF crashes (no crashes have been noted so far)", NEWLINE,
@@ -948,6 +948,84 @@ function regionmanipulator ()
                      frame = {l = 68, w = 2, t = 6, yalign = 0},
                      visible = df.global.world.worldgen.worldgen_parms.cavern_layer_count >= 3}
                  
+    if df.global.world.world_data.region_map[region.pos.x]:_displace(region.pos.y).flags.has_river then
+      local r_entry = "None"
+      local r_exit = "None"
+      
+      for i, river in ipairs (df.global.world.world_data.rivers) do
+        for k, x_pos in ipairs (river.path.x) do
+          if x_pos == region.pos.x and
+             river.path.y [k] == region.pos.y then
+            if k ~= 0 then
+              if river.path.x [k - 1] < x_pos then
+                r_entry = "West"
+              
+              elseif river.path.x [k - 1] > x_pos then
+                r_entry = "East"
+                
+              elseif river.path.y [k - 1] < river.path.y [k] then
+                r_entry = "North"
+                
+              else
+                r_entry = "South"
+              end
+            end
+
+            if k < #river.path.x - 1 then
+              if river.path.x [k + 1] < x_pos then
+                r_exit = "West"
+                
+              elseif river.path.x [k + 1] > x_pos then
+                r_exit = "East"
+                
+              elseif river.path.y [k + 1] < river.path.y [k] then
+                r_exit = "North"
+                
+              else
+                r_exit = "South"
+              end
+              
+            else
+              if river.end_pos.x < x_pos then
+                r_exit = "West"
+                
+              elseif river.end_pos.x > x_pos then
+                r_exit = "East"
+                
+              elseif river.end_pos.y < river.path.y [k] then
+                r_exit = "North"
+                
+              else
+                r_exit = "South"
+              end
+            end
+            
+            break
+          end
+        end
+      end
+      
+      Main_Page.River_Entry =
+        widgets.Label {text = "River entry: " .. r_entry,
+                       frame = {l = 22, t = 9, yalign = 0},
+                       visible = r_entry ~= "None"}
+    
+      Main_Page.River_Exit =
+        widgets.Label {text = "River exit: " .. r_exit,
+                       frame = {l = 42, t = 9, yalign = 0}}
+                       
+    else
+      Main_Page.River_Entry =
+        widgets.Label {text = "River entry:",
+                       frame = {l = 22, t = 9, yalign = 0},
+                       visible = false}
+    
+      Main_Page.River_Exit =
+        widgets.Label {text = "River exit:",
+                       frame = {l = 42, t = 9, yalign = 0},
+                       visible = false}    
+    end
+    
     Main_Page.elevationGrid = Grid {frame = {l = 1, t = 2, w = 17, h = 17},
                                     width = 17,
                                     height = 17,
@@ -1017,6 +1095,8 @@ function regionmanipulator ()
                   Main_Page.Top_Cavern_Water_Edit,
                   Main_Page.Mid_Cavern_Water_Edit,
                   Main_Page.Low_Cavern_Water_Edit,
+                  Main_Page.River_Entry,
+                  Main_Page.River_Exit,
                   Main_Page.elevationGrid,
                   Main_Page.biomeGrid,
                   Main_Page.riversGrid,
