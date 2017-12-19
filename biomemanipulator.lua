@@ -4213,7 +4213,7 @@ function biomemanipulator ()
 --       "% = Temperate Brackish River   & = Tropical Brackish River", NEWLINE,
 --       "( = Temperate Saltwater River  ) = Tropical Saltwater River", NEWLINE,
        NEWLINE,       
-       "Version 0.28, 2017-12-10", NEWLINE,
+       "Version 0.29, 2017-12-19", NEWLINE,
        "Caveats: Only tested to a limited degree.", NEWLINE,
        "Making silly changes are likely to lead to either silly results or nothing at all.", NEWLINE,
        "This script makes use of some unnamed DFHack data structure fields and will cease to work when/if those", NEWLINE,
@@ -5863,13 +5863,28 @@ function biomemanipulator ()
       end
       
       if val < 33 then
-        df.global.world.world_data.regions [region [Surface]].unk_1e8 = 256
-      
+        if region_evil_named then
+          df.global.world.world_data.regions [region [Surface]].good = true
+          df.global.world.world_data.regions [region [Surface]].evil = false
+        else
+          df.global.world.world_data.regions [region [Surface]].unk_1e8 = 256
+        end
+        
       elseif val < 66 then
-        df.global.world.world_data.regions [region [Surface]].unk_1e8 = 0
+        if region_evil_named then
+          df.global.world.world_data.regions [region [Surface]].good = false
+          df.global.world.world_data.regions [region [Surface]].evil = false
+        else
+          df.global.world.world_data.regions [region [Surface]].unk_1e8 = 0
+        end
         
       else
-        df.global.world.world_data.regions [region [Surface]].unk_1e8 = 1
+        if region_evil_named then
+          df.global.world.world_data.regions [region [Surface]].good = false
+          df.global.world.world_data.regions [region [Surface]].evil = true
+        else
+          df.global.world.world_data.regions [region [Surface]].unk_1e8 = 1
+        end
       end
       
       if purge_good or purge_evil then
