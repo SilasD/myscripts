@@ -3899,6 +3899,7 @@ function biomemanipulator ()
       for i = 0, 3 do
         Main_Page.Underground_Grid [i]:panCenter (x, y)
       end
+      Main_Page.Geo_Grid:panCenter (x, y)
       Map_Page.Biome_Grid:panCenter (x, y)
       River_Page.River_Grid:panCenter (x, y)
     end
@@ -4213,7 +4214,7 @@ function biomemanipulator ()
 --       "% = Temperate Brackish River   & = Tropical Brackish River", NEWLINE,
 --       "( = Temperate Saltwater River  ) = Tropical Saltwater River", NEWLINE,
        NEWLINE,       
-       "Version 0.29, 2017-12-19", NEWLINE,
+       "Version 0.30, 2017-12-22", NEWLINE,
        "Caveats: Only tested to a limited degree.", NEWLINE,
        "Making silly changes are likely to lead to either silly results or nothing at all.", NEWLINE,
        "This script makes use of some unnamed DFHack data structure fields and will cease to work when/if those", NEWLINE,
