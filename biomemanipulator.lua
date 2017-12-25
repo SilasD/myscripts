@@ -249,10 +249,18 @@ function decomposeDFHackReleaseNumber (release)
   if release:sub (dash + 1, dash + 1) ~= 'r' then
     if release:len () > dash + 5 and
        release:sub (dash + 1, dash + 5) == "alpha" then
-      rel = tonumber (release:sub (dash + 6, #release)) / 10
+      rel = tonumber (release:sub (dash + 6, #release)) / 1000
     
+    elseif release:len () > dash + 4 and
+       release:sub (dash + 1, dash + 4) == "beta" then
+      rel = tonumber (release:sub (dash + 5, #release)) / 100
+      
+    elseif release:len () > dash + 5 and
+       release:sub (dash + 1, dash + 5) == "gamma" then
+      rel = tonumber (release:sub (dash + 6, #release)) / 10
+      
     else
-      error ("decompose fails to DFHack version (including any alpha) from " .. release)
+      error ("decompose fails to DFHack version (including any alpha, beta, or gamma) from " .. release)
     end
   
   else
@@ -4214,7 +4222,7 @@ function biomemanipulator ()
 --       "% = Temperate Brackish River   & = Tropical Brackish River", NEWLINE,
 --       "( = Temperate Saltwater River  ) = Tropical Saltwater River", NEWLINE,
        NEWLINE,       
-       "Version 0.30, 2017-12-22", NEWLINE,
+       "Version 0.31, 2017-12-25", NEWLINE,
        "Caveats: Only tested to a limited degree.", NEWLINE,
        "Making silly changes are likely to lead to either silly results or nothing at all.", NEWLINE,
        "This script makes use of some unnamed DFHack data structure fields and will cease to work when/if those", NEWLINE,
