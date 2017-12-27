@@ -633,6 +633,10 @@ function biomemanipulator ()
                           desc = "Change cavern passage density min"},
     cavern_density_max = {key = "CUSTOM_SHIFT_D",
                           desc = "Change cavern passage density max"},
+    geo_diversity_single = {key = "CUSTOM_G",
+                            desc = "Assign all legal minerals to all layers of the current geo biome"},
+    geo_diversity_all = {key = "CUSTOM_SHIFT_G",
+                         desc = "Assign all legal minerals to all layers of all geo biomes"},
     geo_clone = {key = "CUSTOM_SHIFT_C",
                  desc = "Clone current Geo Biome"},
     geo_update = {key = "CUSTOM_U",
@@ -655,6 +659,10 @@ function biomemanipulator ()
                 desc = "Nest a cluster inside the currently selected vein/cluster."},
     geo_proportion = {key = "CUSTOM_P",
                       desc = "Proportion of maximum abundance of this substance"},
+    geo_full = {key = "CUSTOM_F",
+                desc = "Add all legal minerals to this layer"},
+    geo_clear = {key = "CUSTOM_C",
+                 desc = "Clear the list of mineral veins/clusters/inclusions in this layer"},
     map_adopt_biome = {key = "CUSTOM_A",
                        desc = "Adopt biome & region of neighboring tile"},
     map_new_region = {key = "CUSTOM_N",
@@ -4222,7 +4230,7 @@ function biomemanipulator ()
 --       "% = Temperate Brackish River   & = Tropical Brackish River", NEWLINE,
 --       "( = Temperate Saltwater River  ) = Tropical Saltwater River", NEWLINE,
        NEWLINE,       
-       "Version 0.31, 2017-12-25", NEWLINE,
+       "Version 0.32, 2017-12-27", NEWLINE,
        "Caveats: Only tested to a limited degree.", NEWLINE,
        "Making silly changes are likely to lead to either silly results or nothing at all.", NEWLINE,
        "This script makes use of some unnamed DFHack data structure fields and will cease to work when/if those", NEWLINE,
@@ -4411,6 +4419,8 @@ function biomemanipulator ()
        "create a new one with with a new number for further modification. Obviously, this new Geo Biome", NEWLINE,
        "is not associated to any World Tile). The next key allows you to Update the Geo Biome number of", NEWLINE,
        "the current World Tile, i.e. have it refer to a new Geo Biome (e.g. the one just created).", NEWLINE,
+       "The Geo Diversity this/all Biome(s) commands allow you to assign every legal mineral to every", NEWLINE,
+       "layer of the current/all geo biomes in the world respectively.", NEWLINE,
        "Below this the Layer list is displayed. This list shows all the layers included in the Geo", NEWLINE,
        "Biome associated with the current World Tile (or the clone, if you've just cloned a Geo Biome)", NEWLINE,
        "listing the Layer material, its type, and the top and bottom levels (starting with 0 for the", NEWLINE,
@@ -4453,6 +4463,9 @@ function biomemanipulator ()
        "selected material. Again, the list is depleted as Inclusions are added.", NEWLINE,
        "The Proportion command allows you to change the Proportion value associated with each Vein etc.", NEWLINE,
        "This unidentified field seems to control the abundance of the Vein etc. material.", NEWLINE,
+       "The Full mineral set allows you to assign all minerals in the available list to the current layer", NEWLINE,
+       "and will also add every possible inclusion, while the Clear command will remove all minerals in", NEWLINE,
+       "the current layer (which also will remove any inclusions).", NEWLINE,
        "Comments:", NEWLINE,
        "- Adding more materials than there are available space for will cause DF to somehow decide which", NEWLINE,
        "  ones are present. You you only have space for two veins and specify three vein materials, one", NEWLINE,
@@ -4474,7 +4487,8 @@ function biomemanipulator ()
        "  gen one. Soil levels are shorn away from the top if the depth exceeds the elevation maximum", NEWLINE,
        "  (with some wrinkes), so what you specify might not be exactly what you get if you embark", NEWLINE,
        "  elevation is too high. There's also a DF bug resulting in bogus aquifer pre embark reports", NEWLINE,
-       "  due to DF not taking its own shearing into account when producing the report."
+       "  due to DF not taking its own shearing into account when producing the report.", NEWLINE,
+       "- The author has not tested  the effects of the various geo diversity commands on any embark."
       }  
 
     return helptext       
@@ -5291,7 +5305,12 @@ function biomemanipulator ()
                              {text = "",
                                      key = keybindings.prev_edit.key,
                                      key_sep = '()'},                            
-                             {text = " Swap current table",
+                             {text = " Swap current table     ",
+                              pen = COLOR_LIGHTBLUE},
+                             {text = "",
+                                     key = keybindings.geo_diversity_single.key,
+                                     key_sep = '()'},       
+                             {text = " Geo Diversity this Biome only",
                               pen = COLOR_LIGHTBLUE}, NEWLINE,
                              {text = "",
                                      key = keybindings.geo_clone.key,
@@ -5301,12 +5320,17 @@ function biomemanipulator ()
                              {text = "",
                                      key = keybindings.geo_update.key,
                                      key_sep = '()'},                             
-                             {text = " Update Geo Biome Number",
+                             {text = " Update Geo Biome Number           ",
+                              pen = COLOR_LIGHTBLUE},
+                             {text = "",
+                                     key = keybindings.geo_diversity_all.key,
+                                     key_sep = '()'},       
+                             {text = " Geo Diversity all Biomes",
                               pen = COLOR_LIGHTBLUE}, NEWLINE,
                              Fit ("Layer", Max_Geo_Layer_Name_Length + 1) ..
                              Fit ("Type", Max_Geo_Type_Name_Length + 1) ..
                              Fit ("Top", 5) ..
-                             "Bottom           Layer Manipulation Keys:"},
+                             "Bottom  Layer Manipulation Keys:"},
                      frame = {l = 0, t = 0, yalign = 0}}
       
     Geo_Page.Geo_Index =
@@ -5368,6 +5392,16 @@ function biomemanipulator ()
                                      key = keybindings.geo_proportion.key,
                                      key_sep = '()'},
                              {text = " Proportion",
+                              pen = COLOR_LIGHTBLUE}, NEWLINE,
+                             {text = "",
+                                     key = keybindings.geo_full.key,
+                                     key_sep = '()'},
+                             {text = " Full mineral set",
+                              pen = COLOR_LIGHTBLUE}, NEWLINE,
+                             {text = "",
+                                     key = keybindings.geo_clear.key,
+                                     key_sep = '()'},
+                             {text = " Clear mineral list",
                               pen = COLOR_LIGHTBLUE}},
                      frame = {l = Max_Geo_Vein_Name_Length + 1 + 5 + Max_Geo_Cluster_Name_Length + Max_Geo_Vein_Name_Length + 2, t = 24, yalign = 0}}
       
@@ -6831,6 +6865,112 @@ function biomemanipulator ()
   end
   
   --==============================================================
+  
+  function Geo_Diversity_Layer (geo_biome, layer)
+    local Layer_Material = df.global.world.raws.inorganics [geo_biome.layers [layer].mat_index]
+    local Found
+        
+    for i, material in ipairs (df.global.world.raws.inorganics) do
+      Found = false
+          
+      for k, mat in ipairs (geo_biome.layers [layer].vein_mat) do
+        if geo_biome.layers [layer].vein_mat [k] == i then
+          Found = true
+          break
+        end
+      end
+          
+      if not Found then
+        for k, location in ipairs (material.environment.location) do
+          if (location == df.environment_type.SOIL and Layer_Material.flags.SOIL) or
+             (location == df.environment_type.SOIL_OCEAN and Layer_Material.flags.SOIL_OCEAN) or  --  Redundant, covered by SOIL
+             (location == df.environment_type.SOIL_SAND and Layer_Material.flags.SOIL_SAND) or    --  Redundant, covered by SOIL
+             (location == df.environment_type.METAMORPHIC and Layer_Material.flags.METAMORPHIC) or
+             (location == df.environment_type.SEDIMENTARY and Layer_Material.flags.SEDIMENTARY) or
+             (location == df.environment_type.IGNEOUS_INTRUSIVE and Layer_Material.flags.IGNEOUS_INTRUSIVE) or
+             (location == df.environment_type.IGNEOUS_EXTRUSIVE and Layer_Material.flags.IGNEOUS_EXTRUSIVE) then  -- or
+            -- (location == df.environment_type.ALLUVIAL and Layer_Material.flags.ALLUVIAL) then  -- No Alluvial flag!
+            Found = true
+            geo_biome.layers [layer].vein_mat:insert ('#', i)
+            geo_biome.layers [layer].vein_nested_in:insert ('#', -1)
+            geo_biome.layers [layer].vein_type:insert ('#', material.environment.type [k])
+            geo_biome.layers [layer].vein_unk_38:insert ('#', 50)
+            break
+          end
+        end                     
+      end
+          
+      if not Found then
+        for k, mat_index in ipairs (material.environment_spec.mat_index) do
+          if mat_index == geo_biome.layers [layer].mat_index then
+            geo_biome.layers [layer].vein_mat:insert ('#', i)
+            geo_biome.layers [layer].vein_nested_in:insert ('#', -1)
+            geo_biome.layers [layer].vein_type:insert ('#', material.environment_spec.inclusion_type [k])
+            geo_biome.layers [layer].vein_unk_38:insert ('#', 50)
+            break
+          end
+        end
+      end
+    end
+
+    for i, vein in ipairs (geo_biome.layers [layer].vein_mat) do
+      for k, material in ipairs (df.global.world.raws.inorganics) do
+        for l, mat_index in ipairs (material.environment_spec.mat_index) do
+          Found = false
+            
+          if mat_index == vein then
+            for m, nested_in in ipairs (geo_biome.layers [layer].vein_nested_in) do
+              if nested_in == i and
+                 vein == k then
+                Found = true
+                break
+              end
+            end
+              
+            if not Found then
+              geo_biome.layers [layer].vein_mat:insert ('#', k)
+              geo_biome.layers [layer].vein_nested_in:insert ('#', i)
+              geo_biome.layers [layer].vein_type:insert ('#', material.environment_spec.inclusion_type [l])
+              geo_biome.layers [layer].vein_unk_38:insert ('#', 50)
+            end
+          end            
+        end
+      end      
+    end
+  end
+  
+  --==============================================================
+
+  function BiomeManipulatorUi:geoDiversitySingle ()
+    local geo_biome = df.global.world.world_data.geo_biomes [tonumber (Geo_Page.Geo_Index.text)]
+    
+    for index, layer in ipairs (geo_biome.layers) do
+      Geo_Diversity_Layer (geo_biome, index)
+    end
+    
+    Make_Geo_Layer (tonumber (Geo_Page.Geo_Index.text))
+
+    Geo_Page.Layer:setChoices (Make_List (Geo_Page.Layer_List))      
+    Geo_Page.Vein:setChoices (Make_List (Geo_Page.Vein_List))            
+  end
+  
+  --==============================================================
+
+  function BiomeManipulatorUi:geoDiversityAll ()
+    for i, geo_biome in ipairs (df.global.world.world_data.geo_biomes) do
+      dfhack.println ("Diversifying Geo Biome " .. tostring (i) .. " (" .. tostring (#df.global.world.world_data.geo_biomes - 1) .. ")")    
+      for index, layer in ipairs (geo_biome.layers) do
+        Geo_Diversity_Layer (geo_biome, index)
+      end
+    end
+    
+    Make_Geo_Layer (tonumber (Geo_Page.Geo_Index.text))
+
+    Geo_Page.Layer:setChoices (Make_List (Geo_Page.Layer_List))      
+    Geo_Page.Vein:setChoices (Make_List (Geo_Page.Vein_List))            
+  end
+  
+  --==============================================================
 
   function BiomeManipulatorUi:updateGeoProportion (value)
     if not tonumber (value) or
@@ -8272,304 +8412,307 @@ function biomemanipulator ()
                               "",
                               self:callback ("updateGeoBiomeNumber"))
       
-    elseif keys [keybindings.geo_delete.key] and Focus == "Geo" then  --  Overloaded key
-      if Geo_Page.Layer.active then
-        local index, choice = Geo_Page.Layer:getSelected ()
-        local geo_biome = df.global.world.world_data.geo_biomes [tonumber (Geo_Page.Geo_Index.text)]
-        index = index - 1  --  DF starts lists at 0, Lua at 1...
-        
-        if #geo_biome.layers == 1 then
-          dialog.showMessage ("Error!", "You have to retain at least one layer.\n",COLOR_LIGHTRED)
-        
-        else
-          if index == #geo_biome.layers - 1 then
-            geo_biome.layers [index - 1].bottom_height = geo_biome.layers [index].bottom_height
+    elseif keys [keybindings.geo_diversity_single.key] and Focus == "Geo" then
+      dialog.showYesNoPrompt ("Geo Diversity Single Geo Biome",
+                              "This command assigns all minerals legal to each\n" ..
+                              "layer to that layer of the current Geo Biome.\n" ..
+                              "Are you sure you want to do that?",
+                              COLOR_WHITE,
+                              self:callback ("geoDiversitySingle"),
+                              (function () end))      
+      
+    elseif keys [keybindings.geo_diversity_all.key] and Focus == "Geo" then
+      dialog.showYesNoPrompt ("Geo Diversity All Geo Biomes",
+                              "This command assigns all minerals legal to each\n" ..
+                              "layer of each Geo Biome in the world to that layer.\n" ..
+                              "Are you sure you want to do that?",
+                              COLOR_WHITE,
+                              self:callback ("geoDiversityAll"),
+                              (function () end))      
           
-          else
-            geo_biome.layers [index + 1].top_height = geo_biome.layers [index].top_height
-          end
+    elseif keys [keybindings.geo_delete.key] and Focus == "Geo" and Geo_Page.Layer.active then
+      local index, choice = Geo_Page.Layer:getSelected ()
+      local geo_biome = df.global.world.world_data.geo_biomes [tonumber (Geo_Page.Geo_Index.text)]
+      index = index - 1  --  DF starts lists at 0, Lua at 1...
+        
+      if #geo_biome.layers == 1 then
+        dialog.showMessage ("Error!", "You have to retain at least one layer.\n",COLOR_LIGHTRED)
+        
+      else
+        if index == #geo_biome.layers - 1 then
+          geo_biome.layers [index - 1].bottom_height = geo_biome.layers [index].bottom_height
+          
+        else
+          geo_biome.layers [index + 1].top_height = geo_biome.layers [index].top_height
+        end
 
-          geo_biome.layers [index]:delete ()
-          geo_biome.layers:erase (index)
+        geo_biome.layers [index]:delete ()
+        geo_biome.layers:erase (index)
         
-          Make_Geo_Layer (tonumber (Geo_Page.Geo_Index.text))
-      
-          Geo_Page.Layer:setChoices (Make_List (Geo_Page.Layer_List))      
-          Geo_Page.Vein:setChoices (Make_List (Geo_Page.Vein_List), 1)
-        end
+        Make_Geo_Layer (tonumber (Geo_Page.Geo_Index.text))
+     
+        Geo_Page.Layer:setChoices (Make_List (Geo_Page.Layer_List))      
+        Geo_Page.Vein:setChoices (Make_List (Geo_Page.Vein_List), 1)
       end
       
-    elseif keys [keybindings.geo_split.key] and Focus == "Geo" then
-      if Geo_Page.Layer.active then
-        local index, choice = Geo_Page.Layer:getSelected ()
-        local geo_biome = df.global.world.world_data.geo_biomes [tonumber (Geo_Page.Geo_Index.text)]
-        index = index - 1  --  DF starts lists at 0, Lua at 1...
+    elseif keys [keybindings.geo_split.key] and Focus == "Geo" and Geo_Page.Layer.active then
+      local index, choice = Geo_Page.Layer:getSelected ()
+      local geo_biome = df.global.world.world_data.geo_biomes [tonumber (Geo_Page.Geo_Index.text)]
+      index = index - 1  --  DF starts lists at 0, Lua at 1...
         
-        if #geo_biome.layers == 16 then
-          dialog.showMessage ("Error!", "DF doesn't recognize more than at most 16 layers.\n",COLOR_LIGHTRED)
+      if #geo_biome.layers == 16 then
+        dialog.showMessage ("Error!", "DF doesn't recognize more than at most 16 layers.\n",COLOR_LIGHTRED)
         
-        elseif geo_biome.layers [index].top_height - geo_biome.layers [index].bottom_height == 0 then
-          dialog.showMessage ("Error!", "A layer has to have a depth of at least two do donate space to a new layer.\n",COLOR_LIGHTRED)
+      elseif geo_biome.layers [index].top_height - geo_biome.layers [index].bottom_height == 0 then
+        dialog.showMessage ("Error!", "A layer has to have a depth of at least two do donate space to a new layer.\n",COLOR_LIGHTRED)
         
-        else
-          geo_biome.layers:insert (index, df.world_geo_layer:new ())
-          geo_biome.layers [index].type = geo_biome.layers [index + 1].type
-          geo_biome.layers [index].mat_index = geo_biome.layers [index + 1].mat_index
-          geo_biome.layers [index].top_height = geo_biome.layers [index + 1].top_height
-          geo_biome.layers [index].bottom_height = math.ceil ((geo_biome.layers [index].top_height + geo_biome.layers [index + 1].bottom_height) / 2)
-          geo_biome.layers [index + 1].top_height = geo_biome.layers [index].bottom_height - 1
-          geo_biome.layers [index].vein_mat = {}
-          geo_biome.layers [index].vein_nested_in = {}
-          geo_biome.layers [index].vein_type = {}
-          geo_biome.layers [index].vein_unk_38 = {}
+      else
+        geo_biome.layers:insert (index, df.world_geo_layer:new ())
+        geo_biome.layers [index].type = geo_biome.layers [index + 1].type
+        geo_biome.layers [index].mat_index = geo_biome.layers [index + 1].mat_index
+        geo_biome.layers [index].top_height = geo_biome.layers [index + 1].top_height
+        geo_biome.layers [index].bottom_height = math.ceil ((geo_biome.layers [index].top_height + geo_biome.layers [index + 1].bottom_height) / 2)
+        geo_biome.layers [index + 1].top_height = geo_biome.layers [index].bottom_height - 1
+        geo_biome.layers [index].vein_mat = {}
+        geo_biome.layers [index].vein_nested_in = {}
+        geo_biome.layers [index].vein_type = {}
+        geo_biome.layers [index].vein_unk_38 = {}
           
-          Make_Geo_Layer (tonumber (Geo_Page.Geo_Index.text))
+        Make_Geo_Layer (tonumber (Geo_Page.Geo_Index.text))
       
-          Geo_Page.Layer:setChoices (Make_List (Geo_Page.Layer_List))      
-          Geo_Page.Vein:setChoices (Make_List (Geo_Page.Vein_List), 1)
-        end
+        Geo_Page.Layer:setChoices (Make_List (Geo_Page.Layer_List))      
+        Geo_Page.Vein:setChoices (Make_List (Geo_Page.Vein_List), 1)
       end
       
-    elseif keys [keybindings.geo_expand.key] and Focus == "Geo" then  --  Overloaded key
-      if Geo_Page.Layer.active then
-        local index, choice = Geo_Page.Layer:getSelected ()
-        local geo_biome = df.global.world.world_data.geo_biomes [tonumber (Geo_Page.Geo_Index.text)]
-        index = index - 1  --  DF starts lists at 0, Lua at 1...
+    elseif keys [keybindings.geo_expand.key] and Focus == "Geo" and Geo_Page.Layer.active then
+      local index, choice = Geo_Page.Layer:getSelected ()
+      local geo_biome = df.global.world.world_data.geo_biomes [tonumber (Geo_Page.Geo_Index.text)]
+      index = index - 1  --  DF starts lists at 0, Lua at 1...
         
-        if index == #geo_biome.layers - 1 then
-          dialog.showMessage ("Error!", "The lowest layer cannot be expanded.\n",COLOR_LIGHTRED)
+      if index == #geo_biome.layers - 1 then
+        dialog.showMessage ("Error!", "The lowest layer cannot be expanded.\n",COLOR_LIGHTRED)
         
-        elseif geo_biome.layers [index + 1].top_height - geo_biome.layers [index + 1].bottom_height == 0 then
-          dialog.showMessage ("Error!", "A layer can be expanded only if the layer below has levels to spare.\n",COLOR_LIGHTRED)
+      elseif geo_biome.layers [index + 1].top_height - geo_biome.layers [index + 1].bottom_height == 0 then
+        dialog.showMessage ("Error!", "A layer can be expanded only if the layer below has levels to spare.\n",COLOR_LIGHTRED)
           
-        else
-          geo_biome.layers [index].bottom_height = geo_biome.layers [index].bottom_height - 1
-          geo_biome.layers [index + 1].top_height = geo_biome.layers [index + 1].top_height - 1
+      else
+        geo_biome.layers [index].bottom_height = geo_biome.layers [index].bottom_height - 1
+        geo_biome.layers [index + 1].top_height = geo_biome.layers [index + 1].top_height - 1
           
-          Make_Geo_Layer (tonumber (Geo_Page.Geo_Index.text))
+        Make_Geo_Layer (tonumber (Geo_Page.Geo_Index.text))
       
-          Geo_Page.Layer:setChoices (Make_List (Geo_Page.Layer_List))      
-          Geo_Page.Vein:setChoices (Make_List (Geo_Page.Vein_List), 1)
-        end
+        Geo_Page.Layer:setChoices (Make_List (Geo_Page.Layer_List))      
+        Geo_Page.Vein:setChoices (Make_List (Geo_Page.Vein_List), 1)
       end
       
-    elseif keys [keybindings.geo_contract.key] and Focus == "Geo" then  --  Overloaded key
-      if Geo_Page.Layer.active then
-        local index, choice = Geo_Page.Layer:getSelected ()
-        local geo_biome = df.global.world.world_data.geo_biomes [tonumber (Geo_Page.Geo_Index.text)]
-        index = index - 1  --  DF starts lists at 0, Lua at 1...
+    elseif keys [keybindings.geo_contract.key] and Focus == "Geo" and Geo_Page.Layer.active then
+      local index, choice = Geo_Page.Layer:getSelected ()
+      local geo_biome = df.global.world.world_data.geo_biomes [tonumber (Geo_Page.Geo_Index.text)]
+      index = index - 1  --  DF starts lists at 0, Lua at 1...
         
-        if index == #geo_biome.layers - 1 then
-          dialog.showMessage ("Error!", "The lowest layer cannot be contracted.\n",COLOR_LIGHTRED)
+      if index == #geo_biome.layers - 1 then
+        dialog.showMessage ("Error!", "The lowest layer cannot be contracted.\n",COLOR_LIGHTRED)
         
-        elseif geo_biome.layers [index].top_height - geo_biome.layers [index].bottom_height == 0 then
-          dialog.showMessage ("Error!", "A layer can be contracted only if it has levels to spare.\n",COLOR_LIGHTRED)
+      elseif geo_biome.layers [index].top_height - geo_biome.layers [index].bottom_height == 0 then
+        dialog.showMessage ("Error!", "A layer can be contracted only if it has levels to spare.\n",COLOR_LIGHTRED)
           
-        else
-          geo_biome.layers [index].bottom_height = geo_biome.layers [index].bottom_height + 1
-          geo_biome.layers [index + 1].top_height = geo_biome.layers [index + 1].top_height + 1
+      else
+        geo_biome.layers [index].bottom_height = geo_biome.layers [index].bottom_height + 1
+        geo_biome.layers [index + 1].top_height = geo_biome.layers [index + 1].top_height + 1
           
-          Make_Geo_Layer (tonumber (Geo_Page.Geo_Index.text))
+        Make_Geo_Layer (tonumber (Geo_Page.Geo_Index.text))
       
-          Geo_Page.Layer:setChoices (Make_List (Geo_Page.Layer_List))      
-          Geo_Page.Vein:setChoices (Make_List (Geo_Page.Vein_List), 1)
-        end
+        Geo_Page.Layer:setChoices (Make_List (Geo_Page.Layer_List))      
+        Geo_Page.Vein:setChoices (Make_List (Geo_Page.Vein_List), 1)
       end
       
-    elseif keys [keybindings.geo_morph.key] and Focus == "Geo" then
-      if Geo_Page.Layer.active then
-        local index, choice = Geo_Page.Layer:getSelected ()
-        local geo_biome = df.global.world.world_data.geo_biomes [tonumber (Geo_Page.Geo_Index.text)]
-        local List = {}
-        index = index - 1  --  DF starts lists at 0, Lua at 1...
+    elseif keys [keybindings.geo_morph.key] and Focus == "Geo" and Geo_Page.Layer.active then
+      local index, choice = Geo_Page.Layer:getSelected ()
+      local geo_biome = df.global.world.world_data.geo_biomes [tonumber (Geo_Page.Geo_Index.text)]
+      local List = {}
+      index = index - 1  --  DF starts lists at 0, Lua at 1...
                 
-        for i, material in ipairs (df.global.world.raws.inorganics) do
-          if material.flags.SEDIMENTARY or
-             material.flags.IGNEOUS_INTRUSIVE or
-             material.flags.IGNEOUS_EXTRUSIVE or
-             material.flags.METAMORPHIC or
-             material.flags.SOIL then
-               table.insert (List, material.id)
-            end       
-        end
+      for i, material in ipairs (df.global.world.raws.inorganics) do
+        if material.flags.SEDIMENTARY or
+           material.flags.IGNEOUS_INTRUSIVE or
+           material.flags.IGNEOUS_EXTRUSIVE or
+           material.flags.METAMORPHIC or
+           material.flags.SOIL then
+             table.insert (List, material.id)
+        end       
+      end
 
-        guiScript.start (function ()
-          local ret, idx, choice = guiScript.showListPrompt ("Choose layer material:", nil, 3, List, nil, true)
-          if ret then
-            for i, material in ipairs (df.global.world.raws.inorganics) do
-              if material.id == List [idx].text then
-                geo_biome.layers [index].mat_index = i
-                if material.flags.SEDIMENTARY then
-                  geo_biome.layers [index].type = df.geo_layer_type.SEDIMENTARY
+      guiScript.start (function ()
+        local ret, idx, choice = guiScript.showListPrompt ("Choose layer material:", nil, 3, List, nil, true)
+        if ret then
+          for i, material in ipairs (df.global.world.raws.inorganics) do
+            if material.id == List [idx].text then
+              geo_biome.layers [index].mat_index = i
+              if material.flags.SEDIMENTARY then
+                geo_biome.layers [index].type = df.geo_layer_type.SEDIMENTARY
                   
-                elseif material.flags.IGNEOUS_INTRUSIVE then
-                  geo_biome.layers [index].type = df.geo_layer_type.IGNEOUS_INTRUSIVE
+              elseif material.flags.IGNEOUS_INTRUSIVE then
+                geo_biome.layers [index].type = df.geo_layer_type.IGNEOUS_INTRUSIVE
                   
-                elseif material.flags.IGNEOUS_EXTRUSIVE then
-                  geo_biome.layers [index].type = df.geo_layer_type.IGNEOUS_EXTRUSIVE
+              elseif material.flags.IGNEOUS_EXTRUSIVE then
+                geo_biome.layers [index].type = df.geo_layer_type.IGNEOUS_EXTRUSIVE
                   
-                elseif material.flags.METAMORPHIC then
-                  geo_biome.layers [index].type = df.geo_layer_type.METAMORPHIC
+              elseif material.flags.METAMORPHIC then
+                geo_biome.layers [index].type = df.geo_layer_type.METAMORPHIC
                   
 --                elseif material.flags.SOIL_SAND then
 --                  geo_biome.layers [index].type = df.geo_layer_type.SOIL_SAND
 
-                elseif material.flags.SOIL then
-                  geo_biome.layers [index].type = df.geo_layer_type.SOIL
-                end
-                
-                if #geo_biome.layers [index].vein_mat > 0 then
-                  for k = 0, #geo_biome.layers [index].vein_mat - 1, -1 do                
-                    geo_biome.layers [index].vein_mat:erase (k)
-                    geo_biome.layers [index].vein_nested_in:erase (k)
-                    geo_biome.layers [index].vein_type:erase (k)
-                    geo_biome.layers [index].vein_unk_38:delete (k)
-                  end
-                end
-                
-                Make_Geo_Layer (tonumber (Geo_Page.Geo_Index.text))
-      
-                Geo_Page.Layer:setChoices (Make_List (Geo_Page.Layer_List))      
-                Geo_Page.Vein:setChoices (Make_List (Geo_Page.Vein_List), 1)
-                
-                break
+              elseif material.flags.SOIL then
+                geo_biome.layers [index].type = df.geo_layer_type.SOIL
               end
-            end
-            end       
-        end)
-      end
-      
-    elseif keys [keybindings.geo_add.key] and Focus == "Geo" then  --  Overloaded key
-      if Geo_Page.Vein.active then
-        local layer_index, choice = Geo_Page.Layer:getSelected ()
-        local geo_biome = df.global.world.world_data.geo_biomes [tonumber (Geo_Page.Geo_Index.text)]
-        local List = {}
-        local Layer_Material = df.global.world.raws.inorganics [geo_biome.layers [layer_index - 1].mat_index]
-        local Found
-        
-        for i, material in ipairs (df.global.world.raws.inorganics) do
-          Found = false
-          
-          for k, mat in ipairs (geo_biome.layers [layer_index - 1].vein_mat) do
-            if geo_biome.layers [layer_index - 1].vein_mat [k] == i then
-              Found = true
+                
+              if #geo_biome.layers [index].vein_mat > 0 then
+                for k = 0, #geo_biome.layers [index].vein_mat - 1, -1 do                
+                  geo_biome.layers [index].vein_mat:erase (k)
+                  geo_biome.layers [index].vein_nested_in:erase (k)
+                  geo_biome.layers [index].vein_type:erase (k)
+                  geo_biome.layers [index].vein_unk_38:delete (k)
+                end
+              end
+                
+              Make_Geo_Layer (tonumber (Geo_Page.Geo_Index.text))
+     
+              Geo_Page.Layer:setChoices (Make_List (Geo_Page.Layer_List))      
+              Geo_Page.Vein:setChoices (Make_List (Geo_Page.Vein_List), 1)
+                
               break
             end
           end
+          end       
+      end)
+      
+    elseif keys [keybindings.geo_add.key] and Focus == "Geo" and Geo_Page.Vein.active then
+      local layer_index, choice = Geo_Page.Layer:getSelected ()
+      local geo_biome = df.global.world.world_data.geo_biomes [tonumber (Geo_Page.Geo_Index.text)]
+      local List = {}
+      local Layer_Material = df.global.world.raws.inorganics [geo_biome.layers [layer_index - 1].mat_index]
+      local Found
+        
+      for i, material in ipairs (df.global.world.raws.inorganics) do
+        Found = false
           
-          if not Found then
-            for k, location in ipairs (material.environment.location) do
-              if (location == df.environment_type.SOIL and Layer_Material.flags.SOIL) or
-                 (location == df.environment_type.SOIL_OCEAN and Layer_Material.flags.SOIL_OCEAN) or  --  Redundant, covered by SOIL
-                 (location == df.environment_type.SOIL_SAND and Layer_Material.flags.SOIL_SAND) or    --  Redundant, covered by SOIL
-                 (location == df.environment_type.METAMORPHIC and Layer_Material.flags.METAMORPHIC) or
-                 (location == df.environment_type.SEDIMENTARY and Layer_Material.flags.SEDIMENTARY) or
-                 (location == df.environment_type.IGNEOUS_INTRUSIVE and Layer_Material.flags.IGNEOUS_INTRUSIVE) or
-                 (location == df.environment_type.IGNEOUS_EXTRUSIVE and Layer_Material.flags.IGNEOUS_EXTRUSIVE) then  -- or
-                -- (location == df.environment_type.ALLUVIAL and Layer_Material.flags.ALLUVIAL) then  -- No Alluvial flag!
-                Found = true
-                table.insert (List, material.id)
-              end
-            end                     
+        for k, mat in ipairs (geo_biome.layers [layer_index - 1].vein_mat) do
+          if geo_biome.layers [layer_index - 1].vein_mat [k] == i then
+            Found = true
+            break
           end
+        end
           
-          if not Found then
-            for k, mat_index in ipairs (material.environment_spec.mat_index) do
-              if mat_index == geo_biome.layers [layer_index - 1].mat_index then
-                table.insert (List, material.id)
-                break
-              end
+        if not Found then
+          for k, location in ipairs (material.environment.location) do
+            if (location == df.environment_type.SOIL and Layer_Material.flags.SOIL) or
+               (location == df.environment_type.SOIL_OCEAN and Layer_Material.flags.SOIL_OCEAN) or  --  Redundant, covered by SOIL
+               (location == df.environment_type.SOIL_SAND and Layer_Material.flags.SOIL_SAND) or    --  Redundant, covered by SOIL
+               (location == df.environment_type.METAMORPHIC and Layer_Material.flags.METAMORPHIC) or
+               (location == df.environment_type.SEDIMENTARY and Layer_Material.flags.SEDIMENTARY) or
+               (location == df.environment_type.IGNEOUS_INTRUSIVE and Layer_Material.flags.IGNEOUS_INTRUSIVE) or
+               (location == df.environment_type.IGNEOUS_EXTRUSIVE and Layer_Material.flags.IGNEOUS_EXTRUSIVE) then  -- or
+              -- (location == df.environment_type.ALLUVIAL and Layer_Material.flags.ALLUVIAL) then  -- No Alluvial flag!
+              Found = true
+              table.insert (List, material.id)
+            end
+          end                     
+        end
+          
+        if not Found then
+          for k, mat_index in ipairs (material.environment_spec.mat_index) do
+            if mat_index == geo_biome.layers [layer_index - 1].mat_index then
+              table.insert (List, material.id)
+              break
             end
           end
         end
+      end
         
-        guiScript.start (function ()
-          local ret, idx, choice = guiScript.showListPrompt ("Choose vein/cluster material:", nil, 3, List, nil, true)
-          if ret then
-            for i, material in ipairs (df.global.world.raws.inorganics) do
-              if material.id == List [idx].text then
-                geo_biome.layers [layer_index - 1].vein_mat:insert ('#', i)
-                geo_biome.layers [layer_index - 1].vein_nested_in:insert ('#', -1)
+      guiScript.start (function ()
+        local ret, idx, choice = guiScript.showListPrompt ("Choose vein/cluster material:", nil, 3, List, nil, true)
+        if ret then
+          for i, material in ipairs (df.global.world.raws.inorganics) do
+            if material.id == List [idx].text then
+              geo_biome.layers [layer_index - 1].vein_mat:insert ('#', i)
+              geo_biome.layers [layer_index - 1].vein_nested_in:insert ('#', -1)
                 
-                Found = false
-                for k, location in ipairs (material.environment.location) do
-                  if (location == df.environment_type.SOIL and Layer_Material.flags.SOIL) or
-                     (location == df.environment_type.SOIL_OCEAN and Layer_Material.flags.SOIL_OCEAN) or
-                     (location == df.environment_type.SOIL_SAND and Layer_Material.flags.SOIL_SAND) or
-                     (location == df.environment_type.METAMORPHIC and Layer_Material.flags.METAMORPHIC) or
-                     (location == df.environment_type.SEDIMENTARY and Layer_Material.flags.SEDIMENTARY) or
-                     (location == df.environment_type.IGNEOUS_INTRUSIVE and Layer_Material.flags.IGNEOUS_INTRUSIVE) or
-                     (location == df.environment_type.IGNEOUS_EXTRUSIVE and Layer_Material.flags.IGNEOUS_EXTRUSIVE) then  -- or
-                    -- (location == df.environment_type.ALLUVIAL and Layer_Material.flags.ALLUVIAL) then  -- No Alluvial flag!
-                    geo_biome.layers [layer_index - 1].vein_type:insert ('#', material.environment.type [k])
-                    Found = true
+              Found = false
+              for k, location in ipairs (material.environment.location) do
+                if (location == df.environment_type.SOIL and Layer_Material.flags.SOIL) or
+                   (location == df.environment_type.SOIL_OCEAN and Layer_Material.flags.SOIL_OCEAN) or
+                   (location == df.environment_type.SOIL_SAND and Layer_Material.flags.SOIL_SAND) or
+                   (location == df.environment_type.METAMORPHIC and Layer_Material.flags.METAMORPHIC) or
+                   (location == df.environment_type.SEDIMENTARY and Layer_Material.flags.SEDIMENTARY) or
+                   (location == df.environment_type.IGNEOUS_INTRUSIVE and Layer_Material.flags.IGNEOUS_INTRUSIVE) or
+                   (location == df.environment_type.IGNEOUS_EXTRUSIVE and Layer_Material.flags.IGNEOUS_EXTRUSIVE) then  -- or
+                  -- (location == df.environment_type.ALLUVIAL and Layer_Material.flags.ALLUVIAL) then  -- No Alluvial flag!
+                  geo_biome.layers [layer_index - 1].vein_type:insert ('#', material.environment.type [k])
+                  Found = true
+                  break
+                end
+              end
+                
+              if not Found then
+                for k, mat_index in ipairs (material.environment_spec.mat_index) do
+                  if mat_index == geo_biome.layers [layer_index - 1].mat_index then
+                    geo_biome.layers [layer_index - 1].vein_type:insert ('#', material.environment_spec.inclusion_type [k])
                     break
                   end
                 end
-                
-                if not Found then
-                  for k, mat_index in ipairs (material.environment_spec.mat_index) do
-                    if mat_index == geo_biome.layers [layer_index - 1].mat_index then
-                      geo_biome.layers [layer_index - 1].vein_type:insert ('#', material.environment_spec.inclusion_type [k])
-                      break
-                    end
-                  end
-                end
-                
-                geo_biome.layers [layer_index - 1].vein_unk_38:insert ('#', 50)
-                
-                Make_Geo_Layer (tonumber (Geo_Page.Geo_Index.text))
-      
-                Geo_Page.Layer:setChoices (Make_List (Geo_Page.Layer_List))      
-                Geo_Page.Vein:setChoices (Make_List (Geo_Page.Vein_List))
-                
-                break
               end
-            end
-          end
-        end)
-      end          
+                
+              geo_biome.layers [layer_index - 1].vein_unk_38:insert ('#', 50)
+               
+              Make_Geo_Layer (tonumber (Geo_Page.Geo_Index.text))
       
-    elseif keys [keybindings.geo_remove.key] and Focus == "Geo" then
-      if Geo_Page.Vein.active then
-        local layer_index, layer_choice = Geo_Page.Layer:getSelected ()
-        local index, choice = Geo_Page.Vein:getSelected ()
-        local geo_biome = df.global.world.world_data.geo_biomes [tonumber (Geo_Page.Geo_Index.text)]
-        
-        if #geo_biome.layers [layer_index - 1].vein_mat == 0 then
-          dialog.showMessage ("Error!", "Cannot remove non existent entries.\n",COLOR_LIGHTRED)
-        
-        else
-          index = index - 1  --  C vs Lua ...
-          local vein_nested_in_length = #geo_biome.layers [layer_index - 1].vein_nested_in - 1
-          
-          for i = 0, vein_nested_in_length do
-            if geo_biome.layers [layer_index - 1].vein_nested_in [vein_nested_in_length - i] == index then
-              geo_biome.layers [layer_index - 1].vein_mat:erase (vein_nested_in_length - i)
-              geo_biome.layers [layer_index - 1].vein_nested_in:erase (vein_nested_in_length - i)
-              geo_biome.layers [layer_index - 1].vein_type:erase (vein_nested_in_length - i)
-              geo_biome.layers [layer_index - 1].vein_unk_38:erase (vein_nested_in_length - i)
+              Geo_Page.Layer:setChoices (Make_List (Geo_Page.Layer_List))      
+              Geo_Page.Vein:setChoices (Make_List (Geo_Page.Vein_List))
+                
+              break
             end
           end
+        end
+      end)
+      
+    elseif keys [keybindings.geo_remove.key] and Focus == "Geo" and Geo_Page.Vein.active then
+      local layer_index, layer_choice = Geo_Page.Layer:getSelected ()
+      local index, choice = Geo_Page.Vein:getSelected ()
+      local geo_biome = df.global.world.world_data.geo_biomes [tonumber (Geo_Page.Geo_Index.text)]
+        
+      if #geo_biome.layers [layer_index - 1].vein_mat == 0 then
+        dialog.showMessage ("Error!", "Cannot remove non existent entries.\n",COLOR_LIGHTRED)
+        
+      else
+        index = index - 1  --  C vs Lua ...
+        local vein_nested_in_length = #geo_biome.layers [layer_index - 1].vein_nested_in - 1
           
-          geo_biome.layers [layer_index - 1].vein_mat:erase (index)
-          geo_biome.layers [layer_index - 1].vein_nested_in:erase (index)
-          geo_biome.layers [layer_index - 1].vein_type:erase (index)
-          geo_biome.layers [layer_index - 1].vein_unk_38:erase (index)
+        for i = 0, vein_nested_in_length do
+          if geo_biome.layers [layer_index - 1].vein_nested_in [vein_nested_in_length - i] == index then
+            geo_biome.layers [layer_index - 1].vein_mat:erase (vein_nested_in_length - i)
+            geo_biome.layers [layer_index - 1].vein_nested_in:erase (vein_nested_in_length - i)
+            geo_biome.layers [layer_index - 1].vein_type:erase (vein_nested_in_length - i)
+            geo_biome.layers [layer_index - 1].vein_unk_38:erase (vein_nested_in_length - i)
+          end
+        end
+          
+        geo_biome.layers [layer_index - 1].vein_mat:erase (index)
+        geo_biome.layers [layer_index - 1].vein_nested_in:erase (index)
+        geo_biome.layers [layer_index - 1].vein_type:erase (index)
+        geo_biome.layers [layer_index - 1].vein_unk_38:erase (index)
                           
-          Make_Geo_Layer (tonumber (Geo_Page.Geo_Index.text))
+        Make_Geo_Layer (tonumber (Geo_Page.Geo_Index.text))
       
-          Geo_Page.Layer:setChoices (Make_List (Geo_Page.Layer_List))      
-          Geo_Page.Vein:setChoices (Make_List (Geo_Page.Vein_List))
-        end        
+        Geo_Page.Layer:setChoices (Make_List (Geo_Page.Layer_List))      
+        Geo_Page.Vein:setChoices (Make_List (Geo_Page.Vein_List))
       end
       
-    elseif keys [keybindings.geo_nest.key] and Focus == "Geo" then      
+    elseif keys [keybindings.geo_nest.key] and Focus == "Geo" and Geo_Page.Vein.active then      
       local geo_biome = df.global.world.world_data.geo_biomes [tonumber (Geo_Page.Geo_Index.text)]
       local layer_index, layer_choice = Geo_Page.Layer:getSelected ()
       
-      if Geo_Page.Vein.active and 
-         #geo_biome.layers [layer_index - 1].vein_mat ~= 0 then
+      if #geo_biome.layers [layer_index - 1].vein_mat ~= 0 then
         local index, choice = Geo_Page.Vein:getSelected ()
         index = index - 1  --  C vs Lua ...
         
@@ -8588,7 +8731,7 @@ function biomemanipulator ()
                 end
               end              
 
-               if not Found then
+              if not Found then
                 table.insert (List, material.id)
               end
             end
@@ -8622,28 +8765,52 @@ function biomemanipulator ()
             end
           end
         end)
-       end
+      end
       
-    elseif keys [keybindings.geo_proportion.key] and Focus == "Geo" then  --  Overloaded key
-      if Geo_Page.Vein.active then
-        local layer_index, layer_choice = Geo_Page.Layer:getSelected ()
-        local index, choice = Geo_Page.Vein:getSelected ()
-        local geo_biome = df.global.world.world_data.geo_biomes [tonumber (Geo_Page.Geo_Index.text)]
+    elseif keys [keybindings.geo_proportion.key] and Focus == "Geo" and Geo_Page.Vein.active then
+      local layer_index, layer_choice = Geo_Page.Layer:getSelected ()
+      local index, choice = Geo_Page.Vein:getSelected ()
+      local geo_biome = df.global.world.world_data.geo_biomes [tonumber (Geo_Page.Geo_Index.text)]
         
-        if #geo_biome.layers [layer_index - 1].vein_mat == 0 then
-          dialog.showMessage ("Error!", "Cannot modify non existent entries.\n",COLOR_LIGHTRED)
+      if #geo_biome.layers [layer_index - 1].vein_mat == 0 then
+        dialog.showMessage ("Error!", "Cannot modify non existent entries.\n",COLOR_LIGHTRED)
         
-        else
-          index = index - 1  --  C vs Lua ...
+      else
+        index = index - 1  --  C vs Lua ...
         
-          dialog.showInputPrompt ("Change Proportion for the Vein/Cluster/Inclusion",
-                                  "Proportion (percentage of max) (" .. tostring (geo_biome.layers [layer_index - 1].vein_unk_38 [index]) .."):",
-                                  COLOR_WHITE,
-                                  "",
-                                  self:callback ("updateGeoProportion"))
-        end
+        dialog.showInputPrompt ("Change Proportion for the Vein/Cluster/Inclusion",
+                                "Proportion (percentage of max) (" .. tostring (geo_biome.layers [layer_index - 1].vein_unk_38 [index]) .."):",
+                                COLOR_WHITE,
+                                "",
+                                self:callback ("updateGeoProportion"))
       end
 
+    elseif keys [keybindings.geo_full.key] and Focus == "Geo" and Geo_Page.Vein.active then
+      local layer_index, choice = Geo_Page.Layer:getSelected ()
+      local geo_biome = df.global.world.world_data.geo_biomes [tonumber (Geo_Page.Geo_Index.text)]
+      Geo_Diversity_Layer (geo_biome, layer_index - 1)
+                  
+      Make_Geo_Layer (tonumber (Geo_Page.Geo_Index.text))
+      
+      Geo_Page.Layer:setChoices (Make_List (Geo_Page.Layer_List))      
+      Geo_Page.Vein:setChoices (Make_List (Geo_Page.Vein_List))
+    
+    elseif keys [keybindings.geo_clear.key] and Focus == "Geo" and Geo_Page.Vein.active then
+      local layer_index, layer_choice = Geo_Page.Layer:getSelected ()
+      local geo_biome = df.global.world.world_data.geo_biomes [tonumber (Geo_Page.Geo_Index.text)]
+
+      while #geo_biome.layers [layer_index - 1].vein_mat > 0 do
+        geo_biome.layers [layer_index - 1].vein_mat:erase (#geo_biome.layers [layer_index - 1].vein_mat - 1)
+        geo_biome.layers [layer_index - 1].vein_nested_in:erase (#geo_biome.layers [layer_index - 1].vein_mat) --  Shrunk 1 above
+        geo_biome.layers [layer_index - 1].vein_type:erase (#geo_biome.layers [layer_index - 1].vein_mat)
+        geo_biome.layers [layer_index - 1].vein_unk_38:erase (#geo_biome.layers [layer_index - 1].vein_mat)
+      end   
+        
+      Make_Geo_Layer (tonumber (Geo_Page.Geo_Index.text))
+      
+      Geo_Page.Layer:setChoices (Make_List (Geo_Page.Layer_List))      
+      Geo_Page.Vein:setChoices (Make_List (Geo_Page.Vein_List))
+      
     elseif keys [keybindings.map_adopt_biome.key] and Focus == "World_Map" then
       dialog.showInputPrompt ("Adopt neighboring tile's Biome/Region to current world tile",
                               "Changes the biome and region of the current world tile to\n" ..
