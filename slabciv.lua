@@ -10,8 +10,17 @@ slabciv
 --  those civs, but works "naturally" if all controllable civs are dead.
 --  A civ is declared dead if it hasn't contained a histfig for 100 years and no generic population
 --  changes have occured for 100 years. Thus, the script is useless if world gen is less than 100 years.
-
+--  Version 0.2 2018-01-01
 ]===]
+local new_progress = false
+
+for field, value in pairs (df.global.world.worldgen_status) do
+  if field == "place_caves" then
+    new_progress = true
+    break
+  end
+end
+
 function slabciv ()
   if dfhack.isMapLoaded () then
     dfhack.color (COLOR_RED)
@@ -24,7 +33,8 @@ function slabciv ()
   local civ_state = {}
    
   local state = df.global.world.worldgen_status.state
-  local active = not df.global.world.worldgen_status.placed_caves
+  local active = (new_progress and not df.global.world.worldgen_status.place_caves) or
+                 (not new_progress and not not df.global.world.worldgen_status.placed_caves)
   local finished_prehistory = false
   local century = 0
   local previous_year = 0

@@ -1,3 +1,12 @@
+local new_progress = false
+
+for field, value in pairs (df.global.world.worldgen_status) do
+  if field == "place_caves" then
+    new_progress = true
+    break
+  end
+end
+
 local breakout_before_caves = false
 local breakout_before_good_evil = false
 local breakout_before_megabeasts = true
@@ -848,14 +857,15 @@ function worldgen_breakout_box ()
   local civ_state = {}
    
   local state = df.global.world.worldgen_status.state
-  local placed_caves = false
-  local active = not df.global.world.worldgen_status.placed_caves
-  local placed_good_evil = false
-  local placed_megabeasts = false
-  local placed_other_beasts = false
-  local made_cave_pops = false
-  local made_cave_civs = false
-  local placed_civs = false
+  local place_caves = false
+  local active = (new_progress and not df.global.world.worldgen_status.place_caves) or
+                 (not new_progress and not df.global.world.worldgen_status.placed_caves)
+  local place_good_evil = false
+  local place_megabeasts = false
+  local place_other_beasts = false
+  local make_cave_pops = false
+  local make_cave_civs = false
+  local place_civs = false
   local finished_prehistory = false
   local entities
   local century = 0
@@ -875,13 +885,13 @@ function worldgen_breakout_box ()
       num_rejects = df.global.world.worldgen_status.num_rejects
       active = true
       state = df.global.world.worldgen_status.state
-      placed_caves = false
-      placed_good_evil = false
-      placed_megabeasts = false
-      placed_other_beasts = false
-      made_cave_pops = false
-      made_cave_civs = false
-      placed_civs = false
+      place_caves = false
+      place_good_evil = false
+      place_megabeasts = false
+      place_other_beasts = false
+      make_cave_pops = false
+      make_cave_civs = false
+      place_civs = false
       finished_prehistory = false
       century = 0
       previous_year = 0
@@ -893,8 +903,10 @@ function worldgen_breakout_box ()
     
     if active and df.global.world.worldgen_status.state == 9 then
       if breakout_before_caves then
-        if not placed_caves and df.global.world.worldgen_status.placed_caves then
-          placed_caves = true
+        if not place_caves and
+           ((new_progress and df.global.world.worldgen_status.place_caves) or
+            (not new_progress and df.global.world.worldgen_status.placed_caves)) then
+          place_caves = true
           dfhack.println ("About to place Caves")      
           local screen = dfhack.gui.getCurViewscreen ()
           screen:feed_key (df.interface_key.LEAVESCREEN)
@@ -902,18 +914,22 @@ function worldgen_breakout_box ()
       end
     
       if breakout_before_good_evil then
-        if not placed_good_evil and df.global.world.worldgen_status.placed_good_evil then
+        if not place_good_evil and
+           ((new_progress and df.global.world.worldgen_status.place_good_evil) or
+            (not new_progress and df.global.world.worldgen_status.placed_good_evil)) then
           dfhack.println ("About to place good/evil")
-          placed_good_evil = true
+          place_good_evil = true
           local screen = dfhack.gui.getCurViewscreen ()
           screen:feed_key (df.interface_key.LEAVESCREEN)
         end
       end
       
       if breakout_before_megabeasts then
-        if not placed_megabeasts and df.global.world.worldgen_status.placed_megabeasts then
+        if not place_megabeasts and
+           ((new_progress and df.global.world.worldgen_status.place_megabeasts) or
+            (not new_progress and df.global.world.worldgen_status.placed_megabeasts)) then
           dfhack.println ("About to place megabeasts")
-          placed_megabeasts = true
+          place_megabeasts = true
           
           for i, region in ipairs (df.global.world.world_data.regions) do
             if region.type == df.world_region_type.Mountains then
@@ -945,34 +961,42 @@ function worldgen_breakout_box ()
       end
       
       if breakout_before_other_beasts then
-        if not placed_other_beasts and df.global.world.worldgen_status.placed_other_beasts then
+        if not place_other_beasts and
+           ((new_progress and df.global.world.worldgen_status.place_other_beasts) or
+            (not new_progress and df.global.world.worldgen_status.placed_other_beasts)) then
           dfhack.println ("About to place other beasts")
-          placed_other_beasts = true
+          place_other_beasts = true
           local screen = dfhack.gui.getCurViewscreen ()
           screen:feed_key (df.interface_key.LEAVESCREEN)
         end
       end
       
       if breakout_before_cave_pops then
-        if not made_cave_pops and df.global.world.worldgen_status.made_cave_pops then
+        if not make_cave_pops and
+           ((new_progress and df.global.world.worldgen_status.make_cave_pops) or
+            (not new_progress and df.global.world.worldgen_status.made_cave_pops)) then
           dfhack.println ("About to make cave pops")
-          made_cave_pops = true
+          make_cave_pops = true
           local screen = dfhack.gui.getCurViewscreen ()
           screen:feed_key (df.interface_key.LEAVESCREEN)
         end
       end
       
       if breakout_before_cave_civs then
-        if not made_cave_civs and df.global.world.worldgen_status.made_cave_civs then
+        if not make_cave_civs and
+        ((new_progress and df.global.world.worldgen_status.make_cave_civs) or
+         (not new_progress and df.global.world.worldgen_status.made_cave_civs)) then
           dfhack.println ("About to make cave civs")
-          made_cave_civs = true
+          make_cave_civs = true
           local screen = dfhack.gui.getCurViewscreen ()
           screen:feed_key (df.interface_key.LEAVESCREEN)
         end
       end
     
-      if not placed_civs and df.global.world.worldgen_status.placed_civs then
-        placed_civs = true
+      if not place_civs and
+         ((new_progress and df.global.world.worldgen_status.place_civs) or
+          (not new_progress and df.global.world.worldgen_status.placed_civs)) then
+        place_civs = true
         entities = #df.global.world.entities.all
         
         if breakout_before_civs then
@@ -982,7 +1006,7 @@ function worldgen_breakout_box ()
         end
       end
 
-      if placed_civs and 
+      if place_civs and 
          not finished_prehistory then 
         local screen = dfhack.gui.getCurViewscreen ()
 
