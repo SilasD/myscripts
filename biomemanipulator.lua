@@ -633,6 +633,8 @@ function biomemanipulator ()
                           desc = "Change cavern passage density min"},
     cavern_density_max = {key = "CUSTOM_SHIFT_D",
                           desc = "Change cavern passage density max"},
+    weather_dead_percent = {key = "CUSTOM_D",
+                            desc = "Change dead vegetation percentage for the region"},
     geo_diversity_single = {key = "CUSTOM_G",
                             desc = "Assign all legal minerals to all layers of the current geo biome"},
     geo_diversity_all = {key = "CUSTOM_SHIFT_G",
@@ -4230,7 +4232,7 @@ function biomemanipulator ()
 --       "% = Temperate Brackish River   & = Tropical Brackish River", NEWLINE,
 --       "( = Temperate Saltwater River  ) = Tropical Saltwater River", NEWLINE,
        NEWLINE,       
-       "Version 0.32, 2017-12-27", NEWLINE,
+       "Version 0.33, 2018-01-11", NEWLINE,
        "Caveats: Only tested to a limited degree.", NEWLINE,
        "Making silly changes are likely to lead to either silly results or nothing at all.", NEWLINE,
        "This script makes use of some unnamed DFHack data structure fields and will cease to work when/if those", NEWLINE,
@@ -4378,6 +4380,10 @@ function biomemanipulator ()
        "Biome Region (if no Weather was associated to it previously), replace the current Evil Weather with", NEWLINE,
        "the selected one (if one was associated already), or remove the current Evil Weather (if NONE was", NEWLINE,
        "selected).", NEWLINE,
+       "It is also possible to set a Dead Vegetation percentage for the region. While this effect is set only", NEWLINE,
+       "for evil regions that have reanimation by DF itself, it can be applied to any region. The effect", NEWLINE,
+       "causes some or all vegetation to be dead in the region, controlled by the percentage value. Note that", NEWLINE,
+       "this effect is applied to the region directly, and technically isn't part of the evil weather itself.", NEWLINE,
        "Comments:", NEWLINE,
        "- Thralling and reanimating Evil Weather seems to generate the same set of modifications, starting", NEWLINE,
        "  with a flashing symbol. However, Reanimation is just displayed as such without these modifications", NEWLINE,
@@ -5278,9 +5284,21 @@ function biomemanipulator ()
     
     table.insert (Weather_Page.Visibility_List, Weather_Page.Dynamic_Info)
     
+    Weather_Page.Dead_Percent_Label =
+      widgets.Label {text = {{text = "",
+                              key = keybindings.weather_dead_percent.key,
+                              key_sep = '()'},                             
+                             {text = " Dead Vegetation:    %",
+                              pen = COLOR_LIGHTBLUE}},
+                     frame = {l = 53, t = 3, yalign = 0}}
+    
     Weather_Page.Current_Weather =
       widgets.Label {text = " ",
                      frame = {l = 40, t = 3, yalign = 0}}
+      
+    Weather_Page.Dead_Percent =
+      widgets.Label {text = Fit_Right (tostring (df.global.world.world_data.regions [region [Surface]].unk_1e4 % 256), 3),  --### unk_1e4 will be named
+                     frame = {l = 75, t = 3, yalign = 0}}
       
     Weather_Page.Name =
       widgets.Label {text = " ",
@@ -5292,7 +5310,9 @@ function biomemanipulator ()
                    Weather_Page.Weather,
                    Weather_Page.Info,
                    Weather_Page.Dynamic_Info,
+                   Weather_Page.Dead_Percent_Label,
                    Weather_Page.Current_Weather,
+                   Weather_Page.Dead_Percent,
                    Weather_Page.Name}}
                   
     Geo_Page.Layer_Label =
@@ -6526,6 +6546,35 @@ function biomemanipulator ()
   
   --==============================================================
 
+  function BiomeManipulatorUi:updateWeatherDeadPercent (value)
+    if not tonumber (value) or 
+       tonumber (value) > 100 or
+       tonumber (value) < 0 then
+      dialog.showMessage ("Error!", "The legal Passage Dead Percent range is 0 - 100", COLOR_LIGHTRED)
+      
+    else  --### unk_1e4 will be named. Use the stuff commented out as a template
+--      if underground_region_type_updated then
+--        df.global.world.world_data.underground_regions [region [Layer]].passage_density_max = tonumber (value)
+--        
+--      else
+        local bool
+        
+        if df.global.world.world_data.regions [region [Surface]].unk_1e4 >= 256 then
+          bool = 1
+        else
+          bool = 0
+        end
+        
+        df.global.world.world_data.regions [region [Surface]].unk_1e4 = tonumber (value) + bool
+--      end
+      
+      Update (0, 0, false)
+      Weather_Page.Dead_Percent:setText (Fit_Right (value, 3))
+    end
+  end
+  
+  --==============================================================
+
   function BiomeManipulatorUi:shiftWeather (index, choice)
     if Weather_Page.Interaction_Index == -1 then  --  None
       if index == 1 then
@@ -6631,7 +6680,12 @@ function biomemanipulator ()
     
       for i, target in ipairs (df.global.world.raws.interactions [Interaction_Index].targets) do
         if target._type == df.interaction_target_corpsest then
-          table.insert (Info, "Reanimation\n")
+          for k, effect in ipairs (df.global.world.raws.interactions [Interaction_Index].effects) do
+            if effect._type == df.interaction_effect_animatest then
+              table.insert (Info, "Reanimation\n")
+              break
+            end
+          end
           
         elseif target._type == df.interaction_target_materialst then
           table.insert (Info, "Material\n")
@@ -8247,6 +8301,9 @@ function biomemanipulator ()
       if Layer == Surface then
         Focus = "Weather"
 
+        Weather_Page.Dead_Percent:setText
+          (Fit_Right (tostring (df.global.world.world_data.regions [region [Surface]].unk_1e4 % 256), 3))  --### unk_1e4 will be named
+
         local List_Index = 1  --  NONE
         local Interaction_Index = -1
         
@@ -8394,7 +8451,14 @@ function biomemanipulator ()
                               COLOR_WHITE,
                               "",
                               self:callback ("updateCavernDensityMax"))
-      
+     
+    elseif keys [keybindings.weather_dead_percent.key] and Focus == "Weather" then
+      dialog.showInputPrompt ("Change Percentage of dead vegetation for this region",
+                              "Dead Vegetation (" .. Weather_Page.Dead_Percent.text .."%:",
+                              COLOR_WHITE,
+                              "",
+                              self:callback ("updateWeatherDeadPercent"))
+         
     elseif keys [keybindings.geo_clone.key] and Focus == "Geo" then
       dialog.showYesNoPrompt ("Clone Current Geo Biome",
                               "Copy current Geo Biome for further tweaking\n" ..
