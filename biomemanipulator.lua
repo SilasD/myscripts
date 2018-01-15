@@ -503,25 +503,24 @@ function biomemanipulator ()
   local movement_supported = not isDFHackOlderThan ("0.43.05-r2")
 
   local region_evil_named = false
+  local region_trees_named = false
+  local reanimating_named = false
+  
   if true then
     local region = df.world_region:new ()
     for i, k in pairs (region) do
       if i == "evil" then
         region_evil_named = true
-        break
-      end
-    end
-  end
-  
-  local region_trees_named = false
-  if true then
-    local region = df.world_region:new ()
-    for i, k in pairs (region) do
-      if i == "tree_biomes" then
+        
+      elseif i == "tree_biomes" then
         region_trees_named = true
-        break
+      
+      elseif i == "reanimating" then
+        reanimating_named = true
       end
     end
+    
+    region:delete ()
   end
   
   --============================================================
@@ -4232,7 +4231,7 @@ function biomemanipulator ()
 --       "% = Temperate Brackish River   & = Tropical Brackish River", NEWLINE,
 --       "( = Temperate Saltwater River  ) = Tropical Saltwater River", NEWLINE,
        NEWLINE,       
-       "Version 0.33, 2018-01-11", NEWLINE,
+       "Version 0.34, 2018-01-15", NEWLINE,
        "Caveats: Only tested to a limited degree.", NEWLINE,
        "Making silly changes are likely to lead to either silly results or nothing at all.", NEWLINE,
        "This script makes use of some unnamed DFHack data structure fields and will cease to work when/if those", NEWLINE,
@@ -5296,9 +5295,16 @@ function biomemanipulator ()
       widgets.Label {text = " ",
                      frame = {l = 40, t = 3, yalign = 0}}
       
-    Weather_Page.Dead_Percent =
-      widgets.Label {text = Fit_Right (tostring (df.global.world.world_data.regions [region [Surface]].unk_1e4 % 256), 3),  --### unk_1e4 will be named
-                     frame = {l = 75, t = 3, yalign = 0}}
+    if reanimating_named then
+      Weather_Page.Dead_Percent =
+        widgets.Label {text = Fit_Right (tostring (df.global.world.world_data.regions [region [Surface]].dead_percentage), 3),
+                       frame = {l = 75, t = 3, yalign = 0}}
+                       
+    else
+      Weather_Page.Dead_Percent =
+        widgets.Label {text = Fit_Right (tostring (df.global.world.world_data.regions [region [Surface]].unk_1e4 % 256), 3),
+                       frame = {l = 75, t = 3, yalign = 0}}
+    end
       
     Weather_Page.Name =
       widgets.Label {text = " ",
@@ -6550,13 +6556,13 @@ function biomemanipulator ()
     if not tonumber (value) or 
        tonumber (value) > 100 or
        tonumber (value) < 0 then
-      dialog.showMessage ("Error!", "The legal Passage Dead Percent range is 0 - 100", COLOR_LIGHTRED)
+      dialog.showMessage ("Error!", "The legal Dead Percent range is 0 - 100", COLOR_LIGHTRED)
       
-    else  --### unk_1e4 will be named. Use the stuff commented out as a template
---      if underground_region_type_updated then
---        df.global.world.world_data.underground_regions [region [Layer]].passage_density_max = tonumber (value)
---        
---      else
+    else
+      if reanimating_named then
+        df.global.world.world_data.regions [region [Surface]].dead_percentage = tonumber (value)
+        
+      else
         local bool
         
         if df.global.world.world_data.regions [region [Surface]].unk_1e4 >= 256 then
@@ -6566,7 +6572,7 @@ function biomemanipulator ()
         end
         
         df.global.world.world_data.regions [region [Surface]].unk_1e4 = tonumber (value) + bool
---      end
+      end
       
       Update (0, 0, false)
       Weather_Page.Dead_Percent:setText (Fit_Right (value, 3))
@@ -8301,8 +8307,14 @@ function biomemanipulator ()
       if Layer == Surface then
         Focus = "Weather"
 
-        Weather_Page.Dead_Percent:setText
-          (Fit_Right (tostring (df.global.world.world_data.regions [region [Surface]].unk_1e4 % 256), 3))  --### unk_1e4 will be named
+        if reanimating_named then
+          Weather_Page.Dead_Percent:setText
+            (Fit_Right (tostring (df.global.world.world_data.regions [region [Surface]].dead_percentage), 3))
+            
+        else
+          Weather_Page.Dead_Percent:setText
+            (Fit_Right (tostring (df.global.world.world_data.regions [region [Surface]].unk_1e4 % 256), 3))
+        end
 
         local List_Index = 1  --  NONE
         local Interaction_Index = -1
