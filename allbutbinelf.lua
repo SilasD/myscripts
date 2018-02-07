@@ -8,30 +8,40 @@ function allbutbinelf ()
   end
   
   for i, item in ipairs (df.global.gview.view.child.child.child.broker_items) do
-	if item._type == df.item_binst or
-	  (item._type == df.item_pantsst and
-	   item.wear == 0 and
-	   item.subtype.props.layer == 0) or  --  underwear
+    if item._type == df.item_binst or
+      (item._type == df.item_pantsst and
+       item.wear == 0 and
+       item.subtype.props.layer == 0) or  --  underwear
       (dfhack.matinfo.decode (item.mat_type, item.mat_index).mode == "plant" and
-	   df.global.world.raws.plants.all [item.mat_index].flags.TREE) then  --  Wooden item, but will also ban fruit
-	  df.global.gview.view.child.child.child.broker_selected [i] = 0
-	  
-	else
-	  blocked = false
-	  
-	  for k, improvement in ipairs (item.improvements) do
-		if dfhack.matinfo.decode (improvement.mat_type, improvement.mat_index).mode == "plant" and
-		   df.global.world.raws.plants.all [improvement.mat_index].flags.TREE then
-	      df.global.gview.view.child.child.child.broker_selected [i] = 0
-		  blocked = true
-		  break
-		end
-	  end
+       df.global.world.raws.plants.all [item.mat_index].flags.TREE) then  --  Wooden item, but will also ban fruit
+      df.global.gview.view.child.child.child.broker_selected [i] = 0
+      
+    else
+      local improvement_exists = false
+      blocked = false
+      
+      for k, value in pairs (item) do
+        if k == "improvements" then
+        improvement_exists = true
+        break
+        end        
+      end
+      
+      if improvement_exists then
+        for k, improvement in ipairs (item.improvements) do
+          if dfhack.matinfo.decode (improvement.mat_type, improvement.mat_index).mode == "plant" and
+             df.global.world.raws.plants.all [improvement.mat_index].flags.TREE then
+            df.global.gview.view.child.child.child.broker_selected [i] = 0
+            blocked = true
+            break
+          end
+        end
+      end
 
-	  if not blocked then
+      if not blocked then
         df.global.gview.view.child.child.child.broker_selected [i] = 1
-	  end
-	end
+      end
+    end
   end
 end
 
