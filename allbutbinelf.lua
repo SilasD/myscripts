@@ -15,6 +15,10 @@ function allbutbinelf ()
       (dfhack.matinfo.decode (item.mat_type, item.mat_index).mode == "plant" and
        df.global.world.raws.plants.all [item.mat_index].flags.TREE) then  --  Wooden item, but will also ban fruit
       df.global.gview.view.child.child.child.broker_selected [i] = 0
+    
+    elseif item.mat_type == 0 and
+           df.global.world.raws.inorganics [item.mat_index].material.flags.IS_METAL then
+      df.global.gview.view.child.child.child.broker_selected [i] = 0  --  Don't sell precious metal!
       
     else
       local improvement_exists = false

@@ -6,14 +6,18 @@ function allbutbins ()
   end
   
   for i, item in ipairs (df.global.gview.view.child.child.child.broker_items) do
-	if item._type == df.item_binst or
-	  (item._type == df.item_pantsst and
-	   item.wear == 0 and
-	   item.subtype.props.layer == 0) then  --  underwear
+    if item._type == df.item_binst or
+       (item._type == df.item_pantsst and
+        item.wear == 0 and
+        item.subtype.props.layer == 0) then  --  underwear
       df.global.gview.view.child.child.child.broker_selected [i] = 0
-	else
+        
+    elseif item.mat_type == 0 and
+           df.global.world.raws.inorganics [item.mat_index].material.flags.IS_METAL then
+          df.global.gview.view.child.child.child.broker_selected [i] = 0  --  Don't sell precious metal!
+    else
       df.global.gview.view.child.child.child.broker_selected [i] = 1
-	end
+    end
   end
 end
 

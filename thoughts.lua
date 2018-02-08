@@ -3,7 +3,7 @@
 --  In addition to that screen, relations are attempted to be reproduced as well.
 --
 --  It is a work in progress, and things marked with ### are things that haven't been seen or have other outstanding issues.
---  Version 0.3 2018-02-07
+--  Version 0.4 2018-02-08
 
 --### At least the emotion thought enum has been extended since work on this script started. Remains to check if other things are missing/updated.
 --    Should probably switch to a list style as the one with "values" plus a startup check to automatically flag any additional values for more items.
@@ -1316,7 +1316,7 @@ local unit_thoughts =
    [df.unit_thought_type.StrangerWeapon] = {["caption"] = "when a stranger advanced with a weapon"},  --### Works without parameters
    [df.unit_thought_type.StrangerSneaking] = {["caption"] = "after seeing a stranger sneaking around"},
    [df.unit_thought_type.SawDrinkBlood] = {["caption"] = "after witnessing a night creature drinking blood"},
-   [df.unit_thought_type.Complained] = {["caption"] = "[subthought]",
+   [df.unit_thought_type.Complained] = {["caption"] = "[subthought]",  -- type: SATISFACTION, unk2: 25, strength: 25, subthought: 48, severity: 0, flags: fftf, unk7: 0
                                         ["subthought"] = {"request enum",
                                                           (function (subthought)
                                                              return complained_thought (subthought)
@@ -1503,7 +1503,7 @@ local unit_thoughts =
                                                              (function (subthought)
                                                                 return df.global.world.raws.creatures.all [subthought].name [1]
                                                               end)}},
-   [df.unit_thought_type.NearVermin] = {["caption"] = "after being near [subthought]", 
+   [df.unit_thought_type.NearVermin] = {["caption"] = "after being near [subthought]",  -- type: ENJOYMENT, unk2: 0, strength: 0, subthought: 215, severity: 0, flags: fftf, unk7: 0
                                         ["subthought"] = {"df.global.world.raws.creatures.all index",
                                                           (function (subthought)
                                                              return df.global.world.raws.creatures.all [subthought].name [1]
@@ -1607,7 +1607,7 @@ local unit_thoughts =
    [df.unit_thought_type.ConvictionVictim] = {["caption"] = "after the bizarre conviction against all reason of the victim of a crime"},  --### Works without parameters
    [df.unit_thought_type.ConvictionJusticeSelf] = {["caption"] = "upon receiving justice through a criminal's conviction"},  --### Works without parameters
    [df.unit_thought_type.ConvictionJusticeFamily] = {["caption"] = "when a family member received justice through a criminal's conviction"},  --### Works without parameters
-   [df.unit_thought_type.Decay] = {["caption"] = "after being forced to endure the decay of [subthought]",
+   [df.unit_thought_type.Decay] = {["caption"] = "after being forced to endure the decay of [subthought]",  -- type: RIGHTEOUS_INDIGNATION, unk2: 0, strength: 0, subthought: 11, severity: 0, flags: ffff, unk7: 0
                                    ["subthought"] = {"df.unit_relationship_type value",
                                                      (function (subthought)
                                                         return decay_of (subthought)
@@ -1638,7 +1638,7 @@ local unit_thoughts =
                                                                     (function (subthought, severity)
                                                                        return get_topic (subthought, severity)
                                                                      end)}},
-   [df.unit_thought_type.DiscussTopic] = {["caption"] = "after discussing [subthought_severity]",
+   [df.unit_thought_type.DiscussTopic] = {["caption"] = "after discussing [subthought_severity]",  -- type: CONTENTMENT, unk2: 0, strength: 0, subthought: 13, severity: 20, flags: fftf, unk7: 0
                                           ["subthought_severity"] = {"knowledge_scholar_category_flag index, flag index",
                                                                      (function (subthought, severity)
                                                                         return get_topic (subthought, severity)
@@ -1717,14 +1717,24 @@ local unit_thoughts =
                                                               (function (subthought)
                                                                  return dfhack.TranslateName (df.world_site.find (subthought).name, true)
                                                                end)}},
-   [df.unit_thought_type.BecomeCitizen] = {["caption"] = "after being granted citizenship"},  --### Works without parameters
+   [df.unit_thought_type.BecomeCitizen] = {["caption"] = "after being granted citizenship",  -- type: SATISFACTION, unk2: 100, strength: 100, subthought: 8359, severity: 0, flags: ffff, unk7: 0
+                                           ["extended_caption"] = "after becoming a citizen of [subthought]",
+                                           ["subthought"] = {"df.historical_entity id",
+                                                             (function (subthought)
+                                                                return dfhack.TranslateName (df.historical_entity.find (subthought).name, true)
+                                                              end)}},
    [df.unit_thought_type.DenyResident] = {["caption"] = "after being denied residency",  -- type: INSULT, unk2: 0, strength: 0, subthought: 1837, severity: 0, flags: fftf, unk7: 0
                                           ["extended_caption"] = "after being denied residency at [subthought]",
                                           ["subthought"] = {"site id",
                                                             (function (subthought)
                                                                return dfhack.TranslateName (df.world_site.find (subthought).name, true)
                                                              end)}},
-   [df.unit_thought_type.DenyCitizen] = {["caption"] = "after being denied citizenship"},  --### Works without parameters
+   [df.unit_thought_type.DenyCitizen] = {["caption"] = "after being denied citizenship",  --### Works without parameters. The below is a guess based on BecomeCitizen
+                                         ["extended_caption"] = "after being refused to become a citizen of [subthought]",
+                                         ["subthought"] = {"df.historical_entity id",
+                                                           (function (subthought)
+                                                              return dfhack.TranslateName (df.historical_entity.find (subthought).name, true)
+                                                            end)}},
    [df.unit_thought_type.LeaveTroupe] = {["caption"] = "after leaving a performance troupe"},  --### Works without parameters
    [df.unit_thought_type.MakeBelieve] = {["caption"] = "after playing make believe"}, -- type: ENJOYMENT, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
    [df.unit_thought_type.PlayToy] = {["caption"] = "after playing with [subthought]", -- type: ENJOYMENT, unk2: 0, strength: 0, subthought: 0, severity: 0, flags: fftf, unk7: 0
@@ -1737,10 +1747,10 @@ local unit_thoughts =
    [df.unit_thought_type.Nightmare] = {["caption"] = "*NIGHTMARE*"},  --### Looks like there should be parameters... Empty without
    [df.unit_thought_type.Argument] = {["caption"] = "after getting into an argument", -- type: BITTERNESS, unk2: 0, strength: 0, subthought: 99640, severity: 0, flags: fftf, unk7: 0. "I got into an argument with Niri Matchedsaffron. <emotion>"
                                       ["extended_caption"] = "after getting into an argument with [subthought]",
-                                      ["subthought"] = {"HF id"},
+                                      ["subthought"] = {"HF id",
                                                         (function (subthought)
                                                            return dfhack.TranslateName (df.historical_figure.find (subthought).name, true)
-                                                         end)},
+                                                         end)}},
    [df.unit_thought_type.CombatDrills] = {["caption"] = "after combat drills"},
    [df.unit_thought_type.ArcheryPractice] = {["caption"] = "after practicing at the archery target"},  --### Works without parameters
    [df.unit_thought_type.ImproveSkill] = {["caption"] = "upon improving [subthought]", -- type: SATISFACTION, unk2: 0, strength: 0, subthought: 10, severity: 0, flags: fftf, unk7: 0
@@ -1902,7 +1912,12 @@ function print_emotion (gender, emotion)
   local token
   local rear
 
-  front, token, rear = token_extractor (unit_thoughts [emotion.thought].caption)
+  if unit_thoughts [emotion.thought].extended_caption then
+    front, token, rear = token_extractor (unit_thoughts [emotion.thought].extended_caption)
+    
+  else
+    front, token, rear = token_extractor (unit_thoughts [emotion.thought].caption)
+  end
   
   while token do
     if token == "subthought" then
@@ -1992,24 +2007,24 @@ function friend_lt (f1, f2)
   local f1_relation_level = 3   --  Passing Acquaintance
   local f2_relation_level = 3
   
-  if #f1.anon_3 > 0 then
-    if f1.anon_3 [0] == 1 or    --  Friend
-       f1.anon_3 [0] == 2 or    --  Grudge
-       f1.anon_3 [0] == 3 then  --  Bonded
+  if #f1.counter > 0 then
+    if f1.counter [0] == 1 or    --  Friend
+       f1.counter [0] == 2 or    --  Grudge
+       f1.counter [0] == 3 then  --  Bonded
       f1_relation_level = 1     --  Friend/Grudge/Bonded
     
-    elseif f1.anon_3 [0] == 7 then
+    elseif f1.counter [0] == 7 then
       f1_relation_level = 2     --  Friendly Terms
     end
   end
   
-  if #f2.anon_3 > 0 then
-    if f2.anon_3 [0] == 1 or    --  Friend
-       f2.anon_3 [0] == 2 or    --  Grudge
-       f2.anon_3 [0] == 3 then  --  Bonded
+  if #f2.counter > 0 then
+    if f2.counter [0] == 1 or    --  Friend
+       f2.counter [0] == 2 or    --  Grudge
+       f2.counter [0] == 3 then  --  Bonded
       f2_relation_level = 1     --  Friend/Grudge/Bonded
       
-    elseif f2.anon_3 [0] == 7 then
+    elseif f2.counter [0] == 7 then
       f2_relation_level = 2     --  Friendly Terms
     end
   end
@@ -2025,11 +2040,11 @@ function friend_lt (f1, f2)
     return f1.histfig_id > f2.histfig_id
   end
   
-  if f1.anon_5 == f2.anon_5 then
+  if f1.anon_2 == f2.anon_2 then
     return f1.histfig_id > f2.histfig_id
     
   else
-    return f1.anon_5 < f2.anon_5
+    return f1.anon_2 < f2.anon_2
   end
 end
  
@@ -2166,7 +2181,7 @@ function thoughts ()
         if mother == "" then
           mother = nil
         end
-          
+        
       elseif histfig_link._type == df.histfig_hf_link_fatherst then
         father = get_hf_name (histfig_link.target_hf)
         if father == "" then
@@ -2547,32 +2562,32 @@ function thoughts ()
       end      
       
       for k, relation in ipairs (friends) do
-        if relation.anon_5 > 0 then
-          if #relation.anon_3 == 0 then
+        if relation.anon_2 > 0 then
+          if #relation.counter == 0 then
           --### "Long-term Acquaintance" is either determined based on the age of the relation or on the rank.
 --            dfhack.print ("Passing Acquaintance ")
-            dfhack.print ("Passing Acquaintance " .. tostring (relation.anon_5) .. " ")
+            dfhack.print ("Passing Acquaintance " .. tostring (relation.anon_2) .. " ")
           
-          elseif relation.anon_3 [0] == 1 then
+          elseif relation.counter [0] == 1 then
 --            dfhack.print ("Friend ")
-            dfhack.print ("Friend " .. tostring (relation.anon_4 [0]) .. " " .. tostring (relation.anon_5) .. " ")
-            if #relation.anon_3 >= 2 and
-               relation.anon_3 [1] == 7 then
-              dfhack.print (tostring (relation.anon_4 [1]) .. " ")
+            dfhack.print ("Friend " .. tostring (relation.rank [0]) .. " " .. tostring (relation.anon_2) .. " ")
+            if #relation.counter >= 2 and
+               relation.counter [1] == 7 then
+              dfhack.print (tostring (relation.rank [1]) .. " ")
             end
           
-          elseif relation.anon_3 [0] == 2 then
+          elseif relation.counter [0] == 2 then
             dfhack.print ("Grudge ")
           
-          elseif relation.anon_3 [0] == 3 then
+          elseif relation.counter [0] == 3 then
             dfhack.print ("Bonded ")
           
-          elseif relation.anon_3 [0] == 7 then
+          elseif relation.counter [0] == 7 then
 --            dfhack.print ("Friendly Terms ")
-            dfhack.print ("Friendly Terms " .. tostring (relation.anon_4 [0]) .. " " .. tostring (relation.anon_5) .. " ")
+            dfhack.print ("Friendly Terms " .. tostring (relation.rank [0]) .. " " .. tostring (relation.anon_2) .. " ")
         
           else
-            dfhack.error ("Unknown primary relation found " .. tostring (relation.anon_3 [0]))
+            dfhack.error ("Unknown primary relation found " .. tostring (relation.counter [0]))
           end
                 
           dfhack.println (get_hf_name (relation.histfig_id))
