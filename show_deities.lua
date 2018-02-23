@@ -59,6 +59,10 @@ function show_deities ()
     local hf = df.historical_figure.find (deities [i] [1])
     dfhack.print (tostring (deities [i] [2]) .. " worshipers for " .. dfhack.TranslateName (hf.name, true))
     
+      if hf.race ~= -1 then
+        dfhack.print (" : " .. df.global.world.raws.creatures.all [hf.race].name [0])
+      end
+      
     for k, sphere in ipairs (hf.info.spheres) do
       dfhack.print (", " .. df.sphere_type [sphere])
     end
@@ -82,6 +86,10 @@ function show_deities ()
       
       dfhack.print (tostring (deities [i] [2]) .. " worshipers for " .. dfhack.TranslateName (hf.name, true))
     
+      if hf.race ~= -1 then
+        dfhack.print (" : " .. df.global.world.raws.creatures.all [hf.race].name [0])
+      end
+      
       if hf.info.spheres then
         for k, sphere in ipairs (hf.info.spheres) do
           dfhack.print (", " .. df.sphere_type [sphere])
