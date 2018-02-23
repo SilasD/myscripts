@@ -273,7 +273,7 @@ function booze_manager ()
     if entry.plot == -1 and
        not entry.zone then
       dfhack.color (COLOR_YELLOW)
-      dfhack.println ("Plot/zone missing for " .. entry.plant.name, "Booze available: " .. tostring (entry.volume), "Plants available:" .. tostring (plants_available))
+      dfhack.println ("Booze available: " .. tostring (entry.volume), "Plants available:" .. tostring (plants_available), "Plot/zone missing for " .. entry.plant.name)
       dfhack.color (COLOR_RESET)
 
     else
@@ -296,7 +296,7 @@ function booze_manager ()
         end
       end
       
-      dfhack.println ("Plot/zone present for " .. entry.plant.name, "Booze available: " .. tostring (entry.volume), "Plants available:" .. tostring (plants_available))
+      dfhack.println ("Booze available: " .. tostring (entry.volume), "Plants available:" .. tostring (plants_available), "Plot/zone present for " .. entry.plant.name)
       dfhack.color (COLOR_RESET)
     end
   end
