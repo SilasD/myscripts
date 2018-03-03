@@ -3,7 +3,7 @@
 --  In addition to that screen, relations are attempted to be reproduced as well.
 --
 --  It is a work in progress, and things marked with ### are things that haven't been seen or have other outstanding issues.
---  Version 0.5 2018-02-22
+--  Version 0.6 2018-03-03
 
 --### At least the emotion thought enum has been extended since work on this script started. Remains to check if other things are missing/updated.
 --    Should probably switch to a list style as the one with "values" plus a startup check to automatically flag any additional values for more items.
@@ -1418,7 +1418,7 @@ local unit_thoughts =
    [df.unit_thought_type.Smoke] = {["caption"] = "after choking on smoke underground"}, -- type: ANNOYANCE, unk2: 100, strength: 100, subthought: -1, severity: 0, flags: ffff, unk7: 0
    [df.unit_thought_type.Waterfall] = {["caption"] = "being near to a waterfall"},  --  RELIEF, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
    [df.unit_thought_type.Dust] = {["caption"] = "after choking on dust underground"}, -- type: ANNOYANCE, unk2: 80, strength: 80, subthought: -1, severity: 0, flags: ffff, unk7: 0
-   [df.unit_thought_type.Demands] = {["caption"] = "considering the state of demands"},  --### Works without parameters
+   [df.unit_thought_type.Demands] = {["caption"] = "considering the state of demands"},  -- type: DISAPPOINTMENT, unk2: 0, strength: 0, subthought: -1, severity: -1, flags: fftf, unk7: 0
    [df.unit_thought_type.ImproperPunishment] = {["caption"] = "that a criminal could not be properly punished"},  --### Works without parameters
    [df.unit_thought_type.PunishmentReduced] = {["caption"] = "to have [his] punishment reduced"},  --### Works without parameters
    [df.unit_thought_type.Elected] = {["caption"] = "to be elected"},  -- type: EAGERNESS, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
@@ -1477,8 +1477,8 @@ local unit_thoughts =
                                                                  return pretention_room_of (subhtought)
                                                                end)}},
    [df.unit_thought_type.LackTables] = {["caption"] = "at the lack of dining tables"},  -- type: ANNOYANCE, unk2: 100, strength: 100, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.CrowdedTables] = {["caption"] = "eating at a crowded table"},  --### Works without parameters
-   [df.unit_thought_type.DiningQuality] = {["caption"] = "dining in [severity] dining room",
+   [df.unit_thought_type.CrowdedTables] = {["caption"] = "eating at a crowded table"},  -- type: IRRITATION, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.DiningQuality] = {["caption"] = "dining in [severity] dining room",  -- type: BLISS, unk2: 0, strength: 0, subthought: -1, severity: 4, flags: fftf, unk7: 0
                                            ["severity"] = {"df.item_quality value",
                                                            (function (severity)
                                                               return dining_room_quality_of (severity)
@@ -1635,7 +1635,7 @@ local unit_thoughts =
                                                                              (function (subthought, severity)
                                                                                 return get_topic (subthought, severity)
                                                                               end)}},
-   [df.unit_thought_type.ResearchStalled] = {["caption"] = "after being unable to advance the study of [subthought_severity]",
+   [df.unit_thought_type.ResearchStalled] = {["caption"] = "after being unable to advance the study of [subthought_severity]",  -- type: ACCEPTANCE, unk2: 0, strength: 0, subthought: 8, severity: 1, flags: fftf, unk7: 0
                                              ["subthought_severity"] = {"knowledge_scholar_category_flag index, flag index",
                                                                         (function (subthought, severity)
                                                                            return get_topic (subthought, severity)
