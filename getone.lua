@@ -1,4 +1,7 @@
 function getone ()
+  local number_to_get = 1  --  Change this number if you want more of each. Note that the number of plants
+                           --  actually collected is reduced by the number of seeds already at hand.
+  
   for i, v in ipairs (df.global.world.raws.plants.all) do
     local paper_plant = false
     
@@ -20,17 +23,24 @@ function getone ()
        not v.flags.BIOME_SUBTERRANEAN_WATER and
        not v.flags.BIOME_SUBTERRANEAN_CHASM and
        not v.flags.BIOME_SUBTERRANEAN_LAVA then
-      local found = false
-      local designated = false
+      local seeds = 0
+      local found = 0
+      local designated = 0
       local skip = false
-      
+ 
       for k, seed in ipairs (df.global.world.items.other.SEEDS) do
         if seed.mat_index == i then
-          skip = true
-          dfhack.println ("Skipping " .. v.id .. " as seeds are already available")
-          break
+          seeds = seeds + 1
+          
+          if seeds >= number_to_get then
+            skip = true
+            dfhack.println ("Skipping " .. v.id .. " as sufficient seeds are already available")
+            break
+          end
         end
       end
+      
+      found = seeds
       
       if not skip then
         for k, plant in ipairs (df.global.world.plants.all) do
@@ -72,13 +82,15 @@ function getone ()
                 end
             
                 if not skip then
-                  found = true
+                  found = found + 1
                   designated = true
+                  
                   for l, growth in ipairs (v.growths) do
                     if growth.id == "FRUIT" and
                        (df.global.cur_year_tick < growth.timing_1 or
                         df.global.cur_year_tick > growth.timing_2) then
                       designated = false
+                      break
                     end
                   end
                
@@ -86,7 +98,10 @@ function getone ()
                     cur.designation [x] [y].dig = df.tile_dig_designation.Default
                     cur.flags.designated = true
                     dfhack.println ("Designated " .. v.id)
-                    break
+                    
+                    if found >= number_to_get then
+                      break
+                    end
                   end
                 end
               end
@@ -96,10 +111,14 @@ function getone ()
       end
       
       if not skip then
-        if not found then
-          dfhack.println ("Failed to find " .. v.id)
+        if found == seeds then
+          dfhack.println ("Failed to find any " .. v.id)
+          
         elseif not designated then
           dfhack.println ("Found " .. v.id .. " but it's not ripe")
+        
+        elseif found < number_to_get then
+          dfhack.println ("Failed to find sufficient " .. v.id)
         end
       end
     end
