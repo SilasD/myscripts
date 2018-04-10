@@ -284,6 +284,11 @@ local values = {[df.value_type.LAW] =
 --=====================================
 
 function Librarian ()
+  if not dfhack.isMapLoaded () then
+    dfhack.printerr ("Error: This script requires a Fortress Mode embark to be loaded.")
+    return
+  end
+  
   local Focus = "Main"
   local Pre_Help_Focus = "Main"
   local Pre_Hiding_Focus = "Main"
@@ -291,6 +296,7 @@ function Librarian ()
   local Hidden_Page = {}
   local Science_Page = {}
   local Values_Page = {}
+  local Authors_Page = {}
   local Help_Page = {}
   local persist_screen
   local civ_id = df.global.world.world_data.active_site [0].entity_links [0].entity_id
@@ -310,6 +316,8 @@ function Librarian ()
                desc = "Shift to the Science page"},
     values = {key = "CUSTOM_V",
               desc = "Shift to the Values page"},
+    authors = {key = "CUSTOM_A",
+               desc = "Shift to the Authors page"},
     left = {key = "CURSOR_LEFT",
             desc = "Rotates to the next list"},
     right = {key = "CURSOR_RIGHT",
@@ -337,6 +345,22 @@ function Librarian ()
     for i, dummy in ipairs (list) do
       for k = i + 1, #list do
         if df.written_content.find (list [k] [1]).title < df.written_content.find (list [i] [1]).title then
+          temp = list [i]
+          list [i] = list [k]
+          list [k] = temp          
+        end
+      end
+    end
+  end
+  
+  --============================================================
+
+  function Sort_Remote (list)
+    local temp
+    
+    for i, dummy in ipairs (list) do
+      for k = i + 1, #list do
+        if list [k] < list [i] then
           temp = list [i]
           list [i] = list [k]
           list [k] = temp          
@@ -548,6 +572,54 @@ function Librarian ()
       end
     end
     
+    return Result
+  end
+  
+  --============================================================
+
+  function Take_Authors_Stock (Stock)
+    local Result = {}
+    
+    for i, element in ipairs (Stock) do
+      local content = df.written_content.find (element [1])
+      local hf = df.historical_figure.find (content.author)
+      
+      if hf then
+        local unit = df.unit.find (hf.unit_id)
+         
+        if unit and
+           unit.civ_id == civ_id and
+           not unit.flags2.visitor then
+          local author = dfhack.TranslateName (hf.name, true) .. "/" .. dfhack.TranslateName (hf.name, false)
+          local found = false
+
+          for k, res in ipairs (Result) do
+            if res [1] == author then
+              found = true
+              table.insert (Result [k] [2], element)
+              break
+            end
+          end
+          
+          if not found then
+            table.insert (Result, {author, {element}})
+          end
+        end
+      end
+    end
+    
+    local temp
+    
+    for i, dummy in ipairs (Result) do
+      for k = i + 1, #Result do
+        if Result [k] [1] < Result [i] [1] then
+          temp = Result [i]
+          Result [i] = Result [k]
+          Result [k] = temp          
+        end
+      end
+    end
+          
     return Result
   end
   
@@ -848,6 +920,7 @@ function Librarian ()
       end
     end
     
+    Sort_Remote (Remote_List)
     Science_Page.Remote_List:setChoices (Remote_List, 1)
   end
   
@@ -888,7 +961,35 @@ function Librarian ()
       end
     end
     
-    Values_Page.Remote_List:setChoices (Remote_List)
+    Sort_Remote (Remote_List)
+    Values_Page.Remote_List:setChoices (Remote_List, 1)
+  end
+  
+  --============================================================
+
+  function Populate_Author_Works ()
+    local selected = 1
+    
+    if Authors_Page.Authors_List then
+      selected = Authors_Page.Authors_List.selected
+    end
+    
+    local list = {}
+    
+    for i, element in ipairs (Authors_Page.Authors [selected] [2]) do
+      local content = df.written_content.find (element [1])
+      local title = content.title
+    
+      if title == "" then
+        title = "<Untitled>"
+      end
+      
+      table.insert (list, title)    
+    end
+    
+    Sort_Remote (list)
+
+    Authors_Page.Works_List:setChoices (list, 1)
   end
   
   --============================================================
@@ -936,7 +1037,7 @@ function Librarian ()
   --============================================================
 
   function Ui:onHelp ()
-    self.subviews.pages:setSelected (5)
+    self.subviews.pages:setSelected (6)
     Pre_Help_Focus = Focus
     Focus = "Help"
   end
@@ -952,7 +1053,7 @@ function Librarian ()
        "the page also provides some basic data on the currently selected work.", NEWLINE,
        "It should be noted that the only kind of references really supported by the script is scientific knowledge", NEWLINE,
        "and works that change values in the reader, while other kinds are just indicated.", NEWLINE,
-       "In addition to the Main page, The Librarian also has Science page and a Values page.", NEWLINE,
+       "In addition to the Main page, The Librarian also has Science pagem a Values page, and an Author's.", NEWLINE,
        "  The Science page provides an indicator matrix showing the science topics you have and do not have works", NEWLINE,
        "on, as well as a breakdown of which works you have on each topic, plus the ones existing in the world", NEWLINE,
        "outside of the fortress (the author does not know if everything is available for recovery through raids,", NEWLINE,
@@ -960,12 +1061,14 @@ function Librarian ()
        "  The Values page is similar to the Science page, and indicates the value changing properites of the works", NEWLINE,
        "available locally, as well as breakdowns on each value/strength combination. Like the Science page, there", NEWLINE,
        "is one list for works present locally and one for works out in the world at large.", NEWLINE,
+       "  The Author's page lists the citizens who are also authors, and the works the currently selected author", NEWLINE,
+       "has produced and which are available in the fortress.", NEWLINE,
        "  You move between lists on the Science and Values page using the left/right cursor keys.", NEWLINE,
        "The final functionality allows you to Hide The Librarian, providing access to the DF interface. The only", NEWLINE,
        "indication that The Librarian sits (passively) in the background is the addition of a return key at the", NEWLINE,
        "bottom of the DF frame. The only thing you're prevented from doing is escaping out from DF to the Save", NEWLINE,
        "menu: you have to return to The Librarian to exit it first, but escaping out of DF submodes work as normal.", NEWLINE, NEWLINE,
-       "Version 0.1 2018-04-07", NEWLINE,
+       "Version 0.2 2018-04-10", NEWLINE,
        "Comments:", NEWLINE,
        "- The term 'work' is used above for a reason. A 'work' is a unique piece of written information. Currently", NEWLINE,
        "  it seems DF is restricted to a single 'work' per book/codex/scroll/quire, but the data structures allow", NEWLINE,
@@ -974,6 +1077,9 @@ function Librarian ()
        "- Similar to the previous point, a single 'work' can technically contain references to multiple topics, and", NEWLINE,
        "  a scientific information reference can technically contain data on multiple topics within the same", NEWLINE,
        "  science category. Neither of these have been seen by the author, however.", NEWLINE,
+       "- The reason the Author's page doesn't list all the works of the authors is that the author of this script", NEWLINE,
+       "  hasn't been able to find it listed somewhere, and scouring the total list of works is expected to take too", NEWLINE,
+       "  much time in worlds with many works", NEWLINE,
        "- Why is the default key to return to The Librarian from DF selected to be 'O'? Well, 'l' and 'L' are in use", NEWLINE,
        "  by DF, so the author decided to toss in a (obscure?) reference to The Librarian...", NEWLINE,
        "Caveats:", NEWLINE,
@@ -1012,6 +1118,11 @@ function Librarian ()
                                      key = keybindings.values.key,
                                      key_sep = '()'},
                              {text = " Values Page ",
+                              pen = COLOR_LIGHTBLUE}, 
+                             {text = "",
+                                     key = keybindings.authors.key,
+                                     key_sep = '()'},
+                             {text = " Authors Page ",
                               pen = COLOR_LIGHTBLUE}, 
                              {text = "",
                                      key = keybindings.hide.key,
@@ -1103,6 +1214,11 @@ function Librarian ()
                                      key = keybindings.values.key,
                                      key_sep = '()'},
                              {text = " Values Page",
+                              pen = COLOR_LIGHTBLUE}, 
+                             {text = "",
+                                     key = keybindings.authors.key,
+                                     key_sep = '()'},
+                             {text = " Authors Page ",
                               pen = COLOR_LIGHTBLUE}, 
                              {text = "",
                                      key = keybindings.hide.key,
@@ -1228,6 +1344,11 @@ function Librarian ()
                              {text = " Science Page",
                               pen = COLOR_LIGHTBLUE}, 
                              {text = "",
+                                     key = keybindings.authors.key,
+                                     key_sep = '()'},
+                             {text = " Authors Page ",
+                              pen = COLOR_LIGHTBLUE}, 
+                             {text = "",
                                      key = keybindings.hide.key,
                                      key_sep = '()'},
                              {text = " Hide The Librarian. Return from DF with",
@@ -1333,6 +1454,86 @@ function Librarian ()
     table.insert (Values_Page.Active_List, Values_Page.Own_List)
     table.insert (Values_Page.Active_List, Values_Page.Remote_List)
     
+    local authorsPage = widgets.Panel {
+      subviews = {}}
+      
+    Authors_Page.Background =
+      widgets.Label {text = {{text = "Help/Info",
+                                      key = keybindings.help.key,
+                                      key_sep = '()'},NEWLINE,
+                             {text = "",
+                                     key = keybindings.main.key,
+                                     key_sep = '()'},
+                             {text = " Main Page",
+                              pen = COLOR_LIGHTBLUE},
+                              {text = "",
+                                     key = keybindings.science.key,
+                                     key_sep = '()'},
+                             {text = " Science Page",
+                              pen = COLOR_LIGHTBLUE}, 
+                             {text = "",
+                                     key = keybindings.values.key,
+                                     key_sep = '()'},
+                             {text = " Values Page ",
+                              pen = COLOR_LIGHTBLUE}, 
+                             {text = "",
+                                     key = keybindings.hide.key,
+                                     key_sep = '()'},
+                             {text = " Hide The Librarian. Return from DF with",
+                              pen = COLOR_LIGHTBLUE},                               
+                             {text = "",
+                                     key = keybindings.ook.key,
+                                     key_sep = '()'},
+                             {text = ook,
+                              pen = COLOR_LIGHTBLUE}, NEWLINE, NEWLINE,
+                             {text = "Authors"}},
+                     frame = {l = 0, t = 1, y_align = 0}}
+    
+    table.insert (authorsPage.subviews, Authors_Page.Background)
+    
+    Authors_Page.Authors = Take_Authors_Stock (Main_Page.Stock)
+    
+    local authors_list = {}
+    
+    for i, element in ipairs (Authors_Page.Authors) do
+      table.insert (authors_list, element [1])
+    end
+    
+    Authors_Page.Works_List =
+      widgets.List {view_id = "Works",
+                    choices = {},
+                    frame = {l = 1, t = 24, h = 15, yalign = 0},
+                    text_pen = COLOR_DARKGREY,
+                    cursor_pen = COLOR_YELLOW,
+                    inactive_pen = COLOR_GREY,
+                    active = false}--,
+--                    on_select = self:callback ("show_authors_titles")}
+    
+    table.insert (authorsPage.subviews, Authors_Page.Works_List)
+    
+    Authors_Page.Authors_List =
+      widgets.List {view_id = "Authors",
+                    choices = authors_list,
+                    frame = {l = 1, t = 6, h = 15, yalign = 0},
+                    text_pen = COLOR_DARKGREY,
+                    cursor_pen = COLOR_YELLOW,
+                    inactive_pen = COLOR_GREY,
+                    active = true,
+                    on_select = self:callback ("show_authors_titles")}
+    
+    table.insert (authorsPage.subviews, Authors_Page.Authors_List)
+    
+    Authors_Page.Background_2 =
+      widgets.Label {text = {{text = " Works"}},
+                     frame = {l = 0, t = 22, y_align = 0}}
+    
+    table.insert (authorsPage.subviews, Authors_Page.Background_2)
+    
+    Authors_Page.Active_List = {}
+    
+    table.insert (Authors_Page.Active_List, Authors_Page.Authors_List)
+    table.insert (Authors_Page.Active_List, Authors_Page.Works_List)
+
     Help_Page.Main = 
       widgets.Label
         {text = Helptext_Main (),
@@ -1347,6 +1548,7 @@ function Librarian ()
                    hiddenPage,
                    sciencePage,
                    valuesPage,
+                   authorsPage,
                    helpPage},view_id = "pages",
                    }
 
@@ -1386,6 +1588,12 @@ function Librarian ()
   
   --==============================================================
 
+  function Ui:show_authors_titles (index, choice)
+    Populate_Author_Works ()
+  end
+  
+  --==============================================================
+
   function Ui:on_select_content_type (index, choice)
     Content_Type_Selected = index
     Main_Page.Content_Type:setText (Content_Type_Map [Content_Type_Selected].name)
@@ -1420,6 +1628,9 @@ function Librarian ()
           
         elseif Pre_Help_Focus == "Values" then
           self.subviews.pages:setSelected (4)
+          
+        elseif Pre_Help_Focus == "Authors" then
+          self.subviews.pages:setSelected (5)
         end
         
         Focus = Pre_Help_Focus
@@ -1430,9 +1641,7 @@ function Librarian ()
     end
 
     if keys [keybindings.content_type.key] and
-       (Focus == "Main" or
-        Focus == "Science" or
-        Focus == "Values") then
+       Focus == "Main" then
       dialog.showListPrompt ("Select Content Type filter",
                              "Filter the title list to show only the ones in the\n" ..
                               "specified Content Type category.", --### Add display of current selection
@@ -1450,7 +1659,8 @@ function Librarian ()
     elseif keys [keybindings.hide.key] and 
            (Focus == "Main" or
             Focus == "Science" or
-            Focus == "Values") then
+            Focus == "Values" or
+            Focus == "Authors") then
       Pre_Hiding_Focus = Focus
       Focus = "Hidden"
       self.subviews.pages:setSelected (2)
@@ -1465,6 +1675,9 @@ function Librarian ()
       
       elseif Pre_Hiding_Focus == "Values" then
         self.subviews.pages:setSelected (4)
+      
+      elseif Pre_Hiding_Focus == "Authors" then
+        self.subviews.pages:setSelected (5)
       end
       
       Focus = Pre_Hiding_Focus
@@ -1488,32 +1701,48 @@ function Librarian ()
       
       Take_Remote_Stock ()
       
-      if Focus == "Science" then
-        Populate_Own_Remote_Science ()
-      
-      elseif Focus == "Values" then
-        Populate_Own_Remote_Values ()      
+      Values_Page.Data_Matrix = Take_Values_Stock (Main_Page.Stock)
+      Populate_Own_Remote_Science ()
+      Authors_Page.Authors = Take_Authors_Stock (Main_Page.Stock)
+    
+      local authors_list = {}
+    
+      for i, element in ipairs (Authors_Page.Authors) do
+        table.insert (authors_list, element [1])
       end
       
+      Authors_Page.Authors_List:setChoices (authors_list, 1)
+      Populate_Author_Works ()
+    
     elseif keys [keybindings.main.key] and 
            (Focus == "Science" or
-            Focus == "Values") then
+            Focus == "Values" or
+            Focus == "Authors") then
       Focus = "Main"
       self.subviews.pages:setSelected (1)
             
     elseif keys [keybindings.science.key] and 
            (Focus == "Main" or
-            Focus == "Values") then
+            Focus == "Values" or
+            Focus == "Authors") then
       Focus = "Science"
       Populate_Own_Remote_Science ()
       self.subviews.pages:setSelected (3)
             
     elseif keys [keybindings.values.key] and 
            (Focus == "Main" or
-            Focus == "Science") then
+            Focus == "Science" or
+            Focus == "Authors") then
       Focus = "Values"
       Populate_Own_Remote_Values ()
       self.subviews.pages:setSelected (4)
+            
+    elseif keys [keybindings.authors.key] and 
+           (Focus == "Main" or
+            Focus == "Science" or
+            Focus == "Values") then
+      Focus = "Authors"
+      self.subviews.pages:setSelected (5)
             
     elseif keys [keybindings.left.key] and 
            Focus == "Science" then
@@ -1592,6 +1821,46 @@ function Librarian ()
       end
       
       for i, list in ipairs (Values_Page.Active_List) do
+        list.active = (i == active)
+      end
+           
+    elseif keys [keybindings.left.key] and 
+           Focus == "Authors" then
+      local active = 1
+      
+      for i, list in ipairs (Authors_Page.Active_List) do
+        if list.active then
+          active = i - 1
+          
+          if active == 0 then
+            active = #Authors_Page.Active_List
+          end
+          
+          break
+        end
+      end
+      
+      for i, list in ipairs (Authors_Page.Active_List) do
+        list.active = (i == active)
+      end
+           
+    elseif keys [keybindings.right.key] and 
+           Focus == "Authors" then
+      local active = 1
+      
+      for i, list in ipairs (Authors_Page.Active_List) do
+        if list.active then
+          active = i + 1
+          
+          if active > #Authors_Page.Active_List then
+            active = 1
+          end
+          
+          break
+        end
+      end
+      
+      for i, list in ipairs (Authors_Page.Active_List) do
         list.active = (i == active)
       end
            
