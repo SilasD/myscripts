@@ -5,9 +5,6 @@
 librarian
 ================
 ]====]
-local dont_be_silly = false  --  'true' disables the "ook" part from the description of the return from hiding key.
-local ook_start_x = 10       --  x position of where the "ook" key description appears, in case the script clashes with something else.
-
 local gui = require 'gui'
 local dialog = require 'gui.dialogs'
 local widgets = require 'gui.widgets'
@@ -293,7 +290,6 @@ function Librarian ()
   local Pre_Help_Focus = "Main"
   local Pre_Hiding_Focus = "Main"
   local Main_Page = {}
-  local Hidden_Page = {}
   local Science_Page = {}
   local Values_Page = {}
   local Authors_Page = {}
@@ -306,10 +302,6 @@ function Librarian ()
                 desc = "Set Content Type filter"},
     reference_filter = {key = "CUSTOM_R",
                         desc = "Toggle Reference Filter"},
-    hide = {key = "CUSTOM_SHIFT_H",
-            desc = "Hide the Librarian"},
-    ook = {key = "CUSTOM_SHIFT_O",
-           desc = "Bring the Librarian out of hiding"},
     main = {key = "CUSTOM_M",
             desc = "Shift to the Main page"},
     science = {key = "CUSTOM_S",
@@ -328,7 +320,6 @@ function Librarian ()
   local Content_Type_Selected = 1
   local Reference_Filter = false
   local Content_Type_Map = {}
-  local ook_key_string = dfhack.screen.getKeyDisplay(df.interface_key.CUSTOM_SHIFT_O)
 
   table.insert (Content_Type_Map, {name = "All",
                                    index = -1})
@@ -472,25 +463,23 @@ function Librarian ()
   function Process_Item (Result, item)
     local found
     
-    if item.flags2.has_written_content then  --### flags.artifact to separate original from copy?
-      for i, improvement in ipairs (item.improvements) do
-        if improvement._type == df.itemimprovement_pagesst or
-           improvement._type == df.itemimprovement_writingst then
-          for k, content_id in ipairs (improvement.contents) do
-            found = false
+    for i, improvement in ipairs (item.improvements) do
+      if improvement._type == df.itemimprovement_pagesst or
+         improvement._type == df.itemimprovement_writingst then
+        for k, content_id in ipairs (improvement.contents) do
+          found = false
             
-            for l, existing_content in ipairs (Result) do
-              if existing_content [1] == content_id then
-                found = true
-                table.insert (Result [l] [2], item)
-                break
-              end
+          for l, existing_content in ipairs (Result) do
+            if existing_content [1] == content_id then
+              found = true
+              table.insert (Result [l] [2], item)
+              break
             end
+          end
           
-            if not found then
-              table.insert (Result, {content_id, {}})
-              table.insert (Result [#Result] [2], item)
-            end
+          if not found then
+            table.insert (Result, {content_id, {}})
+            table.insert (Result [#Result] [2], item)
           end
         end
       end
@@ -997,36 +986,35 @@ function Librarian ()
   Ui = defclass (Ui, gui.FramedScreen)
   Ui.ATTRS = {
     frame_style = gui.GREY_LINE_FRAME,
-    frame_title = "The Librarian",
-    transparent = false
+    frame_title = "The Librarian"
   }
 
   --============================================================
  
-  function Ui:onRenderFrame (dc, rect)
-    local x1, y1, x2, y2 = rect.x1, rect.y1, rect.x2, rect.y2
+--  function Ui:onRenderFrame (dc, rect)
+--    local x1, y1, x2, y2 = rect.x1, rect.y1, rect.x2, rect.y2
 
-    if self.transparent then
-      self:renderParent ()
-      dfhack.screen.paintString (COLOR_LIGHTRED, ook_start_x, y2, ook_key_string)
+--    if self.transparent then
+--      self:renderParent ()
+--      dfhack.screen.paintString (COLOR_LIGHTRED, ook_start_x, y2, ook_key_string)
       
-      if dont_be_silly then
-        dfhack.screen.paintString (COLOR_WHITE, ook_start_x + ook_key_string:len (), y2, ": Return to The Librarian")
-      else
-        dfhack.screen.paintString (COLOR_WHITE, ook_start_x + ook_key_string:len (), y2, ": Ook! Return to The Librarian")
-      end
+--      if dont_be_silly then
+--        dfhack.screen.paintString (COLOR_WHITE, ook_start_x + ook_key_string:len (), y2, ": Return to The Librarian")
+--      else
+--        dfhack.screen.paintString (COLOR_WHITE, ook_start_x + ook_key_string:len (), y2, ": Ook! Return to The Librarian")
+--      end
   
-    else
-      if rect.wgap <= 0 and rect.hgap <= 0 then
-        dc:clear ()
-      else
-        self:renderParent ()
-        dc:fill (rect, self.frame_background)
-      end
+--    else
+--      if rect.wgap <= 0 and rect.hgap <= 0 then
+--        dc:clear ()
+--      else
+--        self:renderParent ()
+--        dc:fill (rect, self.frame_background)
+--      end
 
-      gui.paint_frame (x1, y1, x2, y2, self.frame_style, self.frame_title)
-    end
-  end
+--      gui.paint_frame (x1, y1, x2, y2, self.frame_style, self.frame_title)
+--    end
+--  end
   
   --============================================================
 
@@ -1037,7 +1025,7 @@ function Librarian ()
   --============================================================
 
   function Ui:onHelp ()
-    self.subviews.pages:setSelected (6)
+    self.subviews.pages:setSelected (5)
     Pre_Help_Focus = Focus
     Focus = "Help"
   end
@@ -1061,14 +1049,10 @@ function Librarian ()
        "  The Values page is similar to the Science page, and indicates the value changing properites of the works", NEWLINE,
        "available locally, as well as breakdowns on each value/strength combination. Like the Science page, there", NEWLINE,
        "is one list for works present locally and one for works out in the world at large.", NEWLINE,
-       "  The Author's page lists the citizens who are also authors, and the works the currently selected author", NEWLINE,
+       "  The Authors page lists the citizens who are also authors, and the works the currently selected author", NEWLINE,
        "has produced and which are available in the fortress.", NEWLINE,
        "  You move between lists on the Science and Values page using the left/right cursor keys.", NEWLINE,
-       "The final functionality allows you to Hide The Librarian, providing access to the DF interface. The only", NEWLINE,
-       "indication that The Librarian sits (passively) in the background is the addition of a return key at the", NEWLINE,
-       "bottom of the DF frame. The only thing you're prevented from doing is escaping out from DF to the Save", NEWLINE,
-       "menu: you have to return to The Librarian to exit it first, but escaping out of DF submodes work as normal.", NEWLINE, NEWLINE,
-       "Version 0.2 2018-04-10", NEWLINE,
+       "Version 0.3 2018-04-13", NEWLINE,
        "Comments:", NEWLINE,
        "- The term 'work' is used above for a reason. A 'work' is a unique piece of written information. Currently", NEWLINE,
        "  it seems DF is restricted to a single 'work' per book/codex/scroll/quire, but the data structures allow", NEWLINE,
@@ -1076,15 +1060,12 @@ function Librarian ()
        "  have a different set than another one.", NEWLINE,
        "- Similar to the previous point, a single 'work' can technically contain references to multiple topics, and", NEWLINE,
        "  a scientific information reference can technically contain data on multiple topics within the same", NEWLINE,
-       "  science category. Neither of these have been seen by the author, however.", NEWLINE,
-       "- The reason the Author's page doesn't list all the works of the authors is that the author of this script", NEWLINE,
+       "  science category. Neither of these have been seen by the script author, however.", NEWLINE,
+       "- The reason the Authors page doesn't list all the works of the authors is that the author of this script", NEWLINE,
        "  hasn't been able to find it listed somewhere, and scouring the total list of works is expected to take too", NEWLINE,
        "  much time in worlds with many works", NEWLINE,
-       "- Why is the default key to return to The Librarian from DF selected to be 'O'? Well, 'l' and 'L' are in use", NEWLINE,
-       "  by DF, so the author decided to toss in a (obscure?) reference to The Librarian...", NEWLINE,
        "Caveats:", NEWLINE,
-       "- The testing has been limited. While the logic *should* reload data once returning to a hidden Librarian,", NEWLINE,
-       "  the author has not been in a position to test that it actually picks up changes."
+       "- The testing has been limited..."
        }
                
    return helptext
@@ -1098,12 +1079,7 @@ function Librarian ()
     self.keys = {}
     
     local screen_width, screen_height = dfhack.screen.getWindowSize ()
-    local ook = " Ook!"
-    
-    if dont_be_silly then
-      ook = ""
-    end
-    
+
     Main_Page.Background = 
       widgets.Label {text = {{text = "Help/Info",
                                       key = keybindings.help.key,
@@ -1123,17 +1099,7 @@ function Librarian ()
                                      key = keybindings.authors.key,
                                      key_sep = '()'},
                              {text = " Authors Page ",
-                              pen = COLOR_LIGHTBLUE}, 
-                             {text = "",
-                                     key = keybindings.hide.key,
-                                     key_sep = '()'},
-                             {text = " Hide The Librarian. Return from DF with",
-                              pen = COLOR_LIGHTBLUE},                               
-                             {text = "",
-                                     key = keybindings.ook.key,
-                                     key_sep = '()'},
-                             {text = ook,
-                              pen = COLOR_LIGHTBLUE}, NEWLINE,                            
+                              pen = COLOR_LIGHTBLUE}, NEWLINE,
                              {text = "",
                                      key = keybindings.content_type.key,
                                      key_sep = '()'},
@@ -1195,9 +1161,6 @@ function Librarian ()
                   Main_Page.List,
                   Main_Page.Details}}
                 
-    local hiddenPage = widgets.Panel {
-      subviews = {}}
-           
     local sciencePage = widgets.Panel {
       subviews = {}}
            
@@ -1219,17 +1182,7 @@ function Librarian ()
                                      key = keybindings.authors.key,
                                      key_sep = '()'},
                              {text = " Authors Page ",
-                              pen = COLOR_LIGHTBLUE}, 
-                             {text = "",
-                                     key = keybindings.hide.key,
-                                     key_sep = '()'},
-                             {text = " Hide The Librarian. Return from DF with",
-                              pen = COLOR_LIGHTBLUE},                               
-                             {text = "",
-                                     key = keybindings.ook.key,
-                                     key_sep = '()'},
-                             {text = ook,
-                              pen = COLOR_LIGHTBLUE}},
+                              pen = COLOR_LIGHTBLUE}}, 
                      frame = {l = 0, t = 1, y_align = 0}}
     
     table.insert (sciencePage.subviews, Science_Page.Background)
@@ -1347,16 +1300,6 @@ function Librarian ()
                                      key = keybindings.authors.key,
                                      key_sep = '()'},
                              {text = " Authors Page ",
-                              pen = COLOR_LIGHTBLUE}, 
-                             {text = "",
-                                     key = keybindings.hide.key,
-                                     key_sep = '()'},
-                             {text = " Hide The Librarian. Return from DF with",
-                              pen = COLOR_LIGHTBLUE},                               
-                             {text = "",
-                                     key = keybindings.ook.key,
-                                     key_sep = '()'},
-                             {text = ook,
                               pen = COLOR_LIGHTBLUE}, NEWLINE, NEWLINE,
                              {text = "Value           "},
                              {text = "3 2 1 ",
@@ -1475,16 +1418,6 @@ function Librarian ()
                                      key = keybindings.values.key,
                                      key_sep = '()'},
                              {text = " Values Page ",
-                              pen = COLOR_LIGHTBLUE}, 
-                             {text = "",
-                                     key = keybindings.hide.key,
-                                     key_sep = '()'},
-                             {text = " Hide The Librarian. Return from DF with",
-                              pen = COLOR_LIGHTBLUE},                               
-                             {text = "",
-                                     key = keybindings.ook.key,
-                                     key_sep = '()'},
-                             {text = ook,
                               pen = COLOR_LIGHTBLUE}, NEWLINE, NEWLINE,
                              {text = "Authors"}},
                      frame = {l = 0, t = 1, y_align = 0}}
@@ -1545,7 +1478,6 @@ function Librarian ()
                    
     local pages = widgets.Pages 
       {subviews = {mainPage,
-                   hiddenPage,
                    sciencePage,
                    valuesPage,
                    authorsPage,
@@ -1616,21 +1548,18 @@ function Librarian ()
     end
     
     if keys.LEAVESCREEN then
-      if Focus == "Hidden" then
-        persist_screen:sendInputToParent (keys)
-      
-      elseif Focus == "Help" then
+      if Focus == "Help" then
         if Pre_Help_Focus == "Main" then
           self.subviews.pages:setSelected (1)
                 
         elseif Pre_Help_Focus == "Science" then
-          self.subviews.pages:setSelected (3)
+          self.subviews.pages:setSelected (2)
           
         elseif Pre_Help_Focus == "Values" then
-          self.subviews.pages:setSelected (4)
+          self.subviews.pages:setSelected (3)
           
         elseif Pre_Help_Focus == "Authors" then
-          self.subviews.pages:setSelected (5)
+          self.subviews.pages:setSelected (4)
         end
         
         Focus = Pre_Help_Focus
@@ -1655,65 +1584,7 @@ function Librarian ()
       Main_Page.Filtered_Stock = Filter_Stock (Main_Page.Stock, Content_Type_Selected, Reference_Filter)
       Main_Page.List:setChoices (Make_List (Main_Page.Filtered_Stock))
       Main_Page.Works_Listed:setText (tostring (#Main_Page.List.choices))
-      
-    elseif keys [keybindings.hide.key] and 
-           (Focus == "Main" or
-            Focus == "Science" or
-            Focus == "Values" or
-            Focus == "Authors") then
-      Pre_Hiding_Focus = Focus
-      Focus = "Hidden"
-      self.subviews.pages:setSelected (2)
-      self.transparent = true
-      
-    elseif keys [keybindings.ook.key] and Focus == "Hidden" then
-      if Pre_Hiding_Focus == "Main" then
-        self.subviews.pages:setSelected (1)
-        
-      elseif Pre_Hiding_Focus == "Science" then
-        self.subviews.pages:setSelected (3)
-      
-      elseif Pre_Hiding_Focus == "Values" then
-        self.subviews.pages:setSelected (4)
-      
-      elseif Pre_Hiding_Focus == "Authors" then
-        self.subviews.pages:setSelected (5)
-      end
-      
-      Focus = Pre_Hiding_Focus
-      self.transparent = false
-      Main_Page.Stock = Take_Stock ()
-      Main_Page.Filtered_Stock = Filter_Stock (Main_Page.Stock, Content_Type_Selected, Reference_Filter)
-      Main_Page.List:setChoices (Make_List (Main_Page.Filtered_Stock))
-      Main_Page.Works_Total:setText (tostring (#Main_Page.List.choices))
-      Main_Page.Works_Listed:setText (tostring (#Main_Page.List.choices))
-      
-      Science_Page.Data_Matrix = Take_Science_Stock (Main_Page.Stock)
-    
-      for i = 0, 13 do  --  Haven't found an enum over the knowledge category range...      
-        for k = df.knowledge_scholar_flags_0._first_item, df.knowledge_scholar_flags_0._last_item do  --  Full bit range, rather than used bit range, but same for all...
-          if check_flag ("knowledge_scholar_flags_" .. tostring (i), k) then
-            Science_Page.Matrix [i] [k]:setText (Science_Character_Of (Science_Page.Data_Matrix, i, k))
-            Science_Page.Matrix [i] [k].text_pen = Science_Color_Of (Science_Page.Data_Matrix, i, k)
-          end
-        end
-      end    
-      
-      Take_Remote_Stock ()
-      
-      Values_Page.Data_Matrix = Take_Values_Stock (Main_Page.Stock)
-      Populate_Own_Remote_Science ()
-      Authors_Page.Authors = Take_Authors_Stock (Main_Page.Stock)
-    
-      local authors_list = {}
-    
-      for i, element in ipairs (Authors_Page.Authors) do
-        table.insert (authors_list, element [1])
-      end
-      
-      Authors_Page.Authors_List:setChoices (authors_list, 1)
-      Populate_Author_Works ()
-    
+          
     elseif keys [keybindings.main.key] and 
            (Focus == "Science" or
             Focus == "Values" or
@@ -1727,7 +1598,7 @@ function Librarian ()
             Focus == "Authors") then
       Focus = "Science"
       Populate_Own_Remote_Science ()
-      self.subviews.pages:setSelected (3)
+      self.subviews.pages:setSelected (2)
             
     elseif keys [keybindings.values.key] and 
            (Focus == "Main" or
@@ -1735,14 +1606,14 @@ function Librarian ()
             Focus == "Authors") then
       Focus = "Values"
       Populate_Own_Remote_Values ()
-      self.subviews.pages:setSelected (4)
+      self.subviews.pages:setSelected (3)
             
     elseif keys [keybindings.authors.key] and 
            (Focus == "Main" or
             Focus == "Science" or
             Focus == "Values") then
       Focus = "Authors"
-      self.subviews.pages:setSelected (5)
+      self.subviews.pages:setSelected (4)
             
     elseif keys [keybindings.left.key] and 
            Focus == "Science" then
@@ -1863,9 +1734,6 @@ function Librarian ()
       for i, list in ipairs (Authors_Page.Active_List) do
         list.active = (i == active)
       end
-           
-    elseif Focus == "Hidden" then
-      persist_screen:sendInputToParent (keys)
     end
 
     self.super.onInput (self, keys)
