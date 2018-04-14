@@ -463,6 +463,12 @@ function Librarian ()
   function Process_Item (Result, item)
     local found
     
+    if item.pos.x == -30000 or
+       item.pos.y == -30000 or
+       item.pos.z == -30000 then
+      return  --  Filter visitor owned and carried items.
+    end
+    
     for i, improvement in ipairs (item.improvements) do
       if improvement._type == df.itemimprovement_pagesst or
          improvement._type == df.itemimprovement_writingst then
@@ -991,33 +997,6 @@ function Librarian ()
 
   --============================================================
  
---  function Ui:onRenderFrame (dc, rect)
---    local x1, y1, x2, y2 = rect.x1, rect.y1, rect.x2, rect.y2
-
---    if self.transparent then
---      self:renderParent ()
---      dfhack.screen.paintString (COLOR_LIGHTRED, ook_start_x, y2, ook_key_string)
-      
---      if dont_be_silly then
---        dfhack.screen.paintString (COLOR_WHITE, ook_start_x + ook_key_string:len (), y2, ": Return to The Librarian")
---      else
---        dfhack.screen.paintString (COLOR_WHITE, ook_start_x + ook_key_string:len (), y2, ": Ook! Return to The Librarian")
---      end
-  
---    else
---      if rect.wgap <= 0 and rect.hgap <= 0 then
---        dc:clear ()
---      else
---        self:renderParent ()
---        dc:fill (rect, self.frame_background)
---      end
-
---      gui.paint_frame (x1, y1, x2, y2, self.frame_style, self.frame_title)
---    end
---  end
-  
-  --============================================================
-
   function Ui:onResize (w, h)
     self:updateLayout (gui.ViewRect {rect = gui.mkdims_wh (0, 0 , w, h)})
   end
@@ -1052,7 +1031,7 @@ function Librarian ()
        "  The Authors page lists the citizens who are also authors, and the works the currently selected author", NEWLINE,
        "has produced and which are available in the fortress.", NEWLINE,
        "  You move between lists on the Science and Values page using the left/right cursor keys.", NEWLINE,
-       "Version 0.3 2018-04-13", NEWLINE,
+       "Version 0.4 2018-04-14", NEWLINE,
        "Comments:", NEWLINE,
        "- The term 'work' is used above for a reason. A 'work' is a unique piece of written information. Currently", NEWLINE,
        "  it seems DF is restricted to a single 'work' per book/codex/scroll/quire, but the data structures allow", NEWLINE,
@@ -1182,7 +1161,21 @@ function Librarian ()
                                      key = keybindings.authors.key,
                                      key_sep = '()'},
                              {text = " Authors Page ",
-                              pen = COLOR_LIGHTBLUE}}, 
+                              pen = COLOR_LIGHTBLUE}, NEWLINE, NEWLINE, NEWLINE,
+                             "Philosophy (0)", NEWLINE,
+                             "Philosophy (1)", NEWLINE,
+                             "Mathematics (2)", NEWLINE,
+                             "Mathematics (3)", NEWLINE,
+                             "History (4)", NEWLINE,
+                             "Astronomy (5)", NEWLINE,
+                             "Naturalist (6)", NEWLINE,
+                             "Chemistry (7)", NEWLINE,
+                             "Geography (8)", NEWLINE,
+                             "Medicine (9)", NEWLINE,
+                             "Medicine (10)", NEWLINE,
+                             "Medicine (11)", NEWLINE,
+                             "Engineering (12)", NEWLINE,
+                             "Engineering (13)"}, 
                      frame = {l = 0, t = 1, y_align = 0}}
     
     table.insert (sciencePage.subviews, Science_Page.Background)
@@ -1204,7 +1197,7 @@ function Librarian ()
         if check_flag ("knowledge_scholar_flags_" .. tostring (i), k) then
           Science_Page.Matrix [i] [k] =
             widgets.Label {text = Science_Character_Of (Science_Page.Data_Matrix, i, k),
-                           frame = {l = 1 + k * 2, w = 1, t = 6 + i, y_align = 0},
+                           frame = {l = 18 + k * 2, w = 1, t = 5 + i, y_align = 0},
                            text_pen = Science_Color_Of (Science_Page.Data_Matrix, i, k)}
           table.insert (sciencePage.subviews, Science_Page.Matrix [i] [k])
         end
