@@ -346,15 +346,19 @@ function Librarian ()
   
   --============================================================
 
-  function Sort_Remote (list)
+  function Sort_Remote (list, list_map)
     local temp
+    local map_temp
     
     for i, dummy in ipairs (list) do
       for k = i + 1, #list do
         if list [k] < list [i] then
           temp = list [i]
           list [i] = list [k]
-          list [k] = temp          
+          list [k] = temp
+          map_temp = list_map [i]
+          list_map [i] = list_map [k]
+          list_map [k] = map_temp
         end
       end
     end
@@ -726,12 +730,17 @@ function Librarian ()
   
   --============================================================
 
-  function Produce_Details (index)
-    if not Main_Page.Filtered_Stock [index] then
+  function Produce_Details (element)
+    if not element then
       return ""
     end
     
-    local content = df.written_content.find (Main_Page.Filtered_Stock [index].element [1])
+    local content = df.written_content.find (element [1])
+    
+    if not content then
+      return ""
+    end
+    
     local title = content.title
     local copies = 0
     local original = false
@@ -739,7 +748,7 @@ function Librarian ()
     if title == "" then
       title = "<Untitled>"
     end
-    
+
     local text = {"Title    : " .. title .. "\n",
                   "Category : " .. df.written_content_type [content.type] .. "\n"}
                   
@@ -823,17 +832,19 @@ function Librarian ()
       end
     end
     
-    for i, element in ipairs (Main_Page.Filtered_Stock [index].element [2]) do
-      if element.flags.artifact then
-        original = true
+    if element [2] then
+      for i, item in ipairs (element [2]) do
+        if item.flags.artifact then
+          original = true
         
-      else
-        copies = copies + 1
+        else
+          copies = copies + 1
+        end
       end
-    end
     
-    table.insert (text, "Original : " .. tostring (Bool_To_Yes_No (original) .. "\n"))
-    table.insert (text, "Copies   : " .. tostring (copies) .. "\n")
+      table.insert (text, "Original : " .. tostring (Bool_To_Yes_No (original) .. "\n"))
+      table.insert (text, "Copies   : " .. tostring (copies) .. "\n")
+    end
     
     local hf = df.historical_figure.find (content.author)
     local author = "<Unknown>"
@@ -887,6 +898,7 @@ function Librarian ()
     
     local Own_List = {}
     local Remote_List = {}
+    local Remote_List_Map = {}
     
     if Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1] [Science_Page.Topic_List.selected - 1] then
       for i, element in ipairs (Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1] [Science_Page.Topic_List.selected - 1]) do
@@ -912,11 +924,13 @@ function Librarian ()
         end
       
         table.insert (Remote_List, title)
+        table.insert (Remote_List_Map, i)
       end
     end
     
-    Sort_Remote (Remote_List)
+    Sort_Remote (Remote_List, Remote_List_Map)
     Science_Page.Remote_List:setChoices (Remote_List, 1)
+    Science_Page.Remote_List_Map = Remote_List_Map
   end
   
   --============================================================
@@ -928,6 +942,7 @@ function Librarian ()
     
     local Own_List = {}
     local Remote_List = {}
+    local Remote_List_Map = {}
     
     if Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1] [Values_Page.Strength_List.selected - 4] then
       for i, element in ipairs (Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1] [Values_Page.Strength_List.selected - 4]) do
@@ -953,11 +968,13 @@ function Librarian ()
         end
       
         table.insert (Remote_List, title)
+        table.insert (Remote_List_Map, i)
       end
     end
     
-    Sort_Remote (Remote_List)
+    Sort_Remote (Remote_List, Remote_List_Map)
     Values_Page.Remote_List:setChoices (Remote_List, 1)
+    Values_Page.Remote_List_Map = Remote_List_Map
   end
   
   --============================================================
@@ -970,6 +987,7 @@ function Librarian ()
     end
     
     local list = {}
+    local list_map = {}
     
     for i, element in ipairs (Authors_Page.Authors [selected] [2]) do
       local content = df.written_content.find (element [1])
@@ -980,11 +998,13 @@ function Librarian ()
       end
       
       table.insert (list, title)    
+      table.insert (list_map, i)
     end
     
-    Sort_Remote (list)
+    Sort_Remote (list, list_map)
 
     Authors_Page.Works_List:setChoices (list, 1)
+    Authors_Page.Works_List_Map = list_map
   end
   
   --============================================================
@@ -1020,18 +1040,21 @@ function Librarian ()
        "the page also provides some basic data on the currently selected work.", NEWLINE,
        "It should be noted that the only kind of references really supported by the script is scientific knowledge", NEWLINE,
        "and works that change values in the reader, while other kinds are just indicated.", NEWLINE,
-       "In addition to the Main page, The Librarian also has Science pagem a Values page, and an Author's.", NEWLINE,
+       "In addition to the Main page, The Librarian also has Science page, a Values page, and an Authors page.", NEWLINE,
        "  The Science page provides an indicator matrix showing the science topics you have and do not have works", NEWLINE,
        "on, as well as a breakdown of which works you have on each topic, plus the ones existing in the world", NEWLINE,
        "outside of the fortress (the author does not know if everything is available for recovery through raids,", NEWLINE,
-       "or if the rumors only provide access to some works).", NEWLINE,
+       "or if the rumors only provide access to some works). Basic details on the currently selected work is", NEWLINE,
+       "displayed.", NEWLINE,
        "  The Values page is similar to the Science page, and indicates the value changing properites of the works", NEWLINE,
        "available locally, as well as breakdowns on each value/strength combination. Like the Science page, there", NEWLINE,
-       "is one list for works present locally and one for works out in the world at large.", NEWLINE,
+       "is one list for works present locally and one for works out in the world at large. As with the Science", NEWLINE,
+       "page, basic details on the currently selected work are provided.", NEWLINE,
        "  The Authors page lists the citizens who are also authors, and the works the currently selected author", NEWLINE,
-       "has produced and which are available in the fortress.", NEWLINE,
+       "has produced and which are available in the fortress. Again, basic details on the currently selected work", NEWLINE,
+       "are provided.", NEWLINE,
        "  You move between lists on the Science and Values page using the left/right cursor keys.", NEWLINE,
-       "Version 0.4 2018-04-14", NEWLINE,
+       "Version 0.5 2018-04-18", NEWLINE,
        "Comments:", NEWLINE,
        "- The term 'work' is used above for a reason. A 'work' is a unique piece of written information. Currently", NEWLINE,
        "  it seems DF is restricted to a single 'work' per book/codex/scroll/quire, but the data structures allow", NEWLINE,
@@ -1115,10 +1138,11 @@ function Librarian ()
     Main_Page.Filtered_Stock = Filter_Stock (Main_Page.Stock, Content_Type_Selected, Reference_Filter)
     
     Main_Page.Details =
-      widgets.Label {text = Produce_Details (1),
+      widgets.Label {text = Produce_Details (nil),
                      frame = {l = 54, t = 6, h = 20, y_align = 0},
                      auto_height = false,
                      text_pen = COLOR_WHITE}
+                     
     Main_Page.List =
       widgets.List {view_id = "Selected Written Contents",
                     choices = Make_List (Main_Page.Filtered_Stock),
@@ -1126,7 +1150,7 @@ function Librarian ()
                     text_pen = COLOR_DARKGREY,
                     cursor_pen = COLOR_YELLOW,
                     inactive_pen = COLOR_GREY,
-                    on_select = self:callback ("show_details")}
+                    on_select = self:callback ("show_main_details")}
     
     Main_Page.Works_Total:setText (tostring (#Main_Page.Stock))
     Main_Page.Works_Listed:setText (tostring (#Main_Page.List.choices))
@@ -1240,6 +1264,12 @@ function Librarian ()
                     inactive_pen = COLOR_GREY,
                     on_select = self:callback ("show_science_topic")}
 
+    Science_Page.Details =
+      widgets.Label {text = Produce_Details (nil),
+                     frame = {l = 82, t = 1, h = 20, y_align = 0},
+                     auto_height = false,
+                     text_pen = COLOR_WHITE}
+                     
     Science_Page.Own_List =
       widgets.List {view_id = "Own",
                     choices = category_list,  --  Placeholder
@@ -1247,8 +1277,8 @@ function Librarian ()
                     text_pen = COLOR_DARKGREY,
                     cursor_pen = COLOR_YELLOW,
                     inactive_pen = COLOR_GREY,
-                    active = false}--,
---                    on_select = self:callback ("show_science_topic")}
+                    active = false,
+                    on_select = self:callback ("show_science_local_details")}
 
     Science_Page.Remote_List =
       widgets.List {view_id = "Remote",
@@ -1257,20 +1287,21 @@ function Librarian ()
                     text_pen = COLOR_DARKGREY,
                     cursor_pen = COLOR_YELLOW,
                     inactive_pen = COLOR_GREY,
-                    active = false}--,
---                    on_select = self:callback ("show_science_topic")}
+                    active = false,
+                    on_select = self:callback ("show_science_remote_details")}
 
     table.insert (sciencePage.subviews, Science_Page.Category_List)
     table.insert (sciencePage.subviews, Science_Page.Topic_List)
     table.insert (sciencePage.subviews, Science_Page.Own_List)
     table.insert (sciencePage.subviews, Science_Page.Remote_List)
+    table.insert (sciencePage.subviews, Science_Page.Details)
     
     Science_Page.Active_List = {}
     
     table.insert (Science_Page.Active_List, Science_Page.Category_List)
     table.insert (Science_Page.Active_List, Science_Page.Topic_List)
     table.insert (Science_Page.Active_List, Science_Page.Own_List)
-    table.insert (Science_Page.Active_List, Science_Page.Remote_List)
+    table.insert (Science_Page.Active_List, Science_Page.Remote_List)    
     
     local valuesPage = widgets.Panel {
       subviews = {}}
@@ -1359,6 +1390,12 @@ function Librarian ()
     
     table.insert (valuesPage.subviews, Values_Page.Strength_List)
     
+    Values_Page.Details =
+      widgets.Label {text = Produce_Details (nil),
+                     frame = {l = 0, t = 40, h = 20, y_align = 0},
+                     auto_height = false,
+                     text_pen = COLOR_WHITE}
+                     
     Values_Page.Own_List =
       widgets.List {view_id = "Own",
                     choices = category_list,  --  Placeholder
@@ -1366,8 +1403,8 @@ function Librarian ()
                     text_pen = COLOR_DARKGREY,
                     cursor_pen = COLOR_YELLOW,
                     inactive_pen = COLOR_GREY,
-                    active = false}--,
---                    on_select = self:callback ("show_science_topic")}
+                    active = false,
+                    on_select = self:callback ("show_values_local_details")}
 
     table.insert (valuesPage.subviews, Values_Page.Own_List)
     
@@ -1378,10 +1415,11 @@ function Librarian ()
                     text_pen = COLOR_DARKGREY,
                     cursor_pen = COLOR_YELLOW,
                     inactive_pen = COLOR_GREY,
-                    active = false}--,
---                    on_select = self:callback ("show_science_topic")}
+                    active = false,
+                    on_select = self:callback ("show_values_remote_details")}
 
     table.insert (valuesPage.subviews, Values_Page.Remote_List)
+    table.insert (valuesPage.subviews, Values_Page.Details)
 
     Values_Page.Active_List = {}
     
@@ -1425,6 +1463,12 @@ function Librarian ()
       table.insert (authors_list, element [1])
     end
     
+    Authors_Page.Details =
+      widgets.Label {text = Produce_Details (nil),
+                     frame = {l = 65, t = 24, h = 20, y_align = 0},
+                     auto_height = false,
+                     text_pen = COLOR_WHITE}
+                     
     Authors_Page.Works_List =
       widgets.List {view_id = "Works",
                     choices = {},
@@ -1432,8 +1476,8 @@ function Librarian ()
                     text_pen = COLOR_DARKGREY,
                     cursor_pen = COLOR_YELLOW,
                     inactive_pen = COLOR_GREY,
-                    active = false}--,
---                    on_select = self:callback ("show_authors_titles")}
+                    active = false,
+                    on_select = self:callback ("show_authors_details")}
     
     table.insert (authorsPage.subviews, Authors_Page.Works_List)
     
@@ -1448,9 +1492,10 @@ function Librarian ()
                     on_select = self:callback ("show_authors_titles")}
     
     table.insert (authorsPage.subviews, Authors_Page.Authors_List)
+    table.insert (authorsPage.subviews, Authors_Page.Details)
     
     Authors_Page.Background_2 =
-      widgets.Label {text = {{text = " Works"}},
+      widgets.Label {text = {{text = " Works                                                           Details"}},
                      frame = {l = 0, t = 22, y_align = 0}}
     
     table.insert (authorsPage.subviews, Authors_Page.Background_2)
@@ -1485,8 +1530,8 @@ function Librarian ()
 
   --==============================================================
 
-  function Ui:show_details (index, choice)
-    Main_Page.Details:setText (Produce_Details (index))
+  function Ui:show_main_details (index, choice)
+    Main_Page.Details:setText (Produce_Details (Main_Page.Filtered_Stock [index].element))
   end
   
   --==============================================================
@@ -1513,8 +1558,14 @@ function Librarian ()
   
   --==============================================================
 
-  function Ui:show_authors_titles (index, choice)
-    Populate_Author_Works ()
+  function Ui:show_science_local_details (index, choice)
+    if Science_Page.Own_List then  --  Else initiation
+      if Science_Page.Own_List.active then
+        Science_Page.Details:setText (Produce_Details (Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1]
+                                                                                [Science_Page.Topic_List.selected - 1]
+                                                                                [index]))
+      end
+    end
   end
   
   --==============================================================
@@ -1531,6 +1582,48 @@ function Librarian ()
 
   function Ui:show_values (index, choice)
     Populate_Own_Remote_Values ()
+  end
+  
+  --==============================================================
+
+  function Ui:show_values_local_details (index, choice)
+    if Values_Page.Own_List then  --  Else initiation
+      if Values_Page.Own_List.active then
+        Values_Page.Details:setText (Produce_Details (Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1]
+                                                                              [Values_Page.Strength_List.selected - 4]
+                                                                              [index]))
+      end
+    end
+  end
+  
+  --==============================================================
+
+  function Ui:show_values_remote_details (index, choice)
+    if Values_Page.Remote_List then  --  Else initiation
+      if Values_Page.Remote_List.active then
+        Values_Page.Details:setText (Produce_Details ({Values_Page.Remote_Data_Matrix [Values_Page.Values_List.selected - 1]
+                                                                                      [Values_Page.Strength_List.selected - 4]
+                                                                                      [Values_Page.Remote_List_Map [index]].id}))
+      end
+    end
+  end
+  
+  --==============================================================
+
+  function Ui:show_authors_titles (index, choice)
+    Populate_Author_Works ()
+  end
+  
+  --==============================================================
+
+  function Ui:show_authors_details (index, choice)
+    if Authors_Page.Works_List then  --  Else initiation
+      if Authors_Page.Works_List.active then
+        Authors_Page.Details:setText (Produce_Details (Authors_Page.Authors [Authors_Page.Authors_List.selected]
+                                                                            [2]
+                                                                            [index]))
+      end
+    end
   end
   
   --==============================================================
@@ -1628,6 +1721,21 @@ function Librarian ()
         list.active = (i == active)
       end
            
+      if Science_Page.Own_List.active then
+        Science_Page.Details:setText (Produce_Details (Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1]
+                                                                                [Science_Page.Topic_List.selected - 1]
+                                                                                [Science_Page.Own_List.selected]))
+                                                                                
+      elseif Science_Page.Remote_List.active then
+        Science_Page.Details:setText (Produce_Details ({Science_Page.Remote_Data_Matrix
+          [Science_Page.Category_List.selected - 1]
+          [Science_Page.Topic_List.selected - 1]
+          [Science_Page.Remote_List_Map [Science_Page.Remote_List.selected]].id}))
+                                                                                        
+      else
+        Science_Page.Details:setText (Produce_Details (nil))
+      end
+      
     elseif keys [keybindings.right.key] and 
            Focus == "Science" then
       local active = 1
@@ -1648,6 +1756,21 @@ function Librarian ()
         list.active = (i == active)
       end
            
+      if Science_Page.Own_List.active then
+        Science_Page.Details:setText (Produce_Details (Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1]
+                                                                                [Science_Page.Topic_List.selected - 1]
+                                                                                [Science_Page.Own_List.selected]))
+                                                                                
+      elseif Science_Page.Remote_List.active then
+        Science_Page.Details:setText (Produce_Details ({Science_Page.Remote_Data_Matrix
+          [Science_Page.Category_List.selected - 1]
+          [Science_Page.Topic_List.selected - 1]
+          [Science_Page.Remote_List_Map [Science_Page.Remote_List.selected]].id}))
+                                                                                        
+      else
+        Science_Page.Details:setText (Produce_Details (nil))
+      end
+      
     elseif keys [keybindings.left.key] and 
            Focus == "Values" then
       local active = 1
@@ -1668,6 +1791,21 @@ function Librarian ()
         list.active = (i == active)
       end
            
+      if Values_Page.Own_List.active then
+        Values_Page.Details:setText (Produce_Details (Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1]
+                                                                              [Values_Page.Strength_List.selected - 4]
+                                                                              [Values_Page.Own_List.selected]))
+                                                                                
+      elseif Values_Page.Remote_List.active then
+        Values_Page.Details:setText (Produce_Details ({Values_Page.Remote_Data_Matrix
+          [Values_Page.Values_List.selected - 1]
+          [Values_Page.Strength_List.selected - 4]
+          [Values_Page.Remote_List_Map [Values_Page.Remote_List.selected]].id}))
+                                                                                        
+      else
+        Values_Page.Details:setText (Produce_Details (nil))
+      end
+      
     elseif keys [keybindings.right.key] and 
            Focus == "Values" then
       local active = 1
@@ -1688,6 +1826,21 @@ function Librarian ()
         list.active = (i == active)
       end
            
+      if Values_Page.Own_List.active then
+        Values_Page.Details:setText (Produce_Details (Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1]
+                                                                              [Values_Page.Strength_List.selected - 4]
+                                                                              [Values_Page.Own_List.selected]))
+                                                                                
+      elseif Values_Page.Remote_List.active then
+        Values_Page.Details:setText (Produce_Details ({Values_Page.Remote_Data_Matrix
+          [Values_Page.Values_List.selected - 1]
+          [Values_Page.Strength_List.selected - 4]
+          [Values_Page.Remote_List_Map [Values_Page.Remote_List.selected]].id}))
+                                                                                        
+      else
+        Values_Page.Details:setText (Produce_Details (nil))
+      end
+      
     elseif keys [keybindings.left.key] and 
            Focus == "Authors" then
       local active = 1
@@ -1707,7 +1860,16 @@ function Librarian ()
       for i, list in ipairs (Authors_Page.Active_List) do
         list.active = (i == active)
       end
-           
+
+      if Authors_Page.Works_List.active then
+        Authors_Page.Details:setText (Produce_Details (Authors_Page.Authors [Authors_Page.Authors_List.selected]
+                                                                            [2]
+                                                                            [Authors_Page.Works_List.selected]))
+      
+      else
+        Authors_Page.Details:setText (Produce_Details (nil))
+      end
+      
     elseif keys [keybindings.right.key] and 
            Focus == "Authors" then
       local active = 1
@@ -1726,6 +1888,15 @@ function Librarian ()
       
       for i, list in ipairs (Authors_Page.Active_List) do
         list.active = (i == active)
+      end
+      
+      if Authors_Page.Works_List.active then
+        Authors_Page.Details:setText (Produce_Details (Authors_Page.Authors [Authors_Page.Authors_List.selected]
+                                                                            [2]
+                                                                            [Authors_Page.Works_List.selected]))
+      
+      else
+        Authors_Page.Details:setText (Produce_Details (nil))
       end
     end
 
