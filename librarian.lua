@@ -1054,7 +1054,7 @@ function Librarian ()
        "has produced and which are available in the fortress. Again, basic details on the currently selected work", NEWLINE,
        "are provided.", NEWLINE,
        "  You move between lists on the Science and Values page using the left/right cursor keys.", NEWLINE,
-       "Version 0.5 2018-04-18", NEWLINE,
+       "Version 0.6 2018-04-20", NEWLINE,
        "Comments:", NEWLINE,
        "- The term 'work' is used above for a reason. A 'work' is a unique piece of written information. Currently", NEWLINE,
        "  it seems DF is restricted to a single 'work' per book/codex/scroll/quire, but the data structures allow", NEWLINE,
@@ -1564,6 +1564,18 @@ function Librarian ()
         Science_Page.Details:setText (Produce_Details (Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1]
                                                                                 [Science_Page.Topic_List.selected - 1]
                                                                                 [index]))
+      end
+    end
+  end
+  
+  --==============================================================
+
+  function Ui:show_science_remote_details (index, choice)
+    if Science_Page.Remote_List then  --  Else initiation
+      if Science_Page.Remote_List.active then
+        Science_Page.Details:setText (Produce_Details (Science_Page.Remote_Data_Matrix [Science_Page.Category_List.selected - 1]
+                                                                                       [Science_Page.Topic_List.selected - 1]
+                                                                                       [index]))
       end
     end
   end
