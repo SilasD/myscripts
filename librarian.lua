@@ -280,6 +280,322 @@ local values = {[df.value_type.LAW] =
  
 --=====================================
 
+local knowledge =
+  {[0] = {[df.knowledge_scholar_flags_0.philosophy_logic_formal_reasoning] =                "Philosophy, Logic, Formal reasoning",
+          [df.knowledge_scholar_flags_0.philosophy_logic_deductive_reasoning] =             "Philosophy, Logic, Deductive reasoning",
+          [df.knowledge_scholar_flags_0.philosophy_logic_syllogistic_logic] =               "Philosophy, Logic, Syllogistic logic",
+          [df.knowledge_scholar_flags_0.philosophy_logic_hypothetical_syllogisms] =         "Philosophy, Logic, Hypothetical syllogisms",
+          [df.knowledge_scholar_flags_0.philosophy_logic_propositional_logic] =             "Philosophy, Logic, Propositional",
+          [df.knowledge_scholar_flags_0.philosophy_logic_dialectic_reasoning] =             "Philosophy, Logic, Dialectic reasoning",
+          [df.knowledge_scholar_flags_0.philosophy_logic_analogical_inference] =            "Philosophy, Logic, Analogical inference",
+          [df.knowledge_scholar_flags_0.philosophy_ethics_applied_medical] =                "Philosophy, Ethics, Medical",
+          [df.knowledge_scholar_flags_0.philosophy_ethics_individual_value] =               "Philosophy, Ethics, Individual value",
+          [df.knowledge_scholar_flags_0.philosophy_ethics_state_consequentialism] =         "Philosophy, Ethics, State consequentialism",
+          [df.knowledge_scholar_flags_0.philosophy_epistemology_truth] =                    "Philosophy, Epistemology, Truth",
+          [df.knowledge_scholar_flags_0.philosophy_epistemology_perception] =               "Philosophy, Epistemology, Perception",
+          [df.knowledge_scholar_flags_0.philosophy_epistemology_justification] =            "Philosophy, Epistemology, Justification",
+          [df.knowledge_scholar_flags_0.philosophy_epistemology_belief] =                   "Philosophy, Epistemology, Belief",
+          [df.knowledge_scholar_flags_0.philosophy_metaphysics_existence] =                 "Philosophy, Metaphysics, Existence",
+          [df.knowledge_scholar_flags_0.philosophy_metaphysics_time] =                      "Philosophy, Metaphysics, Time",
+          [df.knowledge_scholar_flags_0.philosophy_metaphysics_mind_body] =                 "Philosophy, Metaphysics, Mind-body",
+          [df.knowledge_scholar_flags_0.philosophy_metaphysics_objects_and_properties] =    "Philosophy, Metaphysics, Objects and properties",
+          [df.knowledge_scholar_flags_0.philosophy_metaphysics_wholes_and_parts] =          "Philosophy, Metaphysics, Wholes and parts",
+          [df.knowledge_scholar_flags_0.philosophy_metaphysics_events] =                    "Philosophy, Metaphysics, Events",
+          [df.knowledge_scholar_flags_0.philosophy_metaphysics_processes] =                 "Philosophy, Metaphysics, Processes",
+          [df.knowledge_scholar_flags_0.philosophy_metaphysics_causation] =                 "Philosophy, Metaphysics, Causation",
+          [df.knowledge_scholar_flags_0.philosophy_ethics_applied_military] =               "Philosophy, Ethics applied, Military",
+          [df.knowledge_scholar_flags_0.philosophy_ethics_applied_interpersonal_conduct] =  "Philosophy, Ethics applied, Interpersonal ethics",
+          [df.knowledge_scholar_flags_0.philosophy_specialized_law] =                       "Philosophy, Specialized, Law",
+          [df.knowledge_scholar_flags_0.philosophy_specialized_education] =                 "Philosophy, Specialized, Education",
+          [df.knowledge_scholar_flags_0.philosophy_specialized_language_grammar] =          "Philosophy, Specialized language, Grammar",
+          [df.knowledge_scholar_flags_0.philosophy_specialized_language_etymology] =        "Philosophy, Specialized language Etymology",
+          [df.knowledge_scholar_flags_0.philosophy_specialized_politics_diplomacy] =        "Philosophy, Specialized politics, Diplomacy",
+          [df.knowledge_scholar_flags_0.philosophy_specialized_politics_government_forms] = "Philosophy, Specialized politics, Government forms",
+          [df.knowledge_scholar_flags_0.philosophy_specialized_politics_economic_policy] =  "Philosophy, Specialized politics, Economic policy",
+          [df.knowledge_scholar_flags_0.philosophy_specialized_politics_social_welfare] =   "Philosophy, Specialized politics, Social welfare"},
+   [1] = {[df.knowledge_scholar_flags_1.philosophy_logic_inductive_reasoning] =             "Philosophy, Logic, Inductive reasoning",
+          [df.knowledge_scholar_flags_1.philosophy_logic_direct_inference] =                "Philosophy, Logic, Direct inference",
+          [df.knowledge_scholar_flags_1.philosophy_aesthetics_nature_of_beauty] =           "Philosophy, Aesthetics, Nature of beauty",
+          [df.knowledge_scholar_flags_1.philosophy_aesthetics_value_of_art] =               "Philosophy, Aesthetics, Value of art",
+          [df.knowledge_scholar_flags_1.philosophy_specialized_language_dictionary] =       "Philosophy, Specialized language, Dictionary"},
+   [2] = {[df.knowledge_scholar_flags_2.mathematics_method_proof_by_contradiction] =        "Mathematics, Method, Proof by contradiction",
+          [df.knowledge_scholar_flags_2.mathematics_notation_zero] =                        "Mathematics, Notation, Zero",
+          [df.knowledge_scholar_flags_2.mathematics_notation_negative_numbers] =            "Mathematics, Notation, Negative numbers",
+          [df.knowledge_scholar_flags_2.mathematics_notation_large_numbers] =               "Mathematics, Notation, Scientific notation",
+          [df.knowledge_scholar_flags_2.mathematics_notation_positional] =                  "Mathematics, Notation, Positional",
+          [df.knowledge_scholar_flags_2.mathematics_geometry_basic_objects] =               "Mathematics, Geometry, Basic objects",
+          [df.knowledge_scholar_flags_2.mathematics_method_exhaustion] =                    "Mathematics, Method, Exhaustion",
+          [df.knowledge_scholar_flags_2.mathematics_geometry_similar_and_congruent_triangles] = "Mathematics, Geometry, Similar and congruent triangles",
+          [df.knowledge_scholar_flags_2.mathematics_geometry_geometric_mean_theorem] =      "Mathematics, Geometry, Geometric mean theorem",
+          [df.knowledge_scholar_flags_2.mathematics_geometry_isosceles_base_angles_equal] = "Mathematics, Geometry, Isosceles base angles equal",
+          [df.knowledge_scholar_flags_2.mathematics_geometry_inscribed_triangle_on_diameter_is_right] = "Mathematics, Geometry, Inscribed triangle on diameter is right",
+          [df.knowledge_scholar_flags_2.mathematics_geometry_pythagorean_theorem] =         "Mathematics, Geometry, Pythagorean theorem",
+          [df.knowledge_scholar_flags_2.mathematics_geometry_pythagorean_triples_small] =   "Mathematics, Geometry, Pythagorean triples small",
+          [df.knowledge_scholar_flags_2.mathematics_geometry_pythagorean_triples_3_digit] = "Mathematics, Geometry, Pythagorean triples 3 digit",
+          [df.knowledge_scholar_flags_2.mathematics_geometry_pythagorean_triples_4_digit] = "Mathematics, Geometry, Pythagorean triples 4 digit",
+          [df.knowledge_scholar_flags_2.mathematics_geometry_existence_of_incommensurable_ratios] = "Mathematics, Geometry, Irrational numbers",
+          [df.knowledge_scholar_flags_2.mathematics_method_axiomatic_reasoning] =           "Mathematics, Method, Axiomatic reasoning",
+          [df.knowledge_scholar_flags_2.mathematics_numbers_unique_prime_factorization] =   "Mathematics, Numbers, Unique prime factorization",
+          [df.knowledge_scholar_flags_2.mathematics_numbers_algorithm_for_computing_gcd] =  "Mathematics, Numbers, Algorithm for computing GCD",
+          [df.knowledge_scholar_flags_2.mathematics_geometry_volume_of_pyramid] =           "Mathematics, Geometry, Volume of pyramid",
+          [df.knowledge_scholar_flags_2.mathematics_geometry_volume_of_cone] =              "Mathematics, Geometry, Volume of cone",
+          [df.knowledge_scholar_flags_2.mathematics_geometry_volume_of_sphere] =            "Mathematics, Geometry, Volume of Sphere",
+          [df.knowledge_scholar_flags_2.mathematics_geometry_pi_to_4_digits] =              "Mathematics, Geometry, Pi to 4 digits",
+          [df.knowledge_scholar_flags_2.mathematics_numbers_division_algorithm] =           "Mathematics, Numbers, Division algorithm",
+          [df.knowledge_scholar_flags_2.mathematics_geometry_table_of_chord_values] =       "Mathematics, Geometry, Chord tables",
+          [df.knowledge_scholar_flags_2.mathematics_geometry_area_of_triangle_from_side_lengths] = "Mathematics, Geometry, Area of triangle from side lengths",
+          [df.knowledge_scholar_flags_2.mathematics_geometry_area_of_circle] =              "Mathematics, Geometry, Area of circle",
+          [df.knowledge_scholar_flags_2.mathematics_geometry_pi_to_6_digits] =              "Mathematics, Geometry, Pi to 6 digits",
+          [df.knowledge_scholar_flags_2.mathematics_geometry_definitions_and_basic_properties_of_conic_sections] = "Mathematics, Geometry, Conic sections",
+          [df.knowledge_scholar_flags_2.mathematics_numbers_chinese_remainder_algorithm] =  "Mathematics, Numbers, Chinese remainder algorithm",
+          [df.knowledge_scholar_flags_2.mathematics_geometry_area_enclosed_by_line_and_parabola] = "Mathematics, Geometry, Area enclosed by line and parabola",
+          [df.knowledge_scholar_flags_2.mathematics_numbers_sieve_algorithm_for_primes] =   "Mathematics, Numbers, Sieve algorithm for primes"},
+   [3] = {[df.knowledge_scholar_flags_3.mathematics_numbers_root_2_to_5_digits] =           "Mathematics, Numbers, Approximation of root 2",
+          [df.knowledge_scholar_flags_3.mathematics_numbers_infinite_primes] =              "Mathematics, Numbers, Euclid's Theorem",
+          [df.knowledge_scholar_flags_3.mathematics_numbers_root_2_irrational] =            "Mathematics, Numbers Irrationality of root 2",
+          [df.knowledge_scholar_flags_3.mathematics_geometry_surface_area_of_sphere] =      "Mathematics, Gometry, Surface area of sphere",
+          [df.knowledge_scholar_flags_3.mathematics_algebra_finite_summation_formulas] =    "Mathematics, Algebra, Large sums",
+          [df.knowledge_scholar_flags_3.mathematics_algebra_solving_linear_systems] =       "Mathematics, Algebra, Systems of equations",
+          [df.knowledge_scholar_flags_3.mathematics_algebra_balancing_and_completion] =     "Mathematics, Algbra, Balancing and completion",
+          [df.knowledge_scholar_flags_3.mathematics_algebra_quadratic_by_completing_square] = "Mathematics, Algebra, Quadratic by completing square",
+          [df.knowledge_scholar_flags_3.mathematics_algebra_quadratic_formula] =            "Mathematics, Algebra, Quadratic formula",
+          [df.knowledge_scholar_flags_3.mathematics_notation_syncopated_algebra] =          "Mathematics, Notation, Syncopated algebra",
+          [df.knowledge_scholar_flags_3.mathematics_geometry_law_of_sines] =                "Mathematics, Geometry, Law of sines",
+          [df.knowledge_scholar_flags_3.mathematics_geometry_angle_sum_difference_trig_identities] = "Mathematics, Geometry, Sum-difference trig identities",
+          [df.knowledge_scholar_flags_3.mathematics_algebra_pascals_triangle] =             "Mathematics, Algebra, Pascal's triangle",
+          [df.knowledge_scholar_flags_3.mathematics_algebra_solving_higher_order_polynomials] = "Mathematics, Algebra, Solving higher order polynomials",
+          [df.knowledge_scholar_flags_3.mathematics_notation_early_symbols_for_operations] = "Mathematics, Notation, Symbol for addition",
+          [df.knowledge_scholar_flags_3.mathematics_algebra_divergence_of_harmonic_series] = "Mathematics, Algebra, Divergence of harmonic series",
+          [df.knowledge_scholar_flags_3.mathematics_geometry_properties_of_chords] =        "Mathematics, Geometry, Properties of chords"},
+   [4] = {[df.knowledge_scholar_flags_4.history_sourcing_basic_reliability] =               "History, Sourcing, Source reliability",
+          [df.knowledge_scholar_flags_4.history_sourcing_role_of_systemic_bias] =           "History, Sourcing, Role of systemic bias",
+          [df.knowledge_scholar_flags_4.history_sourcing_role_of_state_bias_and_propaganda] = "History, Sourcing, Role of state bias and propaganda",
+          [df.knowledge_scholar_flags_4.history_sourcing_personal_interviews] =             "History, Sourcing, Personal interviews",
+          [df.knowledge_scholar_flags_4.history_theory_historical_causation] =              "History, Theory, Historical causation",
+          [df.knowledge_scholar_flags_4.history_theory_historical_cycles] =                 "History, Theory, Historical cycles",
+          [df.knowledge_scholar_flags_4.history_theory_social_cohesion] =                   "History, Theory, Sociology",
+          [df.knowledge_scholar_flags_4.history_theory_social_conflict] =                   "History, Theory, Social conflict",
+          [df.knowledge_scholar_flags_4.history_form_biography] =                           "History, Form, Biography",
+          [df.knowledge_scholar_flags_4.history_form_comparative_biography] =               "History, Form, Comparative biography",
+          [df.knowledge_scholar_flags_4.history_form_biographical_dictionaries] =           "History, Form, Biographical dictionaries",
+          [df.knowledge_scholar_flags_4.history_form_autobiographical_adventure] =          "History, Form, Autobiographical adventure",
+          [df.knowledge_scholar_flags_4.history_form_genealogy] =                           "History, Form, Genealogy",
+          [df.knowledge_scholar_flags_4.history_form_encyclopedia] =                        "History, Form, Encyclopedia",
+          [df.knowledge_scholar_flags_4.history_form_cultural_history] =                    "History, Form, Cultural history",
+          [df.knowledge_scholar_flags_4.history_form_cultural_comparison] =                 "History, Form, Comparative anthropology",
+          [df.knowledge_scholar_flags_4.history_sourcing_role_of_cultural_differences] =    "History, Sourcing, Role of cultural differences",
+          [df.knowledge_scholar_flags_4.history_form_alternate_history] =                   "History, Form, Alternate history",
+          [df.knowledge_scholar_flags_4.history_sourcing_basic_archaeology] =               "History, Sourcing, Archaeology",
+          [df.knowledge_scholar_flags_4.history_form_treatise_on_tech_evolution] =          "History, Form, Treatise on tech evolution"},
+   [5] = {[df.knowledge_scholar_flags_5.astronomy_phases_of_the_moon] =                     "Astronomy, -, Phases of the moon",
+          [df.knowledge_scholar_flags_5.astronomy_summer_winter_moon] =                     "Astronomy, -, Summer winter moon",
+          [df.knowledge_scholar_flags_5.astronomy_path_of_the_moon] =                       "Astronomy, -, Path of the moon",
+          [df.knowledge_scholar_flags_5.astronomy_tides_and_the_moon] =                     "Astronomy, -, Tides and the moon",
+          [df.knowledge_scholar_flags_5.astronomy_height_of_tides_vs_moon_and_sun] =        "Astronomy, -, Tides and the moon",
+          [df.knowledge_scholar_flags_5.astronomy_summer_winter_sun] =                      "Astronomy, -, Summer winter sun",
+          [df.knowledge_scholar_flags_5.astronomy_relationship_between_lunar_solar_year] =  "Astronomy, -, Relationship between lunar solar year",
+          [df.knowledge_scholar_flags_5.astronomy_daylight_variation_with_solar_year] =     "Astronomy, -, Daylight variation with solar year",
+          [df.knowledge_scholar_flags_5.astronomy_geocentric_model] =                       "Astronomy, -, Geocentric model",
+          [df.knowledge_scholar_flags_5.astronomy_heliocentric_model] =                     "Astronomy, -, Heliocentric model",
+          [df.knowledge_scholar_flags_5.astronomy_dates_of_lunar_and_solar_eclipses] =      "Astronomy, -, Dates of lunar and solar eclipses",
+          [df.knowledge_scholar_flags_5.astronomy_star_charts] =                            "Astronomy, -, Astrography",
+          [df.knowledge_scholar_flags_5.astronomy_star_catalogues_100] =                    "Astronomy, -, Star catalogues 100",
+          [df.knowledge_scholar_flags_5.astronomy_star_catalogues_1000] =                   "Astronomy, -, Star catalogues 1000",
+          [df.knowledge_scholar_flags_5.astronomy_star_color_classification] =              "Astronomy, -, Stellar Spectroscopy",
+          [df.knowledge_scholar_flags_5.astronomy_star_magnitude_classification] =          "Astronomy, -, Star magnitude classification",
+          [df.knowledge_scholar_flags_5.astronomy_shape_of_the_world] =                     "Astronomy, -, Shape of the world",
+          [df.knowledge_scholar_flags_5.astronomy_precession_of_equinoxes] =                "Astronomy, -, Precession of equinoxes",
+          [df.knowledge_scholar_flags_5.astronomy_method_empirical_observation] =           "Astronomy, Method, Empirical observation",
+          [df.knowledge_scholar_flags_5.astronomy_method_path_models] =                     "Astronomy, Method, Path models"},
+   [6] = {[df.knowledge_scholar_flags_6.naturalist_method_dissection] =                     "Naturalist, Method, Dissection",
+          [df.knowledge_scholar_flags_6.naturalist_observation_anatomy] =                   "Naturalist, Observation, Anatomy",
+          [df.knowledge_scholar_flags_6.naturalist_theory_comparative_anatomy] =            "Naturalist, Theory, Comparative anatomy",
+          [df.knowledge_scholar_flags_6.naturalist_theory_classification_by_physical_features] = "Naturalist, Theory, Physical taxonomy",
+          [df.knowledge_scholar_flags_6.naturalist_observation_migration_patterns] =        "Naturalist, Observation, Migration patterns",
+          [df.knowledge_scholar_flags_6.naturalist_observation_reproductive_behavior] =     "Naturalist, Observation, Reproductive behavior",
+          [df.knowledge_scholar_flags_6.naturalist_observation_foraging_behavior_and_diet] = "Naturalist, Observation, Foraging behavior",
+          [df.knowledge_scholar_flags_6.naturalist_theory_food_chain] =                     "Naturalist, Theory, Food chain",
+          [df.knowledge_scholar_flags_6.naturalist_observation_social_behavior] =           "Naturalist, Observation, Social behavior",
+          [df.knowledge_scholar_flags_6.naturalist_observation_diseases] =                  "Naturalist, Observation, Veterinary medicine",
+          [df.knowledge_scholar_flags_6.naturalist_theory_climactic_adaptation] =           "Naturalist, Theory, Climactic adaptation",
+          [df.knowledge_scholar_flags_6.naturalist_observation_embriological_development] = "Naturalist, Observation, Embryology",
+          [df.knowledge_scholar_flags_6.naturalist_theory_struggle_for_existence] =         "Naturalist, Theory, Struggle for existence"},
+   [7] = {[df.knowledge_scholar_flags_7.chemistry_classification_combustibles] =            "Chemistry, Classification, Combustibles",
+          [df.knowledge_scholar_flags_7.chemistry_classification_ores] =                    "Chemistry, Classification, Ores",
+          [df.knowledge_scholar_flags_7.chemistry_metallurgy_alloys] =                      "Chemistry, Metallurgy, Alloys",
+          [df.knowledge_scholar_flags_7.chemistry_classification_scratch_test] =            "Chemistry, Classification, Scratch test",
+          [df.knowledge_scholar_flags_7.chemistry_classification_elemental_theory] =        "Chemistry, Classification, Elemental theory",
+          [df.knowledge_scholar_flags_7.chemistry_chemicals_adhesives] =                    "Chemistry, Chemicals, Adhesives",
+          [df.knowledge_scholar_flags_7.chemistry_laboratory_blast_furnace] =               "Chemistry, Laboratory, Blast furnace",
+          [df.knowledge_scholar_flags_7.chemistry_laboratory_alembic] =                     "Chemistry, Laboratory, Alembic",
+          [df.knowledge_scholar_flags_7.chemistry_laboratory_theory_of_liquid_liquid_extraction] = "Chemistry, Laboratory, Theory of liquid liquid extraction",
+          [df.knowledge_scholar_flags_7.chemistry_laboratory_theory_of_distillation] =      "Chemistry, Laboratory, Theory of distillation",
+          [df.knowledge_scholar_flags_7.chemistry_laboratory_theory_of_evaporation] =       "Chemistry, Laboratory, Theory of evaporation",
+          [df.knowledge_scholar_flags_7.chemistry_classification_alkali_and_acids] =        "Chemistry, Classification, Alkali and acids",
+          [df.knowledge_scholar_flags_7.chemistry_laboratory_systematic_experiments] =      "Chemistry, Laboratory, Systematic experiments",
+          [df.knowledge_scholar_flags_7.chemistry_laboratory_glass_flask] =                 "Chemistry, Laboratory, Glass flask",
+          [df.knowledge_scholar_flags_7.chemistry_laboratory_glass_beaker] =                "Chemistry, Laboratory, Glass beaker",
+          [df.knowledge_scholar_flags_7.chemistry_laboratory_glass_vial] =                  "Chemistry, Laboratory, Glass vial",
+          [df.knowledge_scholar_flags_7.chemistry_laboratory_glass_funnel] =                "Chemistry, Laboratory, Glass funnel",
+          [df.knowledge_scholar_flags_7.chemistry_laboratory_crucible] =                    "Chemistry, Laboratory, Crucible",
+          [df.knowledge_scholar_flags_7.chemistry_chemicals_nitric_acid] =                  "Chemistry, Chemicals, Spirit of niter",
+          [df.knowledge_scholar_flags_7.chemistry_chemicals_sulfuric_acid] =                "Chemistry, Chemicals, Oil of vitriol",
+          [df.knowledge_scholar_flags_7.chemistry_chemicals_aqua_regia] =                   "Chemistry, Chemicals, Aqua regia",
+          [df.knowledge_scholar_flags_7.chemistry_laboratory_glass_ampoule] =               "Chemistry, Laboratory, Glass ampoule",
+          [df.knowledge_scholar_flags_7.chemistry_laboratory_glass_retort] =                "Chemistry, Laboratory, Glass retort",
+          [df.knowledge_scholar_flags_7.chemistry_laboratory_lab_ovens] =                   "Chemistry, Laboratory, Lab ovens"},
+   [8] = {[df.knowledge_scholar_flags_8.geography_surveying_basic] =                        "Geography, Surveying, Basic",
+          [df.knowledge_scholar_flags_8.geography_surveying_staff] =                        "Geography, Surveying, Surveying staff",
+          [df.knowledge_scholar_flags_8.geography_cartography_basic] =                      "Geography, Cartography, Basic",
+          [df.knowledge_scholar_flags_8.geography_surveying_triangulation] =                "Geography, Surveying, Triangulation",
+          [df.knowledge_scholar_flags_8.geography_surveying_cartographical] =               "Geography, Surveying, Cartographical surveying",
+          [df.knowledge_scholar_flags_8.geography_surveying_land] =                         "Geography, Surveying, Land surveying",
+          [df.knowledge_scholar_flags_8.geography_surveying_military] =                     "Geography, Surveying, Military surveying",
+          [df.knowledge_scholar_flags_8.geography_surveying_engineering] =                  "Geography, Surveying, Engineering surveying",
+          [df.knowledge_scholar_flags_8.geography_cartography_geological] =                 "Geography, Cartography, Geological",
+          [df.knowledge_scholar_flags_8.geography_cartography_grid_system] =                "Geography, Cartography, Grid system",
+          [df.knowledge_scholar_flags_8.geography_cartography_distance_scale] =             "Geography, Cartography, Distance scale",
+          [df.knowledge_scholar_flags_8.geography_cartography_height_measurements] =        "Geography, Cartography, Height measurements",
+          [df.knowledge_scholar_flags_8.geography_method_economic_data_collection] =        "Geography, Methods, Econometrics",
+          [df.knowledge_scholar_flags_8.geography_cartography_economic] =                   "Geography, Cartography, Economic",
+          [df.knowledge_scholar_flags_8.geography_form_atlas] =                             "Geography, Form, Atlas",
+          [df.knowledge_scholar_flags_8.geography_theory_delta_formation] =                 "Geography, Theory, Delta formation",
+          [df.knowledge_scholar_flags_8.geography_theory_wind_patterns] =                   "Geography, Theory, Anemology (Wind patterns)",
+          [df.knowledge_scholar_flags_8.geography_theory_origin_of_rainfall_from_evap_condense] = "Geography, Theory, Origin of rainfall from evap condense",
+          [df.knowledge_scholar_flags_8.geography_theory_water_cycle] =                     "Geography, Theory, Water cycle",
+          [df.knowledge_scholar_flags_8.geography_theory_latitude_climate_zones] =          "Geography, Theory, Latitude climate zones",
+          [df.knowledge_scholar_flags_8.geography_cartography_accurate_maps] =              "Geography, Cartography, Accurate maps",
+          [df.knowledge_scholar_flags_8.geography_cartography_map_projections] =            "Geography, Cartography, Map projections"},
+   [9] = {[df.knowledge_scholar_flags_9.medicine_theory_disease_and_fouled_water] =         "Medicine, Theory, Disease and fouled water",
+          [df.knowledge_scholar_flags_9.medicine_method_physical_examination] =             "Medicine, Method, Physical examination",
+          [df.knowledge_scholar_flags_9.medicine_method_autopsy] =                          "Medicine, Method, Autopsy",
+          [df.knowledge_scholar_flags_9.medicine_theory_prognosis] =                        "Medicine, Theory, Prognosis",
+          [df.knowledge_scholar_flags_9.medicine_tool_herbal_remedies] =                    "Medicine, Tool, Herbal remedies",
+          [df.knowledge_scholar_flags_9.medicine_tool_animal_remedies] =                    "Medicine, Tool, Animal remedies",
+          [df.knowledge_scholar_flags_9.medicine_tool_mineral_remedies] =                   "Medicine, Tool, Mineral remedies",
+          [df.knowledge_scholar_flags_9.medicine_tool_bandages] =                           "Medicine, Tool, Bandages",
+          [df.knowledge_scholar_flags_9.medicine_theory_disease_classification] =           "Medicine, Theory, Pathology",
+          [df.knowledge_scholar_flags_9.medicine_theory_toxicology] =                       "Medicine, Theory, Toxicology",
+          [df.knowledge_scholar_flags_9.medicine_theory_acute_and_chronic_conditions] =     "Medicine, Theory, Acute and chronic conditions",
+          [df.knowledge_scholar_flags_9.medicine_theory_endemic_disease] =                  "Medicine, Theory, Endemic disease",
+          [df.knowledge_scholar_flags_9.medicine_theory_epidemic_disease] =                 "Medicine, Theory, Epidemic disease",
+          [df.knowledge_scholar_flags_9.medicine_theory_exacerbation] =                     "Medicine, Theory, Exacerbation",
+          [df.knowledge_scholar_flags_9.medicine_theory_paroxysm] =                         "Medicine, Theory, Paroxysm",
+          [df.knowledge_scholar_flags_9.medicine_theory_relapse] =                          "Medicine, Theory, Relapse",
+          [df.knowledge_scholar_flags_9.medicine_theory_convalescence] =                    "Medicine, Theory, Convalescence",
+          [df.knowledge_scholar_flags_9.medicine_method_treatment_of_traumatic_injuries] =  "Medicine, Method, Traumatic injury treatment",
+          [df.knowledge_scholar_flags_9.medicine_method_fracture_treatment] =               "Medicine, Method, Fracture treatment",
+          [df.knowledge_scholar_flags_9.medicine_theory_fracture_classification] =          "Medicine, Theory, Fracture classification",
+          [df.knowledge_scholar_flags_9.medicine_tool_traction_bench] =                     "Medicine, Tool, Traction bench",
+          [df.knowledge_scholar_flags_9.medicine_method_fracture_immobilization] =          "Medicine, Method, Fracture immobilization",
+          [df.knowledge_scholar_flags_9.medicine_tool_orthopedic_cast] =                    "Medicine, Tool, Orthopedic cast",
+          [df.knowledge_scholar_flags_9.medicine_method_surgery_excision] =                 "Medicine, Method, Surgery excision",
+          [df.knowledge_scholar_flags_9.medicine_method_surgery_incision] =                 "Medicine, Method, Surgery incision",
+          [df.knowledge_scholar_flags_9.medicine_method_hernia_surgery] =                   "Medicine, Method, Hernia surgery",
+          [df.knowledge_scholar_flags_9.medicine_method_tracheotomy_surgery] =              "Medicine, Method, Tracheotomy surgery",
+          [df.knowledge_scholar_flags_9.medicine_method_lithotomy_surgery] =                "Medicine, Method, Lithotomy surgery",
+          [df.knowledge_scholar_flags_9.medicine_method_surgery_scraping] =                 "Medicine, Method, Surgery scraping",
+          [df.knowledge_scholar_flags_9.medicine_method_surgery_draining] =                 "Medicine, Method, Surgery draining",
+          [df.knowledge_scholar_flags_9.medicine_method_surgery_probing] =                  "Medicine, Method, Surgery probing",
+          [df.knowledge_scholar_flags_9.medicine_method_surgery_suturing] =                 "Medicine, Method, Surgery suturing"},
+   [10] = {[df.knowledge_scholar_flags_10.medicine_method_surgery_ligature] =               "Medicine, Method, Surgery ligature",
+           [df.knowledge_scholar_flags_10.medicine_theory_surgical_models] =                "Medicine, Theory, Surgical models",
+           [df.knowledge_scholar_flags_10.medicine_tool_mud_bags_as_surgical_models] =      "Medicine, Tool, Mud bags as surgical models",
+           [df.knowledge_scholar_flags_10.medicine_tool_plants_as_surgical_models] =        "Medicine, Tool, Plants as surgical models",
+           [df.knowledge_scholar_flags_10.medicine_tool_animals_as_surgical_models] =       "Medicine, Tool, Plants as surgical models",
+           [df.knowledge_scholar_flags_10.medicine_theory_specialized_surgical_instruments] = "Medicine, Theory, Specialized surgical instruments",
+           [df.knowledge_scholar_flags_10.medicine_tool_forceps] =                          "Medicine, Tool, Forceps",
+           [df.knowledge_scholar_flags_10.medicine_tool_scalpel] =                          "Medicine, Tool, Scalpel",
+           [df.knowledge_scholar_flags_10.medicine_tool_surgical_scissors] =                "Medicine, Tool, Surgical scissors",
+           [df.knowledge_scholar_flags_10.medicine_tool_surgical_needles] =                 "Medicine, Tool, Surgical needles",
+           [df.knowledge_scholar_flags_10.medicine_method_cataract_surgery] =               "Medicine, Method, Cataract surgery",
+           [df.knowledge_scholar_flags_10.medicine_method_cauterization] =                  "Medicine, Method, Cauterization",
+           [df.knowledge_scholar_flags_10.medicine_method_anesthesia] =                     "Medicine, Method, Anesthesia",
+           [df.knowledge_scholar_flags_10.medicine_theory_pulmonary_medicine] =             "Medicine, Theory, Pulmonary medicine",
+           [df.knowledge_scholar_flags_10.medicine_theory_anatomical_studies] =             "Medicine, Theory, Anatomical studies",
+           [df.knowledge_scholar_flags_10.medicine_theory_classification_of_bodily_fluids] = "Medicine, Theory, Classification of bodily fluids",
+           [df.knowledge_scholar_flags_10.medicine_theory_eye_anatomy] =                    "Medicine, Theory, Eye anatomy",
+           [df.knowledge_scholar_flags_10.medicine_theory_motor_vs_sensory_nerves] =        "Medicine, Theory, Motor vs sensory nerves",
+           [df.knowledge_scholar_flags_10.medicine_theory_nervous_system_function] =        "Medicine, Theory, Nervous system function",
+           [df.knowledge_scholar_flags_10.medicine_theory_reaction_time] =                  "Medicine, Theory, Reaction time",
+           [df.knowledge_scholar_flags_10.medicine_theory_blood_vessels] =                  "Medicine, Theory, Blood vessels",
+           [df.knowledge_scholar_flags_10.medicine_theory_pulmonary_circulation] =          "Medicine, Theory, Pulmonary circulation",
+           [df.knowledge_scholar_flags_10.medicine_theory_comparative_anatomy] =            "Medicine, Theory, Comparative anatomy",
+           [df.knowledge_scholar_flags_10.medicine_theory_the_voice] =                      "Medicine, Theory, The voice",
+           [df.knowledge_scholar_flags_10.medicine_theory_classification_of_muscles] =      "Medicine, Theory, Classification of muscles",
+           [df.knowledge_scholar_flags_10.medicine_theory_classification_of_mental_illnesses] = "Medicine, Classification of mental illnesses",
+           [df.knowledge_scholar_flags_10.medicine_theory_treatment_of_mental_illnesses] =  "Medicine, Treatment of mental illnesses",
+           [df.knowledge_scholar_flags_10.medicine_tool_dedicated_hospitals] =              "Medicine, Tool, Dedicated hospitals",
+           [df.knowledge_scholar_flags_10.medicine_method_professional_hospital_staff] =    "Medicine, Method, Professional hospital staff",
+           [df.knowledge_scholar_flags_10.medicine_method_specialized_wards] =              "Medicine, Method, Specialized wards",
+           [df.knowledge_scholar_flags_10.medicine_method_hospital_lab] =                   "Medicine, Method, Hospital lab",
+           [df.knowledge_scholar_flags_10.medicine_method_medical_school] =                 "Medicine, Method, Medical school"},
+   [11] = {[df.knowledge_scholar_flags_11.medicine_method_asylum_for_mentally_ill] =        "Medicine, Method, Asylum for mentally ill"},
+   [12] = {[df.knowledge_scholar_flags_12.engineering_horology_shadow_clock] =              "Engineering, Horology, Shadow clock",
+           [df.knowledge_scholar_flags_12.engineering_horology_water_clock] =               "Engineering, Horology, Water clock",
+           [df.knowledge_scholar_flags_12.engineering_horology_conical_water_clock] =       "Engineering, Horology, Conical water clock",
+           [df.knowledge_scholar_flags_12.engineering_horology_water_clock_reservoir] =     "Engineering, Horology, Water clock reservoir",
+           [df.knowledge_scholar_flags_12.engineering_horology_astrarium] =                 "Engineering, Horology, Astrarium",
+           [df.knowledge_scholar_flags_12.engineering_horology_hourglass] =                 "Engineering, Horology, Hourglass",
+           [df.knowledge_scholar_flags_12.engineering_horology_mechanical_clock] =          "Engineering, Horology, Mechanical Clock",
+           [df.knowledge_scholar_flags_12.engineering_machine_theory_of_pulley] =           "Engineering, Machine, Theory of pulley",
+           [df.knowledge_scholar_flags_12.engineering_machine_pulley] =                     "Engineering, Machine, Pulley",
+           [df.knowledge_scholar_flags_12.engineering_machine_theory_of_screw] =            "Engineering, Machine, Theory of screw",
+           [df.knowledge_scholar_flags_12.engineering_machine_screw] =                      "Engineering, Machine, Screw",
+           [df.knowledge_scholar_flags_12.engineering_machine_theory_of_wheel_and_axle] =   "Engineering, Machine, Theory of wheel and axle",
+           [df.knowledge_scholar_flags_12.engineering_machine_windlass] =                   "Engineering, Machine, Windlass",
+           [df.knowledge_scholar_flags_12.engineering_machine_theory_of_wedge] =            "Engineering, Machine, Theory of wedge",
+           [df.knowledge_scholar_flags_12.engineering_machine_theory_of_lever] =            "Engineering, Machine, Theory of lever",
+           [df.knowledge_scholar_flags_12.engineering_machine_lever] =                      "Engineering, Machine, Lever",
+           [df.knowledge_scholar_flags_12.engineering_machine_straight_beam_balance] =      "Engineering, Machine, Straight beam balance",
+           [df.knowledge_scholar_flags_12.engineering_machine_theory_of_gears] =            "Engineering, Machine, Theory of gears",
+           [df.knowledge_scholar_flags_12.engineering_machine_warded_lock] =                "Engineering, Machine, Warded lock",
+           [df.knowledge_scholar_flags_12.engineering_machine_tumbler_lock] =               "Engineering, Machine, Tumbler lock",
+           [df.knowledge_scholar_flags_12.engineering_machine_padlock] =                    "Engineering, Machine, Padlock",
+           [df.knowledge_scholar_flags_12.engineering_machine_camshaft] =                   "Engineering, Machine, Camshaft",
+           [df.knowledge_scholar_flags_12.engineering_machine_crankshaft] =                 "Engineering, Machine, Crankshaft",
+           [df.knowledge_scholar_flags_12.engineering_machine_water_powered_sawmill] =      "Engineering, Machine, Water powered sawmill",
+           [df.knowledge_scholar_flags_12.engineering_machine_chariot_odometer] =           "Engineering, Machine, Chariot odometer",
+           [df.knowledge_scholar_flags_12.engineering_machine_chain_drive] =                "Engineering, Machine, Chain drive",
+           [df.knowledge_scholar_flags_12.engineering_machine_mechanical_compass] =         "Engineering, Machine, Mechanical compass",
+           [df.knowledge_scholar_flags_12.engineering_machine_differential_gear] =          "Engineering, Machine, Differential gear",
+           [df.knowledge_scholar_flags_12.engineering_machine_combination_lock] =           "Engineering, Machine, Combination lock",
+           [df.knowledge_scholar_flags_12.engineering_machine_verge_escapement] =           "Engineering, Machine, Verge escapement",
+           [df.knowledge_scholar_flags_12.engineering_machine_balance_wheel] =              "Engineering, Machine, Balance wheel",
+           [df.knowledge_scholar_flags_12.engineering_fluid_theory_of_siphon] =             "Engineering, Fluid, Theory of siphon"},
+   [13] = {[df.knowledge_scholar_flags_13.engineering_fluid_valves] =                       "Engineering, Fluid, Valves",
+           [df.knowledge_scholar_flags_13.engineering_fluid_force_pump] =                   "Engineering, Fluid, Force pump",
+           [df.knowledge_scholar_flags_13.engineering_optics_crystal_lens] =                "Engineering, Optics, Crystal lens",
+           [df.knowledge_scholar_flags_13.engineering_optics_water_filled_spheres] =        "Engineering, Optics, Water filled spheres",
+           [df.knowledge_scholar_flags_13.engineering_optics_glass_lens] =                  "Engineering, Optics, Glass lens",
+           [df.knowledge_scholar_flags_13.engineering_optics_camera_obscura] =              "Engineering, Optics, Camera obscura",
+           [df.knowledge_scholar_flags_13.engineering_optics_parabolic_mirror] =            "Engineering, Optics, Parabolic mirror",
+           [df.knowledge_scholar_flags_13.engineering_optics_theory_of_color] =             "Engineering, Optics, Theory of color",
+           [df.knowledge_scholar_flags_13.engineering_optics_theory_of_rainbows] =          "Engineering, Optics, Theory of rainbows",
+           [df.knowledge_scholar_flags_13.engineering_optics_law_of_refraction] =           "Engineering, Optics, Law of refraction",
+           [df.knowledge_scholar_flags_13.engineering_design_models_and_templates] =        "Engineering, Design, Models and templates",
+           [df.knowledge_scholar_flags_13.engineering_construction_wood_lamination] =       "Engineering, Construction, Wood lamination",
+           [df.knowledge_scholar_flags_13.engineering_astronomy_dioptra] =                  "Engineering, Astronomy, Dioptra",
+           [df.knowledge_scholar_flags_13.engineering_astronomy_astrolabe] =                "Engineering, Astronomy, Astrolabe",
+           [df.knowledge_scholar_flags_13.engineering_astronomy_armillary_sphere] =         "Engineering, Astronomy, Armillary sphere",
+           [df.knowledge_scholar_flags_13.engineering_astronomy_spherical_astrolabe] =      "Engineering, Astronomy, Spherical astrolabe",
+           [df.knowledge_scholar_flags_13.engineering_astronomy_mural_instrument] =         "Engineering, Astronomy, Mural instrument",
+           [df.knowledge_scholar_flags_13.engineering_astronomy_orrery] =                   "Engineering, Astronomy, Orrery",
+           [df.knowledge_scholar_flags_13.engineering_machine_water_powered_trip_hammer] =  "Engineering, Machine, Water powered trip hammer",
+           [df.knowledge_scholar_flags_13.engineering_machine_double_acting_piston_bellows] = "Engineering, Machine, Double acting piston bellows",
+           [df.knowledge_scholar_flags_13.engineering_fluid_archimedes_principle] =         "Engineering, Fluid, Archimedes principle",
+           [df.knowledge_scholar_flags_13.engineering_optics_atmospheric_refraction] =      "Engineering, Optics, Atmospheric refraction",
+           [df.knowledge_scholar_flags_13.engineering_optics_cause_of_twilight] =           "Engineering, Optics, Cause of twilight",
+           [df.knowledge_scholar_flags_13.engineering_optics_height_of_atmosphere] =        "Engineering, Optics, Height of atmosphere",
+           [df.knowledge_scholar_flags_13.engineering_machine_piston] =                     "Engineering, Machine, Piston",
+           [df.knowledge_scholar_flags_13.engineering_machine_crank] =                      "Engineering, Machine, Crank",
+           [df.knowledge_scholar_flags_13.engineering_machine_bellows] =                    "Engineering, Machine, Bellows",
+           [df.knowledge_scholar_flags_13.engineering_machine_water_powered_piston_bellows] = "Engineering, Machine, Water powered piston bellows",
+           [df.knowledge_scholar_flags_13.engineering_machine_water_wheel] =                "Engineering, Machine, Water wheel",
+           [df.knowledge_scholar_flags_13.engineering_machine_trip_hammer] =                "Engineering, Machine, Trip hammer"}}
+   
+--=====================================
+
 function Librarian ()
   if not dfhack.isMapLoaded () then
     dfhack.printerr ("Error: This script requires a Fortress Mode embark to be loaded.")
@@ -817,7 +1133,7 @@ function Librarian ()
         elseif ref._type == df.general_ref_knowledge_scholar_flagst then
           for k, flag in ipairs (ref.knowledge.flags.flags_0) do  --  Iterates over all 32 bits regardless of enum value existence, so which "enum" we use doesn't matter
             if flag then
-              table.insert (text, "Reference: " .. flag_image ("knowledge_scholar_flags_" .. tostring (ref.knowledge.category), k) .. " knowledge\n")
+              table.insert (text, "Reference: " .. knowledge [ref.knowledge.category] [k] .. " knowledge\n")
             end
           end
         
@@ -1009,7 +1325,7 @@ function Librarian ()
   
   --============================================================
 
-  Ui = defclass (Ui, gui.FramedScreen)
+  Ui = defclass (nil, gui.FramedScreen)
   Ui.ATTRS = {
     frame_style = gui.GREY_LINE_FRAME,
     frame_title = "The Librarian"
@@ -1054,7 +1370,7 @@ function Librarian ()
        "has produced and which are available in the fortress. Again, basic details on the currently selected work", NEWLINE,
        "are provided.", NEWLINE,
        "  You move between lists on the Science and Values page using the left/right cursor keys.", NEWLINE,
-       "Version 0.6 2018-04-20", NEWLINE,
+       "Version 0.7 2018-04-22", NEWLINE,
        "Comments:", NEWLINE,
        "- The term 'work' is used above for a reason. A 'work' is a unique piece of written information. Currently", NEWLINE,
        "  it seems DF is restricted to a single 'work' per book/codex/scroll/quire, but the data structures allow", NEWLINE,
@@ -1573,9 +1889,9 @@ function Librarian ()
   function Ui:show_science_remote_details (index, choice)
     if Science_Page.Remote_List then  --  Else initiation
       if Science_Page.Remote_List.active then
-        Science_Page.Details:setText (Produce_Details (Science_Page.Remote_Data_Matrix [Science_Page.Category_List.selected - 1]
-                                                                                       [Science_Page.Topic_List.selected - 1]
-                                                                                       [index]))
+        Science_Page.Details:setText (Produce_Details ({Science_Page.Remote_Data_Matrix [Science_Page.Category_List.selected - 1]
+                                                                                        [Science_Page.Topic_List.selected - 1]
+                                                                                        [index].id}))
       end
     end
   end
@@ -1734,16 +2050,26 @@ function Librarian ()
       end
            
       if Science_Page.Own_List.active then
-        Science_Page.Details:setText (Produce_Details (Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1]
-                                                                                [Science_Page.Topic_List.selected - 1]
-                                                                                [Science_Page.Own_List.selected]))
-                                                                                
+        if #Science_Page.Own_List.choices == 0 then
+          Science_Page.Details:setText (Produce_Details (nil))
+          
+        else
+          Science_Page.Details:setText (Produce_Details (Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1]
+                                                                                  [Science_Page.Topic_List.selected - 1]
+                                                                                  [Science_Page.Own_List.selected]))
+        end
+        
       elseif Science_Page.Remote_List.active then
-        Science_Page.Details:setText (Produce_Details ({Science_Page.Remote_Data_Matrix
-          [Science_Page.Category_List.selected - 1]
-          [Science_Page.Topic_List.selected - 1]
-          [Science_Page.Remote_List_Map [Science_Page.Remote_List.selected]].id}))
-                                                                                        
+        if #Science_Page.Remote_List.choices == 0 then
+          Science_Page.Details:setText (Produce_Details (nil))
+          
+        else
+          Science_Page.Details:setText (Produce_Details ({Science_Page.Remote_Data_Matrix
+            [Science_Page.Category_List.selected - 1]
+            [Science_Page.Topic_List.selected - 1]
+            [Science_Page.Remote_List_Map [Science_Page.Remote_List.selected]].id}))
+        end
+        
       else
         Science_Page.Details:setText (Produce_Details (nil))
       end
@@ -1769,16 +2095,26 @@ function Librarian ()
       end
            
       if Science_Page.Own_List.active then
-        Science_Page.Details:setText (Produce_Details (Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1]
-                                                                                [Science_Page.Topic_List.selected - 1]
-                                                                                [Science_Page.Own_List.selected]))
+        if #Science_Page.Own_List.choices == 0 then
+          Science_Page.Details:setText (Produce_Details (nil))
+          
+        else
+          Science_Page.Details:setText (Produce_Details (Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1]
+                                                                                  [Science_Page.Topic_List.selected - 1]
+                                                                                  [Science_Page.Own_List.selected]))
+        end
                                                                                 
       elseif Science_Page.Remote_List.active then
-        Science_Page.Details:setText (Produce_Details ({Science_Page.Remote_Data_Matrix
-          [Science_Page.Category_List.selected - 1]
-          [Science_Page.Topic_List.selected - 1]
-          [Science_Page.Remote_List_Map [Science_Page.Remote_List.selected]].id}))
-                                                                                        
+        if #Science_Page.Remote_List.choices == 0 then
+          Science_Page.Details:setText (Produce_Details (nil))
+          
+        else
+          Science_Page.Details:setText (Produce_Details ({Science_Page.Remote_Data_Matrix
+            [Science_Page.Category_List.selected - 1]
+            [Science_Page.Topic_List.selected - 1]
+            [Science_Page.Remote_List_Map [Science_Page.Remote_List.selected]].id}))
+        end
+        
       else
         Science_Page.Details:setText (Produce_Details (nil))
       end
@@ -1804,16 +2140,26 @@ function Librarian ()
       end
            
       if Values_Page.Own_List.active then
-        Values_Page.Details:setText (Produce_Details (Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1]
-                                                                              [Values_Page.Strength_List.selected - 4]
-                                                                              [Values_Page.Own_List.selected]))
-                                                                                
+        if #Values_Page.Own_List.choices == 0 then
+          Values_Page.Details:setText (Produce_Details (nil))
+          
+        else
+          Values_Page.Details:setText (Produce_Details (Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1]
+                                                                                [Values_Page.Strength_List.selected - 4]
+                                                                                [Values_Page.Own_List.selected]))
+        end
+        
       elseif Values_Page.Remote_List.active then
-        Values_Page.Details:setText (Produce_Details ({Values_Page.Remote_Data_Matrix
-          [Values_Page.Values_List.selected - 1]
-          [Values_Page.Strength_List.selected - 4]
-          [Values_Page.Remote_List_Map [Values_Page.Remote_List.selected]].id}))
-                                                                                        
+        if #Values_Page.Remote_List.choices == 0 then
+          Values_Page.Details:setText (Produce_Details (nil))
+          
+        else        
+          Values_Page.Details:setText (Produce_Details ({Values_Page.Remote_Data_Matrix
+            [Values_Page.Values_List.selected - 1]
+            [Values_Page.Strength_List.selected - 4]
+            [Values_Page.Remote_List_Map [Values_Page.Remote_List.selected]].id}))
+        end
+        
       else
         Values_Page.Details:setText (Produce_Details (nil))
       end
@@ -1839,16 +2185,26 @@ function Librarian ()
       end
            
       if Values_Page.Own_List.active then
-        Values_Page.Details:setText (Produce_Details (Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1]
-                                                                              [Values_Page.Strength_List.selected - 4]
-                                                                              [Values_Page.Own_List.selected]))
-                                                                                
+        if #Values_Page.Own_List.choices == 0 then
+          Values_Page.Details:setText (Produce_Details (nil))
+          
+        else
+          Values_Page.Details:setText (Produce_Details (Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1]
+                                                                                [Values_Page.Strength_List.selected - 4]
+                                                                                [Values_Page.Own_List.selected]))
+        end
+        
       elseif Values_Page.Remote_List.active then
-        Values_Page.Details:setText (Produce_Details ({Values_Page.Remote_Data_Matrix
-          [Values_Page.Values_List.selected - 1]
-          [Values_Page.Strength_List.selected - 4]
-          [Values_Page.Remote_List_Map [Values_Page.Remote_List.selected]].id}))
-                                                                                        
+        if #Values_Page.Remote_List.choices == 0 then
+          Values_Page.Details:setText (Produce_Details (nil))
+          
+        else
+          Values_Page.Details:setText (Produce_Details ({Values_Page.Remote_Data_Matrix
+            [Values_Page.Values_List.selected - 1]
+            [Values_Page.Strength_List.selected - 4]
+            [Values_Page.Remote_List_Map [Values_Page.Remote_List.selected]].id}))
+        end
+        
       else
         Values_Page.Details:setText (Produce_Details (nil))
       end
