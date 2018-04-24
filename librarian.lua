@@ -10,6 +10,7 @@ local dialog = require 'gui.dialogs'
 local widgets = require 'gui.widgets'
 local guiScript = require 'gui.script'
 local utils = require 'utils'
+local Ui
 
 --=====================================
 
@@ -843,8 +844,7 @@ function Librarian ()
       local content = df.written_content.find (element [1])
       
       for k, ref in ipairs (content.refs) do
-        if content.ref_aux [k] == 0 and  --  XML comment claims non zero means ref should be ignored.
-           ref._type == df.general_ref_knowledge_scholar_flagst then 
+        if ref._type == df.general_ref_knowledge_scholar_flagst then 
           for l, flag in ipairs (ref.knowledge.flags.flags_0) do  --  Don't care which one, as they'll iterate of all bits regardless
             if flag then
               if not Result [ref.knowledge.category] [l] then
@@ -874,8 +874,7 @@ function Librarian ()
       local content = df.written_content.find (element [1])
       
       for k, ref in ipairs (content.refs) do
-        if content.ref_aux [k] == 0 and  --  XML comment claims non zero means ref should be ignored.
-           ref._type == df.general_ref_value_levelst then 
+        if ref._type == df.general_ref_value_levelst then 
           local strength, level = value_strengh_of (ref.level)           
 
           if not Result [ref.value] [strength] then
@@ -954,52 +953,50 @@ function Librarian ()
     
     for i, content in ipairs (df.global.world.written_contents.all) do
       for k, ref in ipairs (content.refs) do
-        if content.ref_aux [k] == 0 then  --  XML comment claims non zero means ref should be ignored.
-          if ref._type == df.general_ref_knowledge_scholar_flagst then 
-            for l, flag in ipairs (ref.knowledge.flags.flags_0) do  --  Don't care which one, as they'll iterate of all bits regardless
-              if flag then
-                local found = false
-              
-                if Science_Page.Data_Matrix [ref.knowledge.category] [l] then
-                  for m, element in ipairs (Science_Page.Data_Matrix [ref.knowledge.category] [l]) do
-                    if element [1] == content.id then
-                      found = true
-                      break
-                    end
+        if ref._type == df.general_ref_knowledge_scholar_flagst then 
+          for l, flag in ipairs (ref.knowledge.flags.flags_0) do  --  Don't care which one, as they'll iterate of all bits regardless
+            if flag then
+              local found = false
+             
+              if Science_Page.Data_Matrix [ref.knowledge.category] [l] then
+                for m, element in ipairs (Science_Page.Data_Matrix [ref.knowledge.category] [l]) do
+                  if element [1] == content.id then
+                    found = true
+                    break
                   end
                 end
+              end
               
-                if not found then
-                  if not Science_Result [ref.knowledge.category] [l] then
-                    Science_Result [ref.knowledge.category] [l] = {}
-                  end
-                
-                  table.insert (Science_Result [ref.knowledge.category] [l], content)
+              if not found then
+                if not Science_Result [ref.knowledge.category] [l] then
+                  Science_Result [ref.knowledge.category] [l] = {}
                 end
+                
+                table.insert (Science_Result [ref.knowledge.category] [l], content)
               end
             end
-          
-          elseif ref._type == df.general_ref_value_levelst then
-            local strength, level = value_strengh_of (ref.level)
-            local found = false
-              
-            if Values_Page.Data_Matrix [ref.value] [strength] then
-              for m, element in ipairs (Values_Page.Data_Matrix [ref.value] [strength]) do
-                if element [1] == content.id then
-                  found = true
-                  break
-                end
-              end
-            end
-              
-            if not found then
-              if not Values_Result [ref.value] [strength] then
-                Values_Result [ref.value] [strength] = {}
-              end
-                
-              table.insert (Values_Result [ref.value] [strength], content)
-            end            
           end
+          
+        elseif ref._type == df.general_ref_value_levelst then
+          local strength, level = value_strengh_of (ref.level)
+          local found = false
+            
+          if Values_Page.Data_Matrix [ref.value] [strength] then
+            for m, element in ipairs (Values_Page.Data_Matrix [ref.value] [strength]) do
+              if element [1] == content.id then
+                found = true
+                break
+              end
+            end
+          end
+              
+          if not found then
+            if not Values_Result [ref.value] [strength] then
+              Values_Result [ref.value] [strength] = {}
+            end
+                
+            table.insert (Values_Result [ref.value] [strength], content)
+          end            
         end
       end
     end
@@ -1022,12 +1019,7 @@ function Librarian ()
         include = not Reference_Filter
         
         if Reference_Filter then
-          for k, ref in ipairs (content.refs) do
-            if content.ref_aux [k] == 0 then  --  XML comment claims non zero means ref should be ignored.
-              include = true
-              break
-            end
-          end
+          include = #content.refs ~= 0
         end
         
         if include then
@@ -1044,6 +1036,106 @@ function Librarian ()
     return Result
   end
   
+  --============================================================
+
+  function HF_Name_Of (Id)
+    local hf = df.historical_figure.find (Id)
+    
+    if hf then
+      return dfhack.TranslateName (hf.name, true) .. "/" .. dfhack.TranslateName (hf.name, false)
+      
+    else
+      return "<Unknown histfig>"
+    end
+  end
+  
+  --============================================================
+  
+  function Entity_Name_Of (Id)
+    local entity = df.historical_entity.find (Id)
+      
+    if entity then
+      return dfhack.TranslateName (entity.name, true)-- .. "/" ..
+             --dfhack.TranslateName (entity.name, false)
+             
+    else
+      return "<Unknown entity>"
+    end
+  end
+  
+  --============================================================
+
+  function Site_Name_Of (Id)
+    local site = df.world_site.find (Id)
+      
+    if site then
+      return dfhack.TranslateName (site.name, true) .. "/" ..
+             dfhack.TranslateName (site.name, false)
+             
+    else
+      return "<Unknown site>"
+    end
+  end
+  
+  --============================================================
+
+  function Site_Info_Of (Id)
+    local site = df.world_site.find (Id)
+    
+    if site then
+      return df.world_site_type [site.type] .. " " ..
+             dfhack.TranslateName (site.name, true) .. "/" ..
+             dfhack.TranslateName (site.name, false)
+             
+    else
+      return "<Unknown site>"
+    end
+  end
+  
+  --============================================================
+  
+  function Region_Name_Of (Id)
+    local region = df.world_region.find (Id)
+      
+    if region then
+      return dfhack.TranslateName (region.name, true) .. "/" ..
+             dfhack.TranslateName (region.name, false)
+             
+    else
+      return "<Unknown region>"
+    end
+  end
+  
+  --============================================================
+  
+  function Layer_Name_Of (Id)
+    local region = df.world_underground_region.find (Id)
+      
+    if region then
+      return dfhack.TranslateName (region.name, true) .. "/" ..
+             dfhack.TranslateName (region.name, false)
+             
+    else
+      return "<Unknown underground region>"
+    end
+  end
+  
+  --============================================================
+  
+  function History_Location_Name_Of (Site_Id, Region_Id, Layer_Id)
+    if Site_Id ~= -1 then
+      return Site_Name_Of (Site_Id)
+      
+    elseif Region_Id ~= -1 then
+      return Region_Name_Of (Region_Id)
+      
+    elseif Layer_Id ~= -1 then
+      return Layer_Name_Of (Layer_Id)
+    else
+      return "<Unknown location>"
+    end
+  end
+
   --============================================================
 
   function Produce_Details (element)
@@ -1070,81 +1162,314 @@ function Librarian ()
                   
     
     for i, ref in ipairs (content.refs) do
-      if content.ref_aux [i] == 0 then  --  XML comment claims non zero means ref should be ignored.
-        if ref._type == df.general_ref_artifact or
-           ref._type == df.general_ref_nemesis or
-           ref._type == df.general_ref_item or
-           ref._type == df.general_ref_item_type or
-           ref._type == df.general_ref_coinbatch or
-           ref._type == df.general_ref_mapsquare or
-           ref._type == df.general_ref_entity_art_image or
-           ref._type == df.general_ref_projectile or
-           ref._type == df.general_ref_unit or
-           ref._type == df.general_ref_building or
-           ref._type == df.general_ref_entity or
-           ref._type == df.general_ref_locationst or
-           ref._type == df.general_ref_interactionst or
-           ref._type == df.general_ref_abstract_buildingst or
-           --  ref._type == df.general_ref_historical_eventst or
-           ref._type == df.general_ref_spherest or
-           ref._type == df.general_ref_sitest or
-           ref._type == df.general_ref_subregionst or
-           ref._type == df.general_ref_feature_layerst or
-           ref._type == df.general_ref_historical_figurest or
-           ref._type == df.general_ref_entity_popst or
-           ref._type == df.general_ref_creaturest or
-           --  ref._type == df.general_ref_knowledge_scholar_flagst or
-           ref._type == df.general_ref_activity_eventst or
-           --  ref._type == df.general_ref_value_levelst or
-           ref._type == df.general_ref_languagest or
-           ref._type == df.general_ref_written_contentst or
-           ref._type == df.general_ref_poetic_formst or
-           ref._type == df.general_ref_musical_formst or
-           ref._type == df.general_ref_dance_formst then
-          table.insert (text, "Reference: Unresolved " .. tostring (ref._type) .. " information\n")
+      if ref._type == df.general_ref_artifact or
+         ref._type == df.general_ref_nemesis or
+         ref._type == df.general_ref_item or
+         ref._type == df.general_ref_item_type or
+         ref._type == df.general_ref_coinbatch or
+         ref._type == df.general_ref_mapsquare or
+         ref._type == df.general_ref_entity_art_image or
+         ref._type == df.general_ref_projectile or
+         ref._type == df.general_ref_unit or
+         ref._type == df.general_ref_building or
+         --  ref._type == df.general_ref_entity or
+         ref._type == df.general_ref_locationst or
+         ref._type == df.general_ref_interactionst or
+         ref._type == df.general_ref_abstract_buildingst or
+         --  ref._type == df.general_ref_historical_eventst or
+         ref._type == df.general_ref_spherest or
+         --  ref._type == df.general_ref_sitest or
+         ref._type == df.general_ref_subregionst or
+         ref._type == df.general_ref_feature_layerst or
+         --  ref._type == df.general_ref_historical_figurest or
+         ref._type == df.general_ref_entity_popst or
+         ref._type == df.general_ref_creaturest or
+         --  ref._type == df.general_ref_knowledge_scholar_flagst or
+         ref._type == df.general_ref_activity_eventst or
+         --  ref._type == df.general_ref_value_levelst or
+         --  ref._type == df.general_ref_languagest or
+         ref._type == df.general_ref_written_contentst or
+         ref._type == df.general_ref_poetic_formst or
+         ref._type == df.general_ref_musical_formst or
+         ref._type == df.general_ref_dance_formst then
+        table.insert (text, "Reference: Unresolved " .. tostring (ref._type) .. " information\n")
         
-        elseif ref._type == df.general_ref_historical_eventst then
-          local event = df.history_event.find (ref.event_id)
-          if event then
-            if event._type == df.history_event_add_hf_hf_linkst then
-              local hf = df.historical_figure.find (event.hf)
-              local hf_target = df.historical_figure.find (event.hf)
-              local hf_name = "<Unknown histfig>"
-              local hf_target_name = "<Unknown histfig>"
-              
-              if hf then
-               hf_name = dfhack.TranslateName (hf.name, true)
-              end
-              
-              if hf_target then
-                hf_target_name = dfhack.TranslateName (hf_target.name, true)
-              end
-              
-              table.insert (text, "Reference: " .. hf_name .. " " .. df.histfig_hf_link_type [event.type] .. " vs " .. hf_target_name .. "\n")
-              
-            else
-              table.insert (text, "Reference: Unsupported " .. tostring (event._type) .. " historical event information\n")
-            end
+      elseif ref._type == df.general_ref_entity then
+        local entity = df.historical_entity.find (ref.entity_id)
+          
+        if entity then
+          table.insert (text, "Reference: The " .. df.global.world.raws.creatures.all [entity.race].name [2] .. " " ..
+                              df.historical_entity_type [entity.type] .. " " ..
+                              dfhack.TranslateName (entity.name, true) .. "/" .. dfhack.TranslateName (entity.name, false) .. " information\n")
             
-          else
-            table.insert (text, "Reference: Unknown historical event information\n")
-          end
-          
-        elseif ref._type == df.general_ref_knowledge_scholar_flagst then
-          for k, flag in ipairs (ref.knowledge.flags.flags_0) do  --  Iterates over all 32 bits regardless of enum value existence, so which "enum" we use doesn't matter
-            if flag then
-              table.insert (text, "Reference: " .. knowledge [ref.knowledge.category] [k] .. " knowledge\n")
-            end
-          end
-        
-        elseif ref._type == df.general_ref_value_levelst then
-          local strength, level = value_strengh_of (ref.level)
-          
-          table.insert (text, 'Reference: Moves values towards "' .. values [ref.value] [strength] .. '" = ' .. level .. "\n")
-        
         else
-          table.insert (text, "Reference: *UNKNOWN TYPE* " .. tostring (ref._type) .. " information\n")
+          table.insert (text, "Reference: Unknown entity (culled?) information\n")
         end
+          
+      elseif ref._type == df.general_ref_historical_eventst then
+        local event = df.history_event.find (ref.event_id)
+          
+        if event then      
+          if event._type == df.history_event_war_attacked_sitest or
+             event._type == df.history_event_war_destroyed_sitest or
+             --  event._type == df.history_event_created_sitest or
+             event._type == df.history_event_hist_figure_diedst or
+             --  event._type == df.history_event_add_hf_entity_linkst or            
+             event._type == df.history_event_remove_hf_entity_linkst or            
+             event._type == df.history_event_first_contactst or            
+             event._type == df.history_event_first_contact_failedst or            
+             event._type == df.history_event_topicagreement_concludedst or            
+             event._type == df.history_event_topicagreement_rejectedst or            
+             event._type == df.history_event_topicagreement_madest or            
+             --  event._type == df.history_event_war_peace_acceptedst or            
+             --  event._type == df.history_event_war_peace_rejectedst or            
+             event._type == df.history_event_diplomat_lostst or            
+             event._type == df.history_event_agreements_voidedst or            
+             event._type == df.history_event_merchantst or            
+             event._type == df.history_event_artifact_hiddenst or            
+             event._type == df.history_event_artifact_possessedst or            
+             event._type == df.history_event_artifact_createdst or            
+             event._type == df.history_event_artifact_lostst or            
+             event._type == df.history_event_artifact_foundst or            
+             event._type == df.history_event_artifact_recoveredst or            
+             event._type == df.history_event_artifact_droppedst or            
+             event._type == df.history_event_reclaim_sitest or            
+             --  event._type == df.history_event_hf_destroyed_sitest or            
+             event._type == df.history_event_site_diedst or            
+             event._type == df.history_event_site_retiredst or            
+             event._type == df.history_event_entity_createdst or            
+             event._type == df.history_event_entity_actionst or            
+             event._type == df.history_event_entity_incorporatedst or            
+             --  event._type == df.history_event_created_buildingst or            
+             event._type == df.history_event_replaced_buildingst or            
+             event._type == df.history_event_add_hf_site_linkst or            
+             event._type == df.history_event_remove_hf_site_linkst or            
+             --  event._type == df.history_event_add_hf_hf_linkst or            
+             event._type == df.history_event_remove_hf_hf_linkst or            
+             event._type == df.history_event_entity_razed_buildingst or            
+             event._type == df.history_event_masterpiece_createdst or            
+             event._type == df.history_event_masterpiece_created_arch_designst or            
+             event._type == df.history_event_masterpiece_created_arch_constructst or            
+             event._type == df.history_event_masterpiece_created_itemst or            
+             event._type == df.history_event_masterpiece_created_dye_itemst or            
+             event._type == df.history_event_masterpiece_created_item_improvementst or            
+             event._type == df.history_event_masterpiece_created_foodst or            
+             event._type == df.history_event_masterpiece_created_engravingst or            
+             event._type == df.history_event_masterpiece_lostst or            
+             --  event._type == df.history_event_change_hf_statest or            
+             --  event._type == df.history_event_change_hf_jobst or            
+             event._type == df.history_event_war_field_battlest or            
+             --  event._type == df.history_event_war_plundered_sitest or            
+             event._type == df.history_event_war_site_new_leaderst or            
+             event._type == df.history_event_war_site_tribute_forcedst or            
+             event._type == df.history_event_war_site_taken_overst or            
+             event._type == df.history_event_body_abusedst or            
+             event._type == df.history_event_hist_figure_abductedst or            
+             event._type == df.history_event_item_stolenst or            
+             event._type == df.history_event_hf_razed_buildingst or            
+             --  event._type == df.history_event_creature_devouredst or            
+             event._type == df.history_event_hist_figure_woundedst or            
+             event._type == df.history_event_hist_figure_simple_battle_eventst or            
+             event._type == df.history_event_created_world_constructionst or            
+             event._type == df.history_event_hist_figure_reunionst or            
+             event._type == df.history_event_hist_figure_reach_summitst or            
+             event._type == df.history_event_hist_figure_travelst or            
+             event._type == df.history_event_hist_figure_new_petst or            
+             event._type == df.history_event_assume_identityst or            
+             event._type == df.history_event_create_entity_positionst or            
+             event._type == df.history_event_change_creature_typest or            
+             event._type == df.history_event_hist_figure_revivedst or            
+             event._type == df.history_event_hf_learns_secretst or            
+             event._type == df.history_event_change_hf_body_statest or            
+             event._type == df.history_event_hf_act_on_buildingst or            
+             event._type == df.history_event_hf_does_interactionst or            
+             event._type == df.history_event_hf_confrontedst or            
+             event._type == df.history_event_entity_lawst or            
+             event._type == df.history_event_hf_gains_secret_goalst or            
+             event._type == df.history_event_artifact_storedst or            
+             event._type == df.history_event_agreement_formedst or            
+             event._type == df.history_event_site_disputest or            
+             event._type == df.history_event_agreement_concludedst or            
+             event._type == df.history_event_insurrection_startedst or            
+             event._type == df.history_event_insurrection_endedst or            
+             event._type == df.history_event_hf_attacked_sitest or            
+             event._type == df.history_event_performancest or            
+             event._type == df.history_event_competitionst or            
+             event._type == df.history_event_processionst or            
+             event._type == df.history_event_ceremonyst or            
+             event._type == df.history_event_knowledge_discoveredst or            
+             event._type == df.history_event_artifact_transformedst or            
+             event._type == df.history_event_artifact_destroyedst or            
+             --  event._type == df.history_event_hf_relationship_deniedst or            
+             event._type == df.history_event_regionpop_incorporated_into_entityst or            
+             event._type == df.history_event_poetic_form_createdst or            
+             event._type == df.history_event_musical_form_createdst or            
+             event._type == df.history_event_dance_form_createdst or            
+             --  event._type == df.history_event_written_content_composedst or            
+             event._type == df.history_event_change_hf_moodst or            
+             event._type == df.history_event_artifact_claim_formedst or            
+             event._type == df.history_event_artifact_givenst or            
+             event._type == df.history_event_hf_act_on_artifactst or            
+             event._type == df.history_event_hf_recruited_unit_type_for_entityst or            
+             event._type == df.history_event_hfs_formed_reputation_relationshipst or            
+             event._type == df.history_event_artifact_copiedst or            
+             event._type == df.history_event_sneak_into_sitest or            
+             event._type == df.history_event_spotted_leaving_sitest or            
+             event._type == df.history_event_entity_searched_sitest or            
+             event._type == df.history_event_hf_freedst or            
+             event._type == df.history_event_hist_figure_simple_actionst or            
+             event._type == df.history_event_entity_rampaged_in_sitest or            
+             event._type == df.history_event_entity_fled_sitest or            
+             event._type == df.history_event_tactical_situationst or            
+             event._type == df.history_event_squad_vs_squadst then            
+            table.insert (text, "Reference: Unsupported " .. tostring (event._type) .. " historical event information\n")
+
+          elseif event._type == df.history_event_created_sitest then
+            table.insert (text, "Reference: " .. Entity_Name_Of (event.civ) .. " local government " ..
+                                Entity_Name_Of (event.site_civ) .. " founded " ..
+                                Site_Name_Of (event.site) .. " led by " ..
+                                HF_Name_Of (event.builder_hf) .. "\n")
+            
+          elseif event._type == df.history_event_add_hf_entity_linkst then
+            local position = ""
+            local entity = df.historical_entity.find (event.civ)
+
+            if event.position_id ~= -1 and
+               entity then
+              position = " as " .. entity.positions.own [event.position_id].name [0]
+            end
+              
+            table.insert (text, "Reference: " .. HF_Name_Of (event.histfig) .. " " ..
+                                 df.histfig_entity_link_type [event.link_type] .. " " ..
+                                 Entity_Name_Of (event.civ) .. position .. "\n")
+            
+          elseif event._type == df.history_event_created_buildingst then
+            table.insert (text, "Reference: " .. Entity_Name_Of (event.civ) .. " created " ..
+                                df.abstract_building_type [event.structure] .. " in " ..  --### May be reference to buildings at site instead...
+                                Site_Name_Of (event.site) .. " by " ..
+                                HF_Name_Of (event.builder_hf) .. "\n")
+            
+          elseif event._type == df.history_event_war_peace_acceptedst then
+            table.insert (text, "Reference: " .. Entity_Name_Of (event.source) .. " " ..
+                                df.meeting_topic [event.topic] .. " with " ..
+                                Entity_Name_Of (event.destination) .. " at " ..
+                                Site_Name_Of (event.site) .. " accepted\n")
+          
+          elseif event._type == df.history_event_war_peace_rejectedst then
+            table.insert (text, "Reference: " .. Entity_Name_Of (event.source) .. " " ..
+                                df.meeting_topic [event.topic] .. " with " ..
+                                Entity_Name_Of (event.destination) .. " at " ..
+                                Site_Name_Of (event.site) .. " rejected\n")
+            
+          elseif event._type == df.history_event_hf_destroyed_sitest then
+            table.insert (text, "Reference: " .. HF_Name_Of (event.attacker_hf) .. " destroyed " ..
+                                Site_Name_Of (event.site) .. " governed by\n           " ..
+                                Entity_Name_Of (event.site_civ) .. " belonging to " ..
+                                Entity_Name_Of (event.defender_civ) .. "\n")
+          
+          elseif event._type == df.history_event_add_hf_hf_linkst then
+            table.insert (text, "Reference: Added " .. HF_Name_Of (event.hf) .. " " .. df.histfig_hf_link_type [event.type] .. 
+                                " vs " .. HF_Name_Of (event.hf_target) .. "\n")
+              
+          elseif event._type == df.history_event_change_hf_statest then
+            local state = " <Unknown state>"
+              
+            if event.state == 0 then
+              state = " wandered in"
+                
+            elseif event.state == 1 then
+              state = " settled in"
+                
+            elseif event.state == 2 then
+              state = " Became refugee from"
+                
+            elseif event.state == 5 then
+              state = " visited"
+            end
+              
+            table.insert (text, "Reference: " .. HF_Name_Of (event.hfid) .. state .. " " ..
+                                History_Location_Name_Of (event.site, event.region, event.layer) .. 
+                                " because of " .. df.history_event_reason [event.reason] .. "\n")
+              
+          elseif event._type == df.history_event_change_hf_jobst then
+            table.insert (text, "Reference: " .. HF_Name_Of (event.hfid) .. " changed job from " .. df.profession [event.old_job] .. " to " .. 
+                                df.profession [event.new_job] .. " in " .. History_Location_Name_Of (event.site, event.region, event.layer) .. "\n")
+              
+          elseif event._type == df.history_event_war_plundered_sitest then
+            table.insert (text, "Reference: " .. Entity_Name_Of (event.attacker_civ) .. " attacked " ..
+                                Entity_Name_Of (event.defender_civ) .. " and plundered " ..
+                                Site_Name_Of (event.site) .. " under the control of " ..
+                                Entity_Name_Of (event.site_civ) .. "\n")
+                                
+          elseif event._type == df.history_event_creature_devouredst then
+            --### caste
+            table.insert (text, "Reference; The " .. df.global.world.raws.creatures.all [event.race].name [0] .. " " ..
+                                HF_Name_Of (event.victim) .. " was devoured by " ..
+                                HF_Name_Of (event.eater) .. " " ..
+                                Entity_Name_Of (event.entity) .. " " ..
+                                History_Location_Name_Of (event.site, event.region, event.layer) .. "\n")
+                                
+          elseif event._type == df.history_event_hf_relationship_deniedst then
+            table.insert (text, "Reference: " .. HF_Name_Of (event.seeker_hf) .. " was denied " ..
+                                df.unit_relationship_type [event.type] .. " by " ..
+                                HF_Name_Of (event.target_hf) .. " because\n           " ..
+                                df.history_event_reason [event.reason] .. " of " ..
+--###                                HF_Name_Of (event.reason2) .. " at " ..  --### Changes to event.reason_id
+                                History_Location_Name_Of (event.site, event.region, event.layer) .. "\n")
+              
+          elseif event._type == df.history_event_written_content_composedst then
+            local content = df.written_content.find (event.content)
+            local title = "<Untitled>"
+              
+            if content and
+               content.title ~= "" then
+              title = content.title
+            end
+            --### Circumstances
+            --### Reason
+            
+            table.insert (text, "Reference: " .. HF_Name_Of (event.histfig) .. " wrote " .. title ..
+                                " at " .. History_Location_Name_Of (event.site, event.region, event.layer) .. "\n")
+                                
+          else
+            table.insert (text, "Reference: *UNKNOWN* " .. tostring (event._type) .. " historical event information\n")
+          end
+            
+        else
+          table.insert (text, "Reference: Unknown historical event information (culled?)\n")
+        end
+          
+      elseif ref._type == df.general_ref_sitest then
+        table.insert (text, "Reference: Information about the " .. Site_Info_Of (ref.site_id) .. "\n")
+          
+      elseif ref._type == df.general_ref_historical_figurest then
+        local hf = df.historical_figure.find (ref.hist_figure_id)
+          
+        if hf then
+          table.insert (text, "Reference: Biography of the " .. df.global.world.raws.creatures.all [hf.race].name [0] ..
+                              " " .. HF_Name_Of (ref.hist_figure_id) .. "\n")
+          
+        else
+          table.insert (text, "Reference: Biography of unknown historical figure (culled?)\n")
+        end
+          
+      elseif ref._type == df.general_ref_knowledge_scholar_flagst then
+        for k, flag in ipairs (ref.knowledge.flags.flags_0) do  --  Iterates over all 32 bits regardless of enum value existence, so which "enum" we use doesn't matter
+          if flag then
+            table.insert (text, "Reference: " .. knowledge [ref.knowledge.category] [k] .. " knowledge\n")
+          end
+        end
+        
+      elseif ref._type == df.general_ref_value_levelst then
+        local strength, level = value_strengh_of (ref.level)
+          
+        table.insert (text, 'Reference: Moves values towards "' .. values [ref.value] [strength] .. '" = ' .. level .. "\n")
+        
+      elseif ref._type == df.general_ref_languagest then
+        table.insert (text, "Reference: Dictionary of the " .. df.global.world.raws.language.translations [ref.anon_1].name .. " language\n") --###
+          
+      else
+        table.insert (text, "Reference: *UNKNOWN* " .. tostring (ref._type) .. " information\n")
       end
     end
     
@@ -1163,11 +1488,11 @@ function Librarian ()
     end
     
     local hf = df.historical_figure.find (content.author)
-    local author = "<Unknown>"
+--    local author = "<Unknown>"
     local Local = false
     
     if hf then
-      author = dfhack.TranslateName (hf.name, true) .. "/" .. dfhack.TranslateName (hf.name, false)
+--      author = dfhack.TranslateName (hf.name, true) .. "/" .. dfhack.TranslateName (hf.name, false)
       local unit = df.unit.find (hf.unit_id)
       
       if unit and
@@ -1177,7 +1502,7 @@ function Librarian ()
       end
     end
     
-    table.insert (text, "Author   : " .. author .. "\n")
+    table.insert (text, "Author   : " .. HF_Name_Of (content.author) .. "\n")
     table.insert (text, "Local    : " .. tostring (Bool_To_Yes_No (Local) .. "\n"))
 
     return text
@@ -1370,7 +1695,7 @@ function Librarian ()
        "has produced and which are available in the fortress. Again, basic details on the currently selected work", NEWLINE,
        "are provided.", NEWLINE,
        "  You move between lists on the Science and Values page using the left/right cursor keys.", NEWLINE,
-       "Version 0.7 2018-04-22", NEWLINE,
+       "Version 0.8 2018-04-24", NEWLINE,
        "Comments:", NEWLINE,
        "- The term 'work' is used above for a reason. A 'work' is a unique piece of written information. Currently", NEWLINE,
        "  it seems DF is restricted to a single 'work' per book/codex/scroll/quire, but the data structures allow", NEWLINE,
@@ -1847,7 +2172,12 @@ function Librarian ()
   --==============================================================
 
   function Ui:show_main_details (index, choice)
-    Main_Page.Details:setText (Produce_Details (Main_Page.Filtered_Stock [index].element))
+    if index == nil or #Main_Page.Filtered_Stock < index then
+      Main_Page.Details:setText (Produce_Details (nil))
+      
+    else
+      Main_Page.Details:setText (Produce_Details (Main_Page.Filtered_Stock [index].element))
+    end
   end
   
   --==============================================================
