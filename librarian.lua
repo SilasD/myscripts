@@ -627,6 +627,12 @@ function Librarian ()
               desc = "Shift to the Values page"},
     authors = {key = "CUSTOM_A",
                desc = "Shift to the Authors page"},
+    forbid_book = {key = "CUSTOM_F",
+                   desc = "Toggle 'f'orbidden flag on selected book"},
+    dump_book = {key = "CUSTOM_D",
+                 desc = "Toggle 'd'ump flag on selected book"},
+    trader_book = {key = "CUSTOM_T",
+                   desc = "Toggle 't'rader flag on selected book"},
     left = {key = "CURSOR_LEFT",
             desc = "Rotates to the next list"},
     right = {key = "CURSOR_RIGHT",
@@ -1510,6 +1516,62 @@ function Librarian ()
   
   --============================================================
 
+  function Produce_Book_List (items)
+    if not items then
+      return {}
+    end
+    
+    local result = {}
+    local original
+    local forbidden
+    local trader
+    local inventory
+    local dump_marked
+  
+    for i, item in ipairs (items) do
+      if item.flags.artifact then
+        original = 'O '
+        
+      else
+        original = 'C '
+      end
+      
+      if item.flags.forbid then
+        forbidden = 'F '
+        
+      else
+        forbidden = '  '
+      end
+      
+      if item.flags.dump then
+        dump_marked = 'D '
+      
+      else
+        dump_marked = '  '
+      end
+      
+      if item.flags.trader then
+        trader = 'T '
+      
+      else
+        trader = '  '
+      end
+      
+      if item.flags.in_inventory then
+        inventory = 'I '
+        
+      else
+        inventory = '  '
+      end
+      
+      table.insert (result, original .. forbidden .. dump_marked .. trader .. inventory)
+    end
+    
+    return result
+  end
+  
+  --============================================================
+
   function Science_Character_Of (Stock, category, index)
     if Stock [category] [index] == nil then
       return "?"
@@ -1676,26 +1738,29 @@ function Librarian ()
     local helptext =
       {"Help/Info", NEWLINE,
        "The Librarian provides a few views on the literary works in your stock.", NEWLINE,
-       "The Main page defaults to listing everything, but also provides a couple of means to reduce the number by", NEWLINE,
-       "restricting the list to a Category and/or works that have any kind of reference. In addition to the list,", NEWLINE,
-       "the page also provides some basic data on the currently selected work.", NEWLINE,
-       "It should be noted that the only kind of references really supported by the script is scientific knowledge", NEWLINE,
-       "and works that change values in the reader, while other kinds are just indicated.", NEWLINE,
-       "In addition to the Main page, The Librarian also has Science page, a Values page, and an Authors page.", NEWLINE,
-       "  The Science page provides an indicator matrix showing the science topics you have and do not have works", NEWLINE,
-       "on, as well as a breakdown of which works you have on each topic, plus the ones existing in the world", NEWLINE,
-       "outside of the fortress (the author does not know if everything is available for recovery through raids,", NEWLINE,
-       "or if the rumors only provide access to some works). Basic details on the currently selected work is", NEWLINE,
-       "displayed.", NEWLINE,
-       "  The Values page is similar to the Science page, and indicates the value changing properites of the works", NEWLINE,
-       "available locally, as well as breakdowns on each value/strength combination. Like the Science page, there", NEWLINE,
-       "is one list for works present locally and one for works out in the world at large. As with the Science", NEWLINE,
-       "page, basic details on the currently selected work are provided.", NEWLINE,
-       "  The Authors page lists the citizens who are also authors, and the works the currently selected author", NEWLINE,
-       "has produced and which are available in the fortress. Again, basic details on the currently selected work", NEWLINE,
-       "are provided.", NEWLINE,
-       "  You move between lists on the Science and Values page using the left/right cursor keys.", NEWLINE,
-       "Version 0.8 2018-04-24", NEWLINE,
+       "The help will list the main pages with their specific functions, while functionality present on all of", NEWLINE,
+       "them are summarized thereafter. The pages are:", NEWLINE,
+       "- The Main page contains every work in your fortress, although you can filter it on the category of the", NEWLINE,
+       "  work as well as to display only works that contain references to additional information. These controls", NEWLINE,
+       "  can be in effect concurrently.", NEWLINE,
+       "- The Science page contains an indication of all scientific topics covered in your fortress, as well as", NEWLINE,
+       "  a breakdown to actual works per scientific topic.", NEWLINE,
+       "- The Values page contains an indicator of all the types of value changing works in your fortress broken", NEWLINE,
+       "  down to the values in combination with the strength level target of the works. There is also a further", NEWLINE,
+       "  breakdown to the actual works", NEWLINE,
+       "- The Authors page contains the authors you have in your fortress and the works they have produced.", NEWLINE,
+       NEWLINE,
+       "- You switch between the different pages using the appropriate command keys, listed at each page.", NEWLINE,
+       "- You shift between the lists on each page using the DF left/right movement keys.", NEWLINE,
+       "- All pages provide some basic details on the currently selected work. All works present in your fortress", NEWLINE,
+       "  has a further list of the actual physical books (be they codices, quires, or scrolls) in your fortress", NEWLINE,
+       "  showing some basic flag information on them (Original/Copy, Forbidden, Dump, Trader, and In Inventory", NEWLINE,
+       "  flags). The Forbidden, Dump, and Trader flags can be manipulated when an actual book is in focus using", NEWLINE,
+       "  the command keys displayed above the list.", NEWLINE,
+       "- The Science and Values pages also have a Remote Works list containing all works existing in the DF", NEWLINE,
+       "  world outside of your fortress, allowing you to find out which works you might want to 'acquire' via", NEWLINE,
+       "  raids...", NEWLINE,
+       "Version 0.9 2018-04-27", NEWLINE,
        "Comments:", NEWLINE,
        "- The term 'work' is used above for a reason. A 'work' is a unique piece of written information. Currently", NEWLINE,
        "  it seems DF is restricted to a single 'work' per book/codex/scroll/quire, but the data structures allow", NEWLINE,
@@ -1703,12 +1768,26 @@ function Librarian ()
        "  have a different set than another one.", NEWLINE,
        "- Similar to the previous point, a single 'work' can technically contain references to multiple topics, and", NEWLINE,
        "  a scientific information reference can technically contain data on multiple topics within the same", NEWLINE,
-       "  science category. Neither of these have been seen by the script author, however.", NEWLINE,
+       "  science category. Works referencing multiple topics, including a historical work that has snuck in a", NEWLINE,
+       "  values changing part in it, have been seen. Multiple scientific topics within the same category in", NEWLINE,
+       "  the same referencs has not been seen by the author, and probably isn't used (multiple references can be", NEWLINE,
+       "  used to the same effect).", NEWLINE,
        "- The reason the Authors page doesn't list all the works of the authors is that the author of this script", NEWLINE,
        "  hasn't been able to find it listed somewhere, and scouring the total list of works is expected to take too", NEWLINE,
-       "  much time in worlds with many works", NEWLINE,
+       "  much time in worlds with many works. (There's already a noteceable lag when changing scientific/values", NEWLINE,
+       "  changing topics in the author's world (> half a million works).", NEWLINE,
+       "- The reason the Trader flag is available for toggling is that the author has encountered lots of questing", NEWLINE,
+       "  and attacking visitors who leave books with that flag set behind, and it seems you can't move the book", NEWLINE,
+       "  when it is set. The attackers clearly aren't traders, so that flag being set is probably a bug.", NEWLINE,
        "Caveats:", NEWLINE,
-       "- The testing has been limited..."
+       "- The testing has been limited...", NEWLINE,
+       "- Some data structures are changing. Usage of such data has been skipped for the time being.", NEWLINE,
+       "- Only the Scientific and Values references are completely covered (anything missing is a bug or new data),", NEWLINE,
+       "  but the coverage of the rest is spotty, limited to what happens to be available in the author's fortress.", NEWLINE,
+       "  and what's there hasn't been subject to any touching up, so it provides the information in a crude format.", NEWLINE,
+       "- The Dump flag of artifact works can be set by The Librarian (and is displayed by DF when that has been done)", NEWLINE,
+       "  however, as DF doesn't allow the flag to be set normally and the author's fortress isn't playable, it hasn't", NEWLINE,
+       "  been tested whether those books are actually dumped."
        }
                
    return helptext
@@ -1784,6 +1863,16 @@ function Librarian ()
                      auto_height = false,
                      text_pen = COLOR_WHITE}
                      
+    Main_Page.Book_List =
+      widgets.List {view_id = "Books containting Work",
+                    choices = {},
+                    frame = {l = 54, t = 32, yalign = 0},
+                    text_pen = COLOR_DARKGREY,
+                    cursor_pen = COLOR_YELLOW,
+                    inactive_pen = COLOR_GREY,
+                    active = false}--,
+--                    on_select = self:callback ("show_main_details")}
+    
     Main_Page.List =
       widgets.List {view_id = "Selected Written Contents",
                     choices = Make_List (Main_Page.Filtered_Stock),
@@ -1792,6 +1881,34 @@ function Librarian ()
                     cursor_pen = COLOR_YELLOW,
                     inactive_pen = COLOR_GREY,
                     on_select = self:callback ("show_main_details")}
+    
+    Main_Page.Active_List = {}
+    table.insert (Main_Page.Active_List, Main_Page.List)
+    table.insert (Main_Page.Active_List, Main_Page.Book_List)
+    
+    Main_Page.Book_Order_Label =
+      widgets.Label {text = {{text = "",
+                                     key = keybindings.forbid_book.key,
+                                     key_sep = '()'},
+                             {text = " Toggle Forbid Flag ",
+                              pen = COLOR_LIGHTBLUE},
+                             {text = "",
+                                     key = keybindings.dump_book.key,
+                                     key_sep = '()'},
+                             {text = " Toggle Dump Flag ",
+                              pen = COLOR_LIGHTBLUE}, 
+                             {text = "",
+                                     key = keybindings.trader_book.key,
+                                     key_sep = '()'},
+                             {text = " Toggle Trader Flag",
+                              pen = COLOR_LIGHTBLUE}},
+                     frame = {l = 54, t = 28, y_align = 0},
+                     visible = false}
+                     
+    Main_Page.Book_Label =
+      widgets.Label {text = "Books: O/C = Original/Copy, F = Forbidden, D = Dump, T = Trader, I = In Inventory",
+                     frame = {l = 54, t = 30, y_align = 0},
+                     text_pen = COLOR_WHITE}
     
     Main_Page.Works_Total:setText (tostring (#Main_Page.Stock))
     Main_Page.Works_Listed:setText (tostring (#Main_Page.List.choices))
@@ -1803,7 +1920,10 @@ function Librarian ()
                   Main_Page.Content_Type,
                   Main_Page.Reference_Filter,
                   Main_Page.List,
-                  Main_Page.Details}}
+                  Main_Page.Details,
+                  Main_Page.Book_Order_Label,
+                  Main_Page.Book_Label,
+                  Main_Page.Book_List}}
                 
     local sciencePage = widgets.Panel {
       subviews = {}}
@@ -1870,14 +1990,14 @@ function Librarian ()
     end    
     
     Science_Page.Background_2 =
-      widgets.Label {text = "Category  Scientific Topic                                                        Local Knowledge",
+      widgets.Label {text = "Category  Scientific Topic                                                         Local Knowledge",
                      frame = {l = 0, t = 21, y_align = 0}}
                      
     table.insert (sciencePage.subviews, Science_Page.Background_2)
 
     Science_Page.Background_3 =
       widgets.Label {text = "Remote Knowledge",
-                     frame = {l = 82, t = 38, y_align = 0}}
+                     frame = {l = 83, t = 38, y_align = 0}}
                      
     table.insert (sciencePage.subviews, Science_Page.Background_3)
     
@@ -1889,7 +2009,7 @@ function Librarian ()
     Science_Page.Topic_List =
       widgets.List {view_id = "Topic",
                     choices = category_list,  --  Placeholder
-                    frame = {l = 10, t = 23, yalign = 0},
+                    frame = {l = 10, t = 23, h = 20, yalign = 0},
                     text_pen = COLOR_DARKGREY,
                     cursor_pen = COLOR_YELLOW,
                     inactive_pen = COLOR_GREY,
@@ -1899,7 +2019,7 @@ function Librarian ()
     Science_Page.Category_List =
       widgets.List {view_id = "Category",
                     choices = category_list,
-                    frame = {l = 4, w = 2, t = 23, yalign = 0},
+                    frame = {l = 4, w = 2, h = 20, t = 23, yalign = 0},
                     text_pen = COLOR_DARKGREY,
                     cursor_pen = COLOR_YELLOW,
                     inactive_pen = COLOR_GREY,
@@ -1911,10 +2031,20 @@ function Librarian ()
                      auto_height = false,
                      text_pen = COLOR_WHITE}
                      
+    Science_Page.Book_List =
+      widgets.List {view_id = "Books containting Work",
+                    choices = {},
+                    frame = {l = 1, t = 49, yalign = 0},
+                    text_pen = COLOR_DARKGREY,
+                    cursor_pen = COLOR_YELLOW,
+                    inactive_pen = COLOR_GREY,
+                    active = false}--,
+--                    on_select = self:callback ("show_main_details")}
+    
     Science_Page.Own_List =
       widgets.List {view_id = "Own",
                     choices = category_list,  --  Placeholder
-                    frame = {l = 82, t = 23, h = 15, yalign = 0},
+                    frame = {l = 83, t = 23, h = 15, yalign = 0},
                     text_pen = COLOR_DARKGREY,
                     cursor_pen = COLOR_YELLOW,
                     inactive_pen = COLOR_GREY,
@@ -1924,24 +2054,52 @@ function Librarian ()
     Science_Page.Remote_List =
       widgets.List {view_id = "Remote",
                     choices = category_list,  --  Placeholder
-                    frame = {l = 82, t = 40, h = 15, yalign = 0},
+                    frame = {l = 83, t = 40, h = 15, yalign = 0},
                     text_pen = COLOR_DARKGREY,
                     cursor_pen = COLOR_YELLOW,
                     inactive_pen = COLOR_GREY,
                     active = false,
                     on_select = self:callback ("show_science_remote_details")}
 
+    Science_Page.Book_Order_Label =
+      widgets.Label {text = {{text = "",
+                                     key = keybindings.forbid_book.key,
+                                     key_sep = '()'},
+                             {text = " Toggle Forbid Flag ",
+                              pen = COLOR_LIGHTBLUE},
+                             {text = "",
+                                     key = keybindings.dump_book.key,
+                                     key_sep = '()'},
+                             {text = " Toggle Dump Flag ",
+                              pen = COLOR_LIGHTBLUE}, 
+                             {text = "",
+                                     key = keybindings.trader_book.key,
+                                     key_sep = '()'},
+                             {text = " Toggle Trader Flag",
+                              pen = COLOR_LIGHTBLUE}},
+                     frame = {l = 1, t = 45, y_align = 0},
+                     visible = false}
+                     
+    Science_Page.Book_Label =
+      widgets.Label {text = "Books: O/C = Original/Copy, F = Forbidden, D = Dump, T = Trader, I = In Inventory",
+                     frame = {l = 1, t = 47, y_align = 0},
+                     text_pen = COLOR_WHITE}
+    
     table.insert (sciencePage.subviews, Science_Page.Category_List)
     table.insert (sciencePage.subviews, Science_Page.Topic_List)
     table.insert (sciencePage.subviews, Science_Page.Own_List)
     table.insert (sciencePage.subviews, Science_Page.Remote_List)
     table.insert (sciencePage.subviews, Science_Page.Details)
+    table.insert (sciencePage.subviews, Science_Page.Book_Order_Label)
+    table.insert (sciencePage.subviews, Science_Page.Book_Label)
+    table.insert (sciencePage.subviews, Science_Page.Book_List)
     
     Science_Page.Active_List = {}
     
     table.insert (Science_Page.Active_List, Science_Page.Category_List)
     table.insert (Science_Page.Active_List, Science_Page.Topic_List)
     table.insert (Science_Page.Active_List, Science_Page.Own_List)
+    table.insert (Science_Page.Active_List, Science_Page.Book_List)
     table.insert (Science_Page.Active_List, Science_Page.Remote_List)    
     
     local valuesPage = widgets.Panel {
@@ -2037,6 +2195,16 @@ function Librarian ()
                      auto_height = false,
                      text_pen = COLOR_WHITE}
                      
+    Values_Page.Book_List =
+      widgets.List {view_id = "Books containting Work",
+                    choices = {},
+                    frame = {l = 1, t = 66, yalign = 0},
+                    text_pen = COLOR_DARKGREY,
+                    cursor_pen = COLOR_YELLOW,
+                    inactive_pen = COLOR_GREY,
+                    active = false}--,
+--                    on_select = self:callback ("show_main_details")}
+    
     Values_Page.Own_List =
       widgets.List {view_id = "Own",
                     choices = category_list,  --  Placeholder
@@ -2061,12 +2229,42 @@ function Librarian ()
 
     table.insert (valuesPage.subviews, Values_Page.Remote_List)
     table.insert (valuesPage.subviews, Values_Page.Details)
+    table.insert (valuesPage.subviews, Values_Page.Book_List)
+
+    Values_Page.Book_Order_Label =
+      widgets.Label {text = {{text = "",
+                                     key = keybindings.forbid_book.key,
+                                     key_sep = '()'},
+                             {text = " Toggle Forbid Flag ",
+                              pen = COLOR_LIGHTBLUE},
+                             {text = "",
+                                     key = keybindings.dump_book.key,
+                                     key_sep = '()'},
+                             {text = " Toggle Dump Flag ",
+                              pen = COLOR_LIGHTBLUE}, 
+                             {text = "",
+                                     key = keybindings.trader_book.key,
+                                     key_sep = '()'},
+                             {text = " Toggle Trader Flag",
+                              pen = COLOR_LIGHTBLUE}},
+                     frame = {l = 1, t = 62, y_align = 0},
+                     visible = false}
+                     
+    table.insert (valuesPage.subviews, Values_Page.Book_Order_Label)
+    
+    Values_Page.Book_Label =
+      widgets.Label {text = "Books: O/C = Original/Copy, F = Forbidden, D = Dump, T = Trader, I = In Inventory",
+                     frame = {l = 1, t = 64, y_align = 0},
+                     text_pen = COLOR_WHITE}
+    
+    table.insert (valuesPage.subviews, Values_Page.Book_Label)
 
     Values_Page.Active_List = {}
     
     table.insert (Values_Page.Active_List, Values_Page.Values_List)
     table.insert (Values_Page.Active_List, Values_Page.Strength_List)
     table.insert (Values_Page.Active_List, Values_Page.Own_List)
+    table.insert (Values_Page.Active_List, Values_Page.Book_List)
     table.insert (Values_Page.Active_List, Values_Page.Remote_List)
     
     local authorsPage = widgets.Panel {
@@ -2110,6 +2308,16 @@ function Librarian ()
                      auto_height = false,
                      text_pen = COLOR_WHITE}
                      
+    Authors_Page.Book_List =
+      widgets.List {view_id = "Books containting Work",
+                    choices = {},
+                    frame = {l = 65, t = 50, yalign = 0},
+                    text_pen = COLOR_DARKGREY,
+                    cursor_pen = COLOR_YELLOW,
+                    inactive_pen = COLOR_GREY,
+                    active = false}--,
+--                    on_select = self:callback ("show_main_details")}
+    
     Authors_Page.Works_List =
       widgets.List {view_id = "Works",
                     choices = {},
@@ -2134,6 +2342,7 @@ function Librarian ()
     
     table.insert (authorsPage.subviews, Authors_Page.Authors_List)
     table.insert (authorsPage.subviews, Authors_Page.Details)
+    table.insert (authorsPage.subviews, Authors_Page.Book_List)
     
     Authors_Page.Background_2 =
       widgets.Label {text = {{text = " Works                                                           Details"}},
@@ -2141,10 +2350,39 @@ function Librarian ()
     
     table.insert (authorsPage.subviews, Authors_Page.Background_2)
     
+    Authors_Page.Book_Order_Label =
+      widgets.Label {text = {{text = "",
+                                     key = keybindings.forbid_book.key,
+                                     key_sep = '()'},
+                             {text = " Toggle Forbid Flag ",
+                              pen = COLOR_LIGHTBLUE},
+                             {text = "",
+                                     key = keybindings.dump_book.key,
+                                     key_sep = '()'},
+                             {text = " Toggle Dump Flag ",
+                              pen = COLOR_LIGHTBLUE}, 
+                             {text = "",
+                                     key = keybindings.trader_book.key,
+                                     key_sep = '()'},
+                             {text = " Toggle Trader Flag",
+                              pen = COLOR_LIGHTBLUE}},
+                     frame = {l = 65, t = 46, y_align = 0},
+                     visible = false}
+                     
+    table.insert (authorsPage.subviews, Authors_Page.Book_Order_Label)
+    
+    Authors_Page.Book_Label =
+      widgets.Label {text = "Books: O/C = Original/Copy, F = Forbidden, D = Dump, T = Trader, I = In Inventory",
+                     frame = {l = 65, t = 48, y_align = 0},
+                     text_pen = COLOR_WHITE}
+    
+    table.insert (authorsPage.subviews, Authors_Page.Book_Label)
+
     Authors_Page.Active_List = {}
     
     table.insert (Authors_Page.Active_List, Authors_Page.Authors_List)
     table.insert (Authors_Page.Active_List, Authors_Page.Works_List)
+    table.insert (Authors_Page.Active_List, Authors_Page.Book_List)
 
     Help_Page.Main = 
       widgets.Label
@@ -2174,9 +2412,11 @@ function Librarian ()
   function Ui:show_main_details (index, choice)
     if index == nil or #Main_Page.Filtered_Stock < index then
       Main_Page.Details:setText (Produce_Details (nil))
+      Main_Page.Book_List.setChoices (Produce_Book_List (nil))
       
     else
       Main_Page.Details:setText (Produce_Details (Main_Page.Filtered_Stock [index].element))
+      Main_Page.Book_List:setChoices (Produce_Book_List (Main_Page.Filtered_Stock [index].element [2]), 1)
     end
   end
   
@@ -2187,7 +2427,7 @@ function Librarian ()
 
     for i = df.knowledge_scholar_flags_0._first_item, df.knowledge_scholar_flags_0._last_item do  --  Don't care about the actual flag. Will iterate over all "bits" anyway.
       if check_flag ("knowledge_scholar_flags_" .. tostring (index - 1), i) then
-        table.insert (list, flag_image ("knowledge_scholar_flags_" .. tostring (index - 1), i))
+        table.insert (list, knowledge [index - 1] [i])
       end
     end
    
@@ -2210,6 +2450,9 @@ function Librarian ()
         Science_Page.Details:setText (Produce_Details (Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1]
                                                                                 [Science_Page.Topic_List.selected - 1]
                                                                                 [index]))
+        Science_Page.Book_List:setChoices (Produce_Book_List (Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1]
+                                                                                       [Science_Page.Topic_List.selected - 1]
+                                                                                       [index] [2]), 1)
       end
     end
   end
@@ -2250,6 +2493,9 @@ function Librarian ()
         Values_Page.Details:setText (Produce_Details (Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1]
                                                                               [Values_Page.Strength_List.selected - 4]
                                                                               [index]))
+        Values_Page.Book_List:setChoices (Produce_Book_List (Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1]
+                                                                                     [Values_Page.Strength_List.selected - 1]
+                                                                                     [index] [2]), 1)
       end
     end
   end
@@ -2280,6 +2526,9 @@ function Librarian ()
         Authors_Page.Details:setText (Produce_Details (Authors_Page.Authors [Authors_Page.Authors_List.selected]
                                                                             [2]
                                                                             [index]))
+        Authors_Page.Book_List:setChoices (Produce_Book_List (Authors_Page.Authors [Authors_Page.Authors_List.selected]
+                                                                                   [2]
+                                                                                   [index] [2]), 1)
       end
     end
   end
@@ -2360,6 +2609,50 @@ function Librarian ()
       self.subviews.pages:setSelected (4)
             
     elseif keys [keybindings.left.key] and 
+           Focus == "Main" then
+      local active = 1
+      
+      for i, list in ipairs (Main_Page.Active_List) do
+        if list.active then
+          active = i - 1
+          
+          if active == 0 then
+            active = #Main_Page.Active_List
+          end
+          
+          break
+        end
+      end
+      
+      for i, list in ipairs (Main_Page.Active_List) do
+        list.active = (i == active)
+      end
+           
+      Main_Page.Book_Order_Label.visible = Main_Page.Book_List.active
+      
+    elseif keys [keybindings.right.key] and 
+           Focus == "Main" then
+      local active = 1
+      
+      for i, list in ipairs (Main_Page.Active_List) do
+        if list.active then
+          active = i + 1
+          
+          if active > #Main_Page.Active_List then
+            active = 1
+          end
+          
+          break
+        end
+      end
+      
+      for i, list in ipairs (Main_Page.Active_List) do
+        list.active = (i == active)
+      end
+           
+      Main_Page.Book_Order_Label.visible = Main_Page.Book_List.active
+      
+    elseif keys [keybindings.left.key] and 
            Focus == "Science" then
       local active = 1
       
@@ -2380,14 +2673,7 @@ function Librarian ()
       end
            
       if Science_Page.Own_List.active then
-        if #Science_Page.Own_List.choices == 0 then
-          Science_Page.Details:setText (Produce_Details (nil))
-          
-        else
-          Science_Page.Details:setText (Produce_Details (Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1]
-                                                                                  [Science_Page.Topic_List.selected - 1]
-                                                                                  [Science_Page.Own_List.selected]))
-        end
+        --  nothing
         
       elseif Science_Page.Remote_List.active then
         if #Science_Page.Remote_List.choices == 0 then
@@ -2399,11 +2685,28 @@ function Librarian ()
             [Science_Page.Topic_List.selected - 1]
             [Science_Page.Remote_List_Map [Science_Page.Remote_List.selected]].id}))
         end
-        
+       
+      elseif Science_Page.Book_List.active then       
+        if #Science_Page.Own_List.choices == 0 then
+          Science_Page.Details:setText (Produce_Details (nil))
+          Science_Page.Book_List:setChoices (Produce_Book_List (nil))
+          
+        else
+          Science_Page.Details:setText (Produce_Details (Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1]
+                                                                                  [Science_Page.Topic_List.selected - 1]
+                                                                                  [Science_Page.Own_List.selected]))
+          Science_Page.Book_List:setChoices (Produce_Book_List (Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1]
+                                                                                         [Science_Page.Topic_List.selected - 1]
+                                                                                         [Science_Page.Own_List.selected] [2]))
+        end
       else
         Science_Page.Details:setText (Produce_Details (nil))
       end
-      
+ 
+      Science_Page.Book_Order_Label.visible = Science_Page.Book_List.active
+      Science_Page.Book_List.visible = Science_Page.Own_List.active or
+                                       Science_Page.Book_List.active      
+ 
     elseif keys [keybindings.right.key] and 
            Focus == "Science" then
       local active = 1
@@ -2427,13 +2730,20 @@ function Librarian ()
       if Science_Page.Own_List.active then
         if #Science_Page.Own_List.choices == 0 then
           Science_Page.Details:setText (Produce_Details (nil))
+          Science_Page.Book_List:setChoices (Produce_Book_List (nil))
           
         else
           Science_Page.Details:setText (Produce_Details (Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1]
                                                                                   [Science_Page.Topic_List.selected - 1]
                                                                                   [Science_Page.Own_List.selected]))
+          Science_Page.Book_List:setChoices (Produce_Book_List (Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1]
+                                                                                         [Science_Page.Topic_List.selected - 1]
+                                                                                         [Science_Page.Own_List.selected] [2]))
         end
-                                                                                
+      
+      elseif Science_Page.Book_List.active then
+        --  nothing
+        
       elseif Science_Page.Remote_List.active then
         if #Science_Page.Remote_List.choices == 0 then
           Science_Page.Details:setText (Produce_Details (nil))
@@ -2448,6 +2758,10 @@ function Librarian ()
       else
         Science_Page.Details:setText (Produce_Details (nil))
       end
+
+      Science_Page.Book_Order_Label.visible = Science_Page.Book_List.active
+      Science_Page.Book_List.visible = Science_Page.Own_List.active or
+                                       Science_Page.Book_List.active      
       
     elseif keys [keybindings.left.key] and 
            Focus == "Values" then
@@ -2468,16 +2782,9 @@ function Librarian ()
       for i, list in ipairs (Values_Page.Active_List) do
         list.active = (i == active)
       end
-           
+       
       if Values_Page.Own_List.active then
-        if #Values_Page.Own_List.choices == 0 then
-          Values_Page.Details:setText (Produce_Details (nil))
-          
-        else
-          Values_Page.Details:setText (Produce_Details (Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1]
-                                                                                [Values_Page.Strength_List.selected - 4]
-                                                                                [Values_Page.Own_List.selected]))
-        end
+        --  nothing
         
       elseif Values_Page.Remote_List.active then
         if #Values_Page.Remote_List.choices == 0 then
@@ -2490,9 +2797,27 @@ function Librarian ()
             [Values_Page.Remote_List_Map [Values_Page.Remote_List.selected]].id}))
         end
         
+      elseif Values_Page.Book_List.active then
+        if #Values_Page.Own_List.choices == 0 then
+          Values_Page.Details:setText (Produce_Details (nil))
+          Values_Page.Book_List:setChoices (Produce_Book_List (nil))
+          
+        else
+          Values_Page.Details:setText (Produce_Details (Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1]
+                                                                                [Values_Page.Strength_List.selected - 4]
+                                                                                [Values_Page.Own_List.selected]))
+          Values_Page.Book_List:setChoices (Produce_Book_List (Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1]
+                                                                                       [Values_Page.Strength_List.selected - 4]
+                                                                                       [Values_Page.Own_List.selected] [2]))
+       end
+        
       else
         Values_Page.Details:setText (Produce_Details (nil))
       end
+      
+      Values_Page.Book_Order_Label.visible = Values_Page.Book_List.active
+      Values_Page.Book_List.visible = Values_Page.Own_List.active or
+                                      Values_Page.Book_List.active      
       
     elseif keys [keybindings.right.key] and 
            Focus == "Values" then
@@ -2517,12 +2842,19 @@ function Librarian ()
       if Values_Page.Own_List.active then
         if #Values_Page.Own_List.choices == 0 then
           Values_Page.Details:setText (Produce_Details (nil))
+          Values_Page.Book_List:setChoices (Produce_Book_List (nil))
           
         else
           Values_Page.Details:setText (Produce_Details (Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1]
                                                                                 [Values_Page.Strength_List.selected - 4]
                                                                                 [Values_Page.Own_List.selected]))
+          Values_Page.Book_List:setChoices (Produce_Book_List (Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1]
+                                                                                       [Values_Page.Strength_List.selected - 4]
+                                                                                       [Values_Page.Own_List.selected] [2]))
         end
+      
+      elseif Values_Page.Book_List.active then
+        --  nothing
         
       elseif Values_Page.Remote_List.active then
         if #Values_Page.Remote_List.choices == 0 then
@@ -2538,6 +2870,10 @@ function Librarian ()
       else
         Values_Page.Details:setText (Produce_Details (nil))
       end
+      
+      Values_Page.Book_Order_Label.visible = Values_Page.Book_List.active
+      Values_Page.Book_List.visible = Values_Page.Own_List.active or
+                                      Values_Page.Book_List.active      
       
     elseif keys [keybindings.left.key] and 
            Focus == "Authors" then
@@ -2560,13 +2896,23 @@ function Librarian ()
       end
 
       if Authors_Page.Works_List.active then
+        --  nothing
+      
+      elseif Authors_Page.Book_List.active then
         Authors_Page.Details:setText (Produce_Details (Authors_Page.Authors [Authors_Page.Authors_List.selected]
                                                                             [2]
                                                                             [Authors_Page.Works_List.selected]))
+        Authors_Page.Book_List:setChoices (Produce_Book_List (Authors_Page.Authors [Authors_Page.Authors_List.selected]
+                                                                                   [2]
+                                                                                   [Authors_Page.Works_List.selected] [2]), 1)
       
       else
         Authors_Page.Details:setText (Produce_Details (nil))
       end
+      
+      Authors_Page.Book_Order_Label.visible = Authors_Page.Book_List.active
+      Authors_Page.Book_List.visible = Authors_Page.Works_List.active or
+                                       Authors_Page.Book_List.active      
       
     elseif keys [keybindings.right.key] and 
            Focus == "Authors" then
@@ -2592,10 +2938,203 @@ function Librarian ()
         Authors_Page.Details:setText (Produce_Details (Authors_Page.Authors [Authors_Page.Authors_List.selected]
                                                                             [2]
                                                                             [Authors_Page.Works_List.selected]))
+        Authors_Page.Book_List:setChoices (Produce_Book_List (Authors_Page.Authors [Authors_Page.Authors_List.selected]
+                                                                                   [2]
+                                                                                   [Authors_Page.Works_List.selected] [2]), 1)
       
+      elseif Authors_Page.Book_List.active then
+        --  nothing
+        
       else
         Authors_Page.Details:setText (Produce_Details (nil))
       end
+      
+      Authors_Page.Book_Order_Label.visible = Authors_Page.Book_List.active
+      Authors_Page.Book_List.visible = Authors_Page.Works_List.active or
+                                       Authors_Page.Book_List.active      
+      
+    elseif keys [keybindings.forbid_book.key] and
+           Focus == "Main" and
+           Main_Page.Book_List.active and
+           #Main_Page.Book_List.choices > 0 then
+      Main_Page.Filtered_Stock [Main_Page.List.selected].element [2] [Main_Page.Book_List.selected].flags.forbid =
+        not Main_Page.Filtered_Stock [Main_Page.List.selected].element [2] [Main_Page.Book_List.selected].flags.forbid
+        
+      Main_Page.Book_List:setChoices (Produce_Book_List (Main_Page.Filtered_Stock [Main_Page.List.selected].element [2]), Main_Page.Book_List.selected)
+      
+    elseif keys [keybindings.dump_book.key] and
+           Focus == "Main" and
+           Main_Page.Book_List.active and
+           #Main_Page.Book_List.choices > 0 then
+      Main_Page.Filtered_Stock [Main_Page.List.selected].element [2] [Main_Page.Book_List.selected].flags.dump =
+        not Main_Page.Filtered_Stock [Main_Page.List.selected].element [2] [Main_Page.Book_List.selected].flags.dump
+        
+      Main_Page.Book_List:setChoices (Produce_Book_List (Main_Page.Filtered_Stock [Main_Page.List.selected].element [2]), Main_Page.Book_List.selected)
+      
+    elseif keys [keybindings.trader_book.key] and
+           Focus == "Main" and
+           Main_Page.Book_List.active and
+           #Main_Page.Book_List.choices > 0 then
+      Main_Page.Filtered_Stock [Main_Page.List.selected].element [2] [Main_Page.Book_List.selected].flags.trader =
+        not Main_Page.Filtered_Stock [Main_Page.List.selected].element [2] [Main_Page.Book_List.selected].flags.trader
+        
+      Main_Page.Book_List:setChoices (Produce_Book_List (Main_Page.Filtered_Stock [Main_Page.List.selected].element [2]), Main_Page.Book_List.selected)
+      
+    elseif keys [keybindings.forbid_book.key] and
+           Focus == "Science" and
+           Science_Page.Book_List.active and
+           #Science_Page.Book_List.choices > 0 then
+      Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1]
+                               [Science_Page.Topic_List.selected - 1]
+                               [Science_Page.Own_List.selected] [2]
+                               [Science_Page.Book_List.selected].flags.forbid =
+        not Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1]
+                                     [Science_Page.Topic_List.selected - 1]
+                                     [Science_Page.Own_List.selected] [2]
+                                     [Science_Page.Book_List.selected].flags.forbid
+                                       
+      Science_Page.Book_List:setChoices (Produce_Book_List (Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1]
+                                                                                     [Science_Page.Topic_List.selected - 1]
+                                                                                     [Science_Page.Own_List.selected] [2]), Science_Page.Book_List.selected)
+
+    elseif keys [keybindings.dump_book.key] and
+           Focus == "Science" and
+           Science_Page.Book_List.active and
+           #Science_Page.Book_List.choices > 0 then
+      Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1]
+                               [Science_Page.Topic_List.selected - 1]
+                               [Science_Page.Own_List.selected] [2]
+                               [Science_Page.Book_List.selected].flags.dump =
+        not Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1]
+                                     [Science_Page.Topic_List.selected - 1]
+                                     [Science_Page.Own_List.selected] [2]
+                                     [Science_Page.Book_List.selected].flags.dump
+                                       
+      Science_Page.Book_List:setChoices (Produce_Book_List (Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1]
+                                                                                     [Science_Page.Topic_List.selected - 1]
+                                                                                     [Science_Page.Own_List.selected] [2]), Science_Page.Book_List.selected)
+                                                                                     
+    elseif keys [keybindings.trader_book.key] and
+           Focus == "Science" and
+           Science_Page.Book_List.active and
+           #Science_Page.Book_List.choices > 0 then
+      Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1]
+                               [Science_Page.Topic_List.selected - 1]
+                               [Science_Page.Own_List.selected] [2]
+                               [Science_Page.Book_List.selected].flags.trader =
+        not Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1]
+                                     [Science_Page.Topic_List.selected - 1]
+                                     [Science_Page.Own_List.selected] [2]
+                                     [Science_Page.Book_List.selected].flags.trader
+                                       
+      Science_Page.Book_List:setChoices (Produce_Book_List (Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1]
+                                                                                     [Science_Page.Topic_List.selected - 1]
+                                                                                     [Science_Page.Own_List.selected] [2]), Science_Page.Book_List.selected)
+      
+    elseif keys [keybindings.forbid_book.key] and
+           Focus == "Values" and
+           Values_Page.Book_List.active and
+           #Values_Page.Book_List.choices > 0 then
+      Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1]
+                               [Values_Page.Strength_List.selected - 4]
+                               [Values_Page.Own_List.selected] [2]
+                               [Values_Page.Book_List.selected].flags.forbid =
+        not Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1]
+                                    [Values_Page.Strength_List.selected - 4]
+                                    [Values_Page.Own_List.selected] [2]
+                                    [Values_Page.Book_List.selected].flags.forbid
+                                       
+      Values_Page.Book_List:setChoices (Produce_Book_List (Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1]
+                                                                                   [Values_Page.Strength_List.selected - 4]
+                                                                                   [Values_Page.Own_List.selected] [2]), Values_Page.Book_List.selected)
+      
+    elseif keys [keybindings.dump_book.key] and
+           Focus == "Values" and
+           Values_Page.Book_List.active and
+           #Values_Page.Book_List.choices > 0 then
+      Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1]
+                               [Values_Page.Strength_List.selected - 4]
+                               [Values_Page.Own_List.selected] [2]
+                               [Values_Page.Book_List.selected].flags.dump =
+        not Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1]
+                                    [Values_Page.Strength_List.selected - 4]
+                                    [Values_Page.Own_List.selected] [2]
+                                    [Values_Page.Book_List.selected].flags.dump
+                                       
+      Values_Page.Book_List:setChoices (Produce_Book_List (Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1]
+                                                                                   [Values_Page.Strength_List.selected - 4]
+                                                                                   [Values_Page.Own_List.selected] [2]), Values_Page.Book_List.selected)
+      
+    elseif keys [keybindings.trader_book.key] and
+           Focus == "Values" and
+           Values_Page.Book_List.active and
+           #Values_Page.Book_List.choices > 0 then
+      Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1]
+                               [Values_Page.Strength_List.selected - 4]
+                               [Values_Page.Own_List.selected] [2]
+                               [Values_Page.Book_List.selected].flags.trader =
+        not Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1]
+                                    [Values_Page.Strength_List.selected - 4]
+                                    [Values_Page.Own_List.selected] [2]
+                                    [Values_Page.Book_List.selected].flags.trader
+                                       
+      Values_Page.Book_List:setChoices (Produce_Book_List (Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1]
+                                                                                   [Values_Page.Strength_List.selected - 4]
+                                                                                   [Values_Page.Own_List.selected] [2]), Values_Page.Book_List.selected)
+      
+    elseif keys [keybindings.forbid_book.key] and
+           Focus == "Authors" and
+           Authors_Page.Book_List.active and
+           #Authors_Page.Book_List.choices > 0 then
+      Authors_Page.Authors [Authors_Page.Authors_List.selected]
+                           [2]
+                           [Authors_Page.Works_List.selected] [2]
+                           [Authors_Page.Book_List.selected].flags.forbid =
+        not  Authors_Page.Authors [Authors_Page.Authors_List.selected]
+                                  [2]
+                                  [Authors_Page.Works_List.selected] [2]
+                                  [Authors_Page.Book_List.selected].flags.forbid
+        
+                                       
+      Authors_Page.Book_List:setChoices (Produce_Book_List (Authors_Page.Authors [Authors_Page.Authors_List.selected]
+                                                                                 [2]
+                                                                                 [Authors_Page.Works_List.selected] [2]), Authors_Page.Book_List.selected)
+      
+    elseif keys [keybindings.dump_book.key] and
+           Focus == "Authors" and
+           Authors_Page.Book_List.active and
+           #Authors_Page.Book_List.choices > 0 then
+      Authors_Page.Authors [Authors_Page.Authors_List.selected]
+                           [2]
+                           [Authors_Page.Works_List.selected] [2]
+                           [Authors_Page.Book_List.selected].flags.dump =
+        not  Authors_Page.Authors [Authors_Page.Authors_List.selected]
+                                  [2]
+                                  [Authors_Page.Works_List.selected] [2]
+                                  [Authors_Page.Book_List.selected].flags.dump
+        
+                                       
+      Authors_Page.Book_List:setChoices (Produce_Book_List (Authors_Page.Authors [Authors_Page.Authors_List.selected]
+                                                                                 [2]
+                                                                                 [Authors_Page.Works_List.selected] [2]), Authors_Page.Book_List.selected)
+      
+    elseif keys [keybindings.trader_book.key] and
+           Focus == "Authors" and
+           Authors_Page.Book_List.active and
+           #Authors_Page.Book_List.choices > 0 then
+      Authors_Page.Authors [Authors_Page.Authors_List.selected]
+                           [2]
+                           [Authors_Page.Works_List.selected] [2]
+                           [Authors_Page.Book_List.selected].flags.trader =
+        not  Authors_Page.Authors [Authors_Page.Authors_List.selected]
+                                  [2]
+                                  [Authors_Page.Works_List.selected] [2]
+                                  [Authors_Page.Book_List.selected].flags.trader
+        
+                                       
+      Authors_Page.Book_List:setChoices (Produce_Book_List (Authors_Page.Authors [Authors_Page.Authors_List.selected]
+                                                                                 [2]
+                                                                                 [Authors_Page.Works_List.selected] [2]), Authors_Page.Book_List.selected)
     end
 
     self.super.onInput (self, keys)
