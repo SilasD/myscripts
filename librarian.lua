@@ -5,6 +5,9 @@
 librarian
 ================
 ]====]
+local dont_be_silly = false  --  'true' disables the "ook" part from the description of the return from hiding key.
+local ook_start_x = 10       --  x position of where the "ook" key description appears, in case the script clashes with something else.
+
 local gui = require 'gui'
 local dialog = require 'gui.dialogs'
 local widgets = require 'gui.widgets'
@@ -610,13 +613,14 @@ function Librarian ()
   local Science_Page = {}
   local Values_Page = {}
   local Authors_Page = {}
+  local Hidden_Page = {}
   local Help_Page = {}
   local persist_screen
   local civ_id = df.global.world.world_data.active_site [0].entity_links [0].entity_id
   
   local keybindings = {
     content_type = {key = "CUSTOM_C",
-                desc = "Set Content Type filter"},
+                    desc = "Set Content Type filter"},
     reference_filter = {key = "CUSTOM_R",
                         desc = "Toggle Reference Filter"},
     main = {key = "CUSTOM_M",
@@ -633,6 +637,10 @@ function Librarian ()
                  desc = "Toggle 'd'ump flag on selected book"},
     trader_book = {key = "CUSTOM_T",
                    desc = "Toggle 't'rader flag on selected book"},
+    zoom = {key = "CUSTOM_Z",
+            desc = "Zoom to a book"},
+    ook = {key = "CUSTOM_SHIFT_O",
+           desc = "Bring the Librarian out of hiding"},
     left = {key = "CURSOR_LEFT",
             desc = "Rotates to the next list"},
     right = {key = "CURSOR_RIGHT",
@@ -643,6 +651,7 @@ function Librarian ()
   local Content_Type_Selected = 1
   local Reference_Filter = false
   local Content_Type_Map = {}
+  local ook_key_string = dfhack.screen.getKeyDisplay (df.interface_key [keybindings.ook.key])
 
   table.insert (Content_Type_Map, {name = "All",
                                    index = -1})
@@ -1712,11 +1721,82 @@ function Librarian ()
   
   --============================================================
 
+  function Book_Location_And_Access_Key (item)
+    local pos = {["x"] = item.pos.x,
+                 ["y"] = item.pos.y,
+                 ["z"] = item.pos.z}
+    local key
+        
+    if item.flags.in_inventory then
+      key = {[df.interface_key [df.interface_key.D_VIEWUNIT]] = true}
+      for i, ref in ipairs (item.general_refs) do
+        if ref._type == df.general_ref_unit_holderst then
+          local unit = df.unit.find (ref.unit_id)
+          pos.x = unit.pos.x
+          pos.y = unit.pos.y
+          pos.z = unit.pos.z
+          return pos, key
+        end
+      end
+        
+    else
+      key = {[df.interface_key [df.interface_key.D_LOOK]] = true}
+          
+      for i, ref in ipairs (item.general_refs) do
+        if ref._type == df.general_ref_building_holderst then
+          local building = df.building.find (ref.building_id)
+          pos.x = building.centerx
+          pos.y = building.centery
+          pos.z = building.z
+          key = {[df.interface_key [df.interface_key.D_BUILDITEM]] = true}
+          return pos, key
+          
+        elseif ref._type == df.general_ref_contained_in_itemst then
+          local container = df.item.find (ref.item_id)
+          
+          return Book_Location_And_Access_Key (container)
+        end 
+      end
+
+      return pos, key        
+    end
+ end
+  
+  --============================================================
+
   Ui = defclass (nil, gui.FramedScreen)
   Ui.ATTRS = {
     frame_style = gui.GREY_LINE_FRAME,
-    frame_title = "The Librarian"
+    frame_title = "The Librarian",
+    transparent = false
   }
+
+  --============================================================
+ 
+  function Ui:onRenderFrame (dc, rect)
+    local x1, y1, x2, y2 = rect.x1, rect.y1, rect.x2, rect.y2
+
+    if self.transparent then
+      self:renderParent ()
+      dfhack.screen.paintString (COLOR_LIGHTRED, ook_start_x, y2, ook_key_string)
+      
+      if dont_be_silly then
+        dfhack.screen.paintString (COLOR_WHITE, ook_start_x + ook_key_string:len (), y2, ": Return to The Librarian")
+      else
+        dfhack.screen.paintString (COLOR_WHITE, ook_start_x + ook_key_string:len (), y2, ": Ook! Return to The Librarian")
+      end
+  
+    else
+      if rect.wgap <= 0 and rect.hgap <= 0 then
+        dc:clear ()
+      else
+        self:renderParent ()
+        dc:fill (rect, self.frame_background)
+      end
+
+      gui.paint_frame (x1, y1, x2, y2, self.frame_style, self.frame_title)
+    end
+  end
 
   --============================================================
  
@@ -1727,7 +1807,7 @@ function Librarian ()
   --============================================================
 
   function Ui:onHelp ()
-    self.subviews.pages:setSelected (5)
+    self.subviews.pages:setSelected (6)
     Pre_Help_Focus = Focus
     Focus = "Help"
   end
@@ -1757,10 +1837,14 @@ function Librarian ()
        "  showing some basic flag information on them (Original/Copy, Forbidden, Dump, Trader, and In Inventory", NEWLINE,
        "  flags). The Forbidden, Dump, and Trader flags can be manipulated when an actual book is in focus using", NEWLINE,
        "  the command keys displayed above the list.", NEWLINE,
+       "- The actual book sections have a 'zoom to book' command allowing you to zoom to the location in your", NEWLINE,
+       "  fortress where the book is (e.g. to determine whether it will cause trouble if forbidden). Warning!", NEWLINE,
+       "  while it seems DF can be played from there, there are things known not to work properly. Return from", NEWLINE,
+       "  this view with the Ook! command (added on top of the bottom frame for reference) when done viewing.", NEWLINE,
        "- The Science and Values pages also have a Remote Works list containing all works existing in the DF", NEWLINE,
        "  world outside of your fortress, allowing you to find out which works you might want to 'acquire' via", NEWLINE,
        "  raids...", NEWLINE,
-       "Version 0.9 2018-04-27", NEWLINE,
+       "Version 0.10 2018-04-28", NEWLINE,
        "Comments:", NEWLINE,
        "- The term 'work' is used above for a reason. A 'work' is a unique piece of written information. Currently", NEWLINE,
        "  it seems DF is restricted to a single 'work' per book/codex/scroll/quire, but the data structures allow", NEWLINE,
@@ -1779,6 +1863,9 @@ function Librarian ()
        "- The reason the Trader flag is available for toggling is that the author has encountered lots of questing", NEWLINE,
        "  and attacking visitors who leave books with that flag set behind, and it seems you can't move the book", NEWLINE,
        "  when it is set. The attackers clearly aren't traders, so that flag being set is probably a bug.", NEWLINE,
+       "- Why is the command to return to The Librarian named 'Ook!'? 'l' and 'L' are used by DF, so a reference to", NEWLINE,
+       "  the Discworld Librarian was used. If that's definitely not funny, change the 'dont_be_silly' variable at", NEWLINE,
+       "  the beginning of this script to 'true'.", NEWLINE,
        "Caveats:", NEWLINE,
        "- The testing has been limited...", NEWLINE,
        "- Some data structures are changing. Usage of such data has been skipped for the time being.", NEWLINE,
@@ -1787,7 +1874,10 @@ function Librarian ()
        "  and what's there hasn't been subject to any touching up, so it provides the information in a crude format.", NEWLINE,
        "- The Dump flag of artifact works can be set by The Librarian (and is displayed by DF when that has been done)", NEWLINE,
        "  however, as DF doesn't allow the flag to be set normally and the author's fortress isn't playable, it hasn't", NEWLINE,
-       "  been tested whether those books are actually dumped."
+       "  been tested whether those books are actually dumped.", NEWLINE,
+       "- The Hidden view brought up with zooming to books had issues with the up/down keys having side effects in the", NEWLINE,
+       "  form of additional movements, causing them to exit lists. While that has been worked around, any other issues", NEWLINE,
+       "  have not. It's known the DFHack naming function doesn't work, for instance."
        }
                
    return helptext
@@ -1895,12 +1985,18 @@ function Librarian ()
                              {text = "",
                                      key = keybindings.dump_book.key,
                                      key_sep = '()'},
-                             {text = " Toggle Dump Flag ",
-                              pen = COLOR_LIGHTBLUE}, 
+                             {text = " Toggle Dump Flag",
+                              pen = COLOR_LIGHTBLUE},
+                             NEWLINE,
                              {text = "",
                                      key = keybindings.trader_book.key,
                                      key_sep = '()'},
-                             {text = " Toggle Trader Flag",
+                             {text = " Toggle Trader Flag ",
+                              pen = COLOR_LIGHTBLUE},
+                             {text = "",
+                                     key = keybindings.zoom.key,
+                                     key_sep = '()'},
+                             {text = " Zoom to book (return with 'O')",
                               pen = COLOR_LIGHTBLUE}},
                      frame = {l = 54, t = 28, y_align = 0},
                      visible = false}
@@ -2070,12 +2166,18 @@ function Librarian ()
                              {text = "",
                                      key = keybindings.dump_book.key,
                                      key_sep = '()'},
-                             {text = " Toggle Dump Flag ",
-                              pen = COLOR_LIGHTBLUE}, 
+                             {text = " Toggle Dump Flag",
+                              pen = COLOR_LIGHTBLUE},
+                             NEWLINE,
                              {text = "",
                                      key = keybindings.trader_book.key,
                                      key_sep = '()'},
-                             {text = " Toggle Trader Flag",
+                             {text = " Toggle Trader Flag ",
+                              pen = COLOR_LIGHTBLUE},
+                             {text = "",
+                                     key = keybindings.zoom.key,
+                                     key_sep = '()'},
+                             {text = " Zoom to book (return with 'O')",
                               pen = COLOR_LIGHTBLUE}},
                      frame = {l = 1, t = 45, y_align = 0},
                      visible = false}
@@ -2240,12 +2342,18 @@ function Librarian ()
                              {text = "",
                                      key = keybindings.dump_book.key,
                                      key_sep = '()'},
-                             {text = " Toggle Dump Flag ",
-                              pen = COLOR_LIGHTBLUE}, 
+                             {text = " Toggle Dump Flag",
+                              pen = COLOR_LIGHTBLUE},
+                             NEWLINE,
                              {text = "",
                                      key = keybindings.trader_book.key,
                                      key_sep = '()'},
-                             {text = " Toggle Trader Flag",
+                             {text = " Toggle Trader Flag ",
+                              pen = COLOR_LIGHTBLUE},
+                             {text = "",
+                                     key = keybindings.zoom.key,
+                                     key_sep = '()'},
+                             {text = " Zoom to book (return with 'O')",
                               pen = COLOR_LIGHTBLUE}},
                      frame = {l = 1, t = 62, y_align = 0},
                      visible = false}
@@ -2359,12 +2467,18 @@ function Librarian ()
                              {text = "",
                                      key = keybindings.dump_book.key,
                                      key_sep = '()'},
-                             {text = " Toggle Dump Flag ",
-                              pen = COLOR_LIGHTBLUE}, 
+                             {text = " Toggle Dump Flag",
+                              pen = COLOR_LIGHTBLUE},
+                             NEWLINE,
                              {text = "",
                                      key = keybindings.trader_book.key,
                                      key_sep = '()'},
-                             {text = " Toggle Trader Flag",
+                             {text = " Toggle Trader Flag ",
+                              pen = COLOR_LIGHTBLUE},
+                             {text = "",
+                                     key = keybindings.zoom.key,
+                                     key_sep = '()'},
+                             {text = " Zoom to book (return with 'O')",
                               pen = COLOR_LIGHTBLUE}},
                      frame = {l = 65, t = 46, y_align = 0},
                      visible = false}
@@ -2384,6 +2498,9 @@ function Librarian ()
     table.insert (Authors_Page.Active_List, Authors_Page.Works_List)
     table.insert (Authors_Page.Active_List, Authors_Page.Book_List)
 
+    local hiddenPage = widgets.Panel {
+      subviews = {}}
+           
     Help_Page.Main = 
       widgets.Label
         {text = Helptext_Main (),
@@ -2398,6 +2515,7 @@ function Librarian ()
                    sciencePage,
                    valuesPage,
                    authorsPage,
+                   hiddenPage,
                    helpPage},view_id = "pages",
                    }
 
@@ -2541,7 +2659,10 @@ function Librarian ()
     end
     
     if keys.LEAVESCREEN then
-      if Focus == "Help" then
+      if Focus == "Hidden" then
+        persist_screen:sendInputToParent (keys)
+      
+      elseif Focus == "Help" then
         if Pre_Help_Focus == "Main" then
           self.subviews.pages:setSelected (1)
                 
@@ -2608,6 +2729,24 @@ function Librarian ()
       Focus = "Authors"
       self.subviews.pages:setSelected (4)
             
+    elseif keys [keybindings.ook.key] and
+           Focus == "Hidden" then
+      if Pre_Hiding_Focus == "Main" then
+        self.subviews.pages:setSelected (1)
+        
+      elseif Pre_Hiding_Focus == "Science" then
+        self.subviews.pages:setSelected (2)
+      
+      elseif Pre_Hiding_Focus == "Values" then
+        self.subviews.pages:setSelected (3)
+      
+      elseif Pre_Hiding_Focus == "Authors" then
+        self.subviews.pages:setSelected (4)
+      end
+      
+      Focus = Pre_Hiding_Focus
+      self.transparent = false
+    
     elseif keys [keybindings.left.key] and 
            Focus == "Main" then
       local active = 1
@@ -2980,6 +3119,34 @@ function Librarian ()
         
       Main_Page.Book_List:setChoices (Produce_Book_List (Main_Page.Filtered_Stock [Main_Page.List.selected].element [2]), Main_Page.Book_List.selected)
       
+    elseif keys [keybindings.zoom.key] and 
+           Focus == "Main" and
+           Main_Page.Book_List.active and
+           #Main_Page.Book_List.choices > 0 then
+      local item = Main_Page.Filtered_Stock [Main_Page.List.selected].element [2] [Main_Page.Book_List.selected]
+      
+      if item.pos.x ~= -30000 and
+         item.pos.y ~= -30000 and
+         item.pos.z ~= -30000 then
+         local pos, key = Book_Location_And_Access_Key (item)
+
+         persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.OPTIONS]] = true,
+                                           [df.interface_key [df.interface_key.LEAVESCREEN]] = true})  --  To exit any competing view mode.
+        persist_screen:sendInputToParent (key)
+        df.global.cursor.x = pos.x
+        df.global.cursor.y = pos.y
+        df.global.cursor.z = pos.z
+        persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.CURSOR_LEFT]] = true})  --  Jiggle to get DF to update.
+        if item.pos.x ~= 0 then
+          persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.CURSOR_RIGHT]] = true})
+        end
+        
+        Pre_Hiding_Focus = Focus
+        Focus = "Hidden"      
+        self.subviews.pages:setSelected (5)
+        self.transparent = true
+      end
+      
     elseif keys [keybindings.forbid_book.key] and
            Focus == "Science" and
            Science_Page.Book_List.active and
@@ -3031,6 +3198,37 @@ function Librarian ()
                                                                                      [Science_Page.Topic_List.selected - 1]
                                                                                      [Science_Page.Own_List.selected] [2]), Science_Page.Book_List.selected)
       
+    elseif keys [keybindings.zoom.key] and 
+           Focus == "Science" and
+           Science_Page.Book_List.active and
+           #Science_Page.Book_List.choices > 0 then
+      local item = Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1]
+                                            [Science_Page.Topic_List.selected - 1]
+                                            [Science_Page.Own_List.selected] [2]
+                                            [Science_Page.Book_List.selected]
+      
+      if item.pos.x ~= -30000 and
+         item.pos.y ~= -30000 and
+         item.pos.z ~= -30000 then
+         local pos, key = Book_Location_And_Access_Key (item)
+
+         persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.OPTIONS]] = true,
+                                           [df.interface_key [df.interface_key.LEAVESCREEN]] = true})  --  To exit any competing view mode.
+        persist_screen:sendInputToParent (key)
+        df.global.cursor.x = pos.x
+        df.global.cursor.y = pos.y
+        df.global.cursor.z = pos.z
+        persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.CURSOR_LEFT]] = true})  --  Jiggle to get DF to update.
+        if item.pos.x ~= 0 then
+          persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.CURSOR_RIGHT]] = true})
+        end
+        
+        Pre_Hiding_Focus = Focus
+        Focus = "Hidden"      
+        self.subviews.pages:setSelected (5)
+        self.transparent = true
+      end
+      
     elseif keys [keybindings.forbid_book.key] and
            Focus == "Values" and
            Values_Page.Book_List.active and
@@ -3081,6 +3279,37 @@ function Librarian ()
       Values_Page.Book_List:setChoices (Produce_Book_List (Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1]
                                                                                    [Values_Page.Strength_List.selected - 4]
                                                                                    [Values_Page.Own_List.selected] [2]), Values_Page.Book_List.selected)
+      
+    elseif keys [keybindings.zoom.key] and 
+           Focus == "Values" and
+           Values_Page.Book_List.active and
+           #Values_Page.Book_List.choices > 0 then
+      local item = Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1]
+                                           [Values_Page.Strength_List.selected - 4]
+                                           [Values_Page.Own_List.selected] [2]
+                                           [Values_Page.Book_List.selected]
+      
+      if item.pos.x ~= -30000 and
+         item.pos.y ~= -30000 and
+         item.pos.z ~= -30000 then
+         local pos, key = Book_Location_And_Access_Key (item)
+
+         persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.OPTIONS]] = true,
+                                           [df.interface_key [df.interface_key.LEAVESCREEN]] = true})  --  To exit any competing view mode.
+        persist_screen:sendInputToParent (key)
+        df.global.cursor.x = pos.x
+        df.global.cursor.y = pos.y
+        df.global.cursor.z = pos.z
+        persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.CURSOR_LEFT]] = true})  --  Jiggle to get DF to update.
+        if item.pos.x ~= 0 then
+          persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.CURSOR_RIGHT]] = true})
+        end
+        
+        Pre_Hiding_Focus = Focus
+        Focus = "Hidden"      
+        self.subviews.pages:setSelected (5)
+        self.transparent = true
+      end
       
     elseif keys [keybindings.forbid_book.key] and
            Focus == "Authors" and
@@ -3135,6 +3364,48 @@ function Librarian ()
       Authors_Page.Book_List:setChoices (Produce_Book_List (Authors_Page.Authors [Authors_Page.Authors_List.selected]
                                                                                  [2]
                                                                                  [Authors_Page.Works_List.selected] [2]), Authors_Page.Book_List.selected)
+           
+    elseif keys [keybindings.zoom.key] and 
+           Focus == "Authors" and
+           Authors_Page.Book_List.active and
+           #Authors_Page.Book_List.choices > 0 then
+      local item = Authors_Page.Authors [Authors_Page.Authors_List.selected]
+                                        [2]
+                                        [Authors_Page.Works_List.selected] [2]
+                                        [Authors_Page.Book_List.selected]
+      
+      if item.pos.x ~= -30000 and
+         item.pos.y ~= -30000 and
+         item.pos.z ~= -30000 then
+         local pos, key = Book_Location_And_Access_Key (item)
+
+         persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.OPTIONS]] = true,
+                                           [df.interface_key [df.interface_key.LEAVESCREEN]] = true})  --  To exit any competing view mode.
+        persist_screen:sendInputToParent (key)
+        df.global.cursor.x = pos.x
+        df.global.cursor.y = pos.y
+        df.global.cursor.z = pos.z
+        persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.CURSOR_LEFT]] = true})  --  Jiggle to get DF to update.
+        if item.pos.x ~= 0 then
+          persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.CURSOR_RIGHT]] = true})
+        end
+        
+        Pre_Hiding_Focus = Focus
+        Focus = "Hidden"      
+        self.subviews.pages:setSelected (5)
+        self.transparent = true
+      end
+      
+    elseif Focus == "Hidden" then
+      if keys [df.interface_key [df.interface_key.SECONDSCROLL_DOWN]] then  --### Special case because of weird side effects when sending the whole list through.
+        persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.SECONDSCROLL_DOWN]] = true})
+        
+      elseif keys [df.interface_key [df.interface_key.SECONDSCROLL_UP]] then  --### Special case because of weird side effects when sending the whole list through.
+        persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.SECONDSCROLL_UP]] = true})
+        
+      else
+        persist_screen:sendInputToParent (keys)
+      end
     end
 
     self.super.onInput (self, keys)
