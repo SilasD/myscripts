@@ -653,13 +653,6 @@ function Librarian ()
   local Content_Type_Map = {}
   local ook_key_string = dfhack.screen.getKeyDisplay (df.interface_key [keybindings.ook.key])
 
-  table.insert (Content_Type_Map, {name = "All",
-                                   index = -1})
-  for i = df.written_content_type._first_item, df.written_content_type._last_item do
-    table.insert (Content_Type_Map, {name = df.written_content_type [i],
-                                     index = i})
-  end
-
  --============================================================
 
   function Sort (list)
@@ -1844,7 +1837,7 @@ function Librarian ()
        "- The Science and Values pages also have a Remote Works list containing all works existing in the DF", NEWLINE,
        "  world outside of your fortress, allowing you to find out which works you might want to 'acquire' via", NEWLINE,
        "  raids...", NEWLINE,
-       "Version 0.10 2018-04-28", NEWLINE,
+       "Version 0.11 2018-05-04", NEWLINE,
        "Comments:", NEWLINE,
        "- The term 'work' is used above for a reason. A 'work' is a unique piece of written information. Currently", NEWLINE,
        "  it seems DF is restricted to a single 'work' per book/codex/scroll/quire, but the data structures allow", NEWLINE,
@@ -1934,8 +1927,21 @@ function Librarian ()
                      frame = {l = 53, t = 1, y_align = 0},
                      text_pen = COLOR_WHITE}
     
+    Main_Page.Stock = Take_Stock ()
+    Main_Page.Filtered_Stock = Filter_Stock (Main_Page.Stock, Content_Type_Selected, Reference_Filter)
+
+    table.insert (Content_Type_Map, {name = {[false] = "All (" .. tostring (#Main_Page.Stock) .. ")",
+                                             [true] = "All (" .. tostring (#Filter_Stock (Main_Page.Stock, Content_Type_Selected, true)) .. ")"},
+                                     index = -1})
+                                     
+    for i = df.written_content_type._first_item, df.written_content_type._last_item do
+      table.insert (Content_Type_Map, {name = {[false] = df.written_content_type [i] .. " (" .. tostring (#Filter_Stock (Main_Page.Stock, i + 2, false)) .. ")",
+                                               [true] = df.written_content_type [i] .. " (" .. tostring (#Filter_Stock (Main_Page.Stock, i + 2, true)) .. ")"},
+                                       index = i})
+    end
+
     Main_Page.Content_Type =
-      widgets.Label {text = Content_Type_Map [Content_Type_Selected].name,
+      widgets.Label {text = Content_Type_Map [Content_Type_Selected].name [false],
                      frame = {l = 19, t = 3, y_align = 0},
                      text_pen = COLOR_YELLOW}
       
@@ -1944,9 +1950,6 @@ function Librarian ()
                      frame = {l = 89, w = 1, t = 3, y_align = 0},
                      text_pen = COLOR_YELLOW}
       
-    Main_Page.Stock = Take_Stock ()
-    Main_Page.Filtered_Stock = Filter_Stock (Main_Page.Stock, Content_Type_Selected, Reference_Filter)
-    
     Main_Page.Details =
       widgets.Label {text = Produce_Details (nil),
                      frame = {l = 54, t = 6, h = 20, y_align = 0},
@@ -2530,7 +2533,7 @@ function Librarian ()
   function Ui:show_main_details (index, choice)
     if index == nil or #Main_Page.Filtered_Stock < index then
       Main_Page.Details:setText (Produce_Details (nil))
-      Main_Page.Book_List.setChoices (Produce_Book_List (nil))
+      Main_Page.Book_List:setChoices (Produce_Book_List (nil))
       
     else
       Main_Page.Details:setText (Produce_Details (Main_Page.Filtered_Stock [index].element))
@@ -2591,7 +2594,7 @@ function Librarian ()
 
   function Ui:on_select_content_type (index, choice)
     Content_Type_Selected = index
-    Main_Page.Content_Type:setText (Content_Type_Map [Content_Type_Selected].name)
+    Main_Page.Content_Type:setText (Content_Type_Map [Content_Type_Selected].name [Reference_Filter])
     Main_Page.Filtered_Stock = Filter_Stock (Main_Page.Stock, Content_Type_Selected, Reference_Filter)
     Main_Page.List:setChoices (Make_List (Main_Page.Filtered_Stock))
     Main_Page.Works_Listed:setText (tostring (#Main_Page.List.choices))
@@ -2685,16 +2688,22 @@ function Librarian ()
 
     if keys [keybindings.content_type.key] and
        Focus == "Main" then
+      list = {}
+      for i, element in ipairs (Content_Type_Map) do
+        table.insert (list, element.name [Reference_Filter])
+      end
+      
       dialog.showListPrompt ("Select Content Type filter",
                              "Filter the title list to show only the ones in the\n" ..
                               "specified Content Type category.", --### Add display of current selection
                               COLOR_WHITE,
-                              Make_List (Content_Type_Map),
+                              list, 
                               self:callback ("on_select_content_type"))
                               
     elseif keys [keybindings.reference_filter.key] and Focus == "Main" then
       Reference_Filter = not Reference_Filter
       Main_Page.Reference_Filter:setText (Bool_To_YN (Reference_Filter))
+      Main_Page.Content_Type:setText (Content_Type_Map [Content_Type_Selected].name [Reference_Filter])
       Main_Page.Filtered_Stock = Filter_Stock (Main_Page.Stock, Content_Type_Selected, Reference_Filter)
       Main_Page.List:setChoices (Make_List (Main_Page.Filtered_Stock))
       Main_Page.Works_Listed:setText (tostring (#Main_Page.List.choices))
