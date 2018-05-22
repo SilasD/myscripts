@@ -1694,16 +1694,18 @@ function Librarian ()
     local list = {}
     local list_map = {}
     
-    for i, element in ipairs (Authors_Page.Authors [selected] [2]) do
-      local content = df.written_content.find (element [1])
-      local title = content.title
+    if #Authors_Page.Authors > 0 then
+      for i, element in ipairs (Authors_Page.Authors [selected] [2]) do
+        local content = df.written_content.find (element [1])
+        local title = content.title
     
-      if title == "" then
-        title = "<Untitled>"
-      end
+        if title == "" then
+          title = "<Untitled>"
+        end
       
-      table.insert (list, title)    
-      table.insert (list_map, i)
+        table.insert (list, title)    
+        table.insert (list_map, i)
+      end
     end
     
     Sort_Remote (list, list_map)
@@ -1837,7 +1839,7 @@ function Librarian ()
        "- The Science and Values pages also have a Remote Works list containing all works existing in the DF", NEWLINE,
        "  world outside of your fortress, allowing you to find out which works you might want to 'acquire' via", NEWLINE,
        "  raids...", NEWLINE,
-       "Version 0.11 2018-05-04", NEWLINE,
+       "Version 0.12 2018-05-22", NEWLINE,
        "Comments:", NEWLINE,
        "- The term 'work' is used above for a reason. A 'work' is a unique piece of written information. Currently", NEWLINE,
        "  it seems DF is restricted to a single 'work' per book/codex/scroll/quire, but the data structures allow", NEWLINE,
