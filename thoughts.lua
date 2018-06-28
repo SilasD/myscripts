@@ -3,7 +3,7 @@
 --  In addition to that screen, relations are attempted to be reproduced as well.
 --
 --  It is a work in progress, and things marked with ### are things that haven't been seen or have other outstanding issues.
---  Version 0.6 2018-03-03
+--  Version 0.7 2018-06-28
 
 --### At least the emotion thought enum has been extended since work on this script started. Remains to check if other things are missing/updated.
 --    Should probably switch to a list style as the one with "values" plus a startup check to automatically flag any additional values for more items.
@@ -299,145 +299,146 @@ local values = {[df.value_type.LAW] =
                  [2] = "views the pursuit of knowledge as deeply important",
                  [3] = "finds the quest for knowledge to be of the very highest value"}}
 
---  {feeling_type, text, prefix} where:
+--  {feeling_type, text, memory, prefix} where:
 --   "feeling_type" is:
 --   - true = is/was
 --   - false = feels/felt
 --   - nil = <nothing printed>
 --   "text" is the text DF prints for the feeling_type
+--   "memory" in the text DF prints when it's a remembered rather than current event.
 --   "prefix" is an optional parameter that goes in between feeling_type and text, but is printed in the standard color, not the feeling color.
 --     it turns out all instances of this parameter seems to be "in ", so it could have been a boolean instead (with only true or absent used).
 --
-local emotions = {[df.emotion_type.ANYTHING] = {false, "ANYTHING"},
-                  [df.emotion_type.ACCEPTANCE] = {true, "accepting"},
-                  [df.emotion_type.ADORATION] = {false, "adoration"},
-                  [df.emotion_type.AFFECTION] = {false, "affection"},
-                  [df.emotion_type.AGITATION] = {true, "agitated"},
-                  [df.emotion_type.AGGRAVATION] = {true, "aggravated"},
-                  [df.emotion_type.AGONY] = {true, "agony"},
-                  [df.emotion_type.ALARM] = {true, "alarmed"},
-                  [df.emotion_type.ALIENATION] = {false, "alienated"},
-                  [df.emotion_type.AMAZEMENT] = {true, "amazed"},
-                  [df.emotion_type.AMBIVALENCE] = {true, "ambivalent"},
-                  [df.emotion_type.AMUSEMENT] = {true, "amused"},
-                  [df.emotion_type.ANGER] = {true, "angry"},
-                  [df.emotion_type.ANGST] = {true, "existential crisis", "in "},
-                  [df.emotion_type.ANGUISH] = {true, "anguish", "in "},
-                  [df.emotion_type.ANNOYANCE] = {true, "annoyed"},
-                  [df.emotion_type.ANXIETY] = {false, "anxious"},
-                  [df.emotion_type.APATHY] = {true, "apathetic"},
-                  [df.emotion_type.AROUSAL] = {true, "aroused"},
-                  [df.emotion_type.ASTONISHMENT] = {true, "astonished"},
-                  [df.emotion_type.AVERSION] = {false, "aversion"},
-                  [df.emotion_type.AWE] = {true, "awe", "in "},
-                  [df.emotion_type.BITTERNESS] = {false, "bitter"},
-                  [df.emotion_type.BLISS] = {true, "blissful"},
-                  [df.emotion_type.BOREDOM] = {true, "bored"},
-                  [df.emotion_type.CARING] = {false, "caring"},
-                  [df.emotion_type.CONFUSION] = {true, "confused"},
-                  [df.emotion_type.CONTEMPT] = {true, "contemptuous"},
-                  [df.emotion_type.CONTENTMENT] = {true, "content"},
-                  [df.emotion_type.DEFEAT] = {false, "defeated"},
-                  [df.emotion_type.DEJECTION] = {true, "dejected"},
-                  [df.emotion_type.DELIGHT] = {true, "delighted"},
-                  [df.emotion_type.DESPAIR] = {true, "despair", "in "},
-                  [df.emotion_type.DISAPPOINTMENT] = {false, "disappointed"},
-                  [df.emotion_type.DISGUST] = {true, "disgusted"},
-                  [df.emotion_type.DISILLUSIONMENT] = {true, "disillusioned"},
-                  [df.emotion_type.DISLIKE] = {false, "dislike"},
-                  [df.emotion_type.DISMAY] = {true, "dismayed"},
-                  [df.emotion_type.DISPLEASURE] = {false, "displeasure"},
-                  [df.emotion_type.DISTRESS] = {true, "distressed"},
-                  [df.emotion_type.DOUBT] = {true, "doubt", "in "},
-                  [df.emotion_type.EAGERNESS] = {true, "eager"},
-                  [df.emotion_type.ELATION] = {true, "elated"},
-                  [df.emotion_type.EMBARRASSMENT] = {true, "embarrassed"},
-                  [df.emotion_type.EMPATHY] = {false, "empathy"},
-                  [df.emotion_type.EMPTINESS] = {false, "empty"},
-                  [df.emotion_type.ENJOYMENT] = {false, "enjoyment"},
-                  [df.emotion_type.ENTHUSIASM] = {true, "enthusiastic"},
-                  [df.emotion_type.EUPHORIA] = {false, "euphoric"},
-                  [df.emotion_type.EXASPERATION] = {true, "exasperated"},
-                  [df.emotion_type.EXCITEMENT] = {true, "excited"},
-                  [df.emotion_type.EXHILARATION] = {true, "exhilarated"},
-                  [df.emotion_type.EXPECTANCY] = {true, "expectant"},
-                  [df.emotion_type.FEAR] = {true, "afraid"},
-                  [df.emotion_type.FEROCITY] = {false, "ferocity"},
-                  [df.emotion_type.FONDNESS] = {false, "fondness"},
-                  [df.emotion_type.FREEDOM] = {false, "free"},
-                  [df.emotion_type.FRIGHT] = {true, "frightened"},
-                  [df.emotion_type.FRUSTRATION] = {true, "frustrated"},
-                  [df.emotion_type.GAIETY] = {false, "gaiety"},
-                  [df.emotion_type.GLEE] = {true, "gleeful"},
-                  [df.emotion_type.GLOOM] = {true, "gloomy"},
-                  [df.emotion_type.GLUMNESS] = {false, "glum"},
-                  [df.emotion_type.GRATITUDE] = {false, "gratitude"},
-                  [df.emotion_type.GRIEF] = {nil, "grieved"},
-                  [df.emotion_type.GRIM_SATISFACTION] = {false, "grim satisfaction"},
-                  [df.emotion_type.GROUCHINESS] = {true, "grouchy"},
-                  [df.emotion_type.GRUMPINESS] = {true, "grumpy"},
-                  [df.emotion_type.GUILT] = {false, "guilty"},
-                  [df.emotion_type.HAPPINESS] = {false, "happy"},
-                  [df.emotion_type.HATRED] = {false, "hateful"},
-                  [df.emotion_type.HOPE] = {false, "hope"},
-                  [df.emotion_type.HOPELESSNESS] = {false, "hopeless"},
-                  [df.emotion_type.HORROR] = {true, "horrified"},
-                  [df.emotion_type.HUMILIATION] = {false, "humiliated"},
-                  [df.emotion_type.INSULT] = {false, "insulted"},
-                  [df.emotion_type.INTEREST] = {true, "interested"},
-                  [df.emotion_type.IRRITATION] = {true, "insulted"},
-                  [df.emotion_type.ISOLATION] = {false, "isolated"},
-                  [df.emotion_type.JOLLINESS] = {true, "jolly"},
-                  [df.emotion_type.JOVIALITY] = {false, "jovial"},
-                  [df.emotion_type.JOY] = {false, "joy"},
-                  [df.emotion_type.JUBILATION] = {true, "jubilant"},
-                  [df.emotion_type.LOATHING] = {false, "loathing"},
-                  [df.emotion_type.LONELINESS] = {false, "lonely"},
-                  [df.emotion_type.LOVE] = {false, "love"},
-                  [df.emotion_type.LUST] = {false, "lustful"},
-                  [df.emotion_type.MISERY] = {false, "miserable"},
-                  [df.emotion_type.MORTIFICATION] = {true, "mortified"},
-                  [df.emotion_type.NERVOUSNESS] = {false, "nervous"},
-                  [df.emotion_type.NOSTALGIA] = {false, "nostalgic"},
-                  [df.emotion_type.OPTIMISM] = {false, "optimistic"},
-                  [df.emotion_type.OUTRAGE] = {true, "outraged"},
-                  [df.emotion_type.PANIC] = {nil, "panicked"},
-                  [df.emotion_type.PATIENCE] = {false, "patient"},
-                  [df.emotion_type.PASSION] = {false, "passionate"},
-                  [df.emotion_type.PESSIMISM] = {true, "pessimistic"},
-                  [df.emotion_type.PLEASURE] = {false, "pleasure"},
-                  [df.emotion_type.PRIDE] = {true, "proud"},
-                  [df.emotion_type.RAGE] = {nil, "rages"},
-                  [df.emotion_type.RAPTURE] = {true, "enraptured"},
-                  [df.emotion_type.REJECTION] = {false, "rejected"},
-                  [df.emotion_type.RELIEF] = {true, "relieved"},
-                  [df.emotion_type.REGRET] = {false, "regretful"},
-                  [df.emotion_type.REMORSE] = {false, "remorseful"},
-                  [df.emotion_type.REPENTANCE] = {false, "repentant"},
-                  [df.emotion_type.RESENTMENT] = {true, "resentful"},
+local emotions = {[df.emotion_type.ANYTHING] = {false, "ANYTHING", "remembering"},
+                  [df.emotion_type.ACCEPTANCE] = {true, "accepting", "remembering"},
+                  [df.emotion_type.ADORATION] = {false, "adoration", "remembering"},
+                  [df.emotion_type.AFFECTION] = {false, "affection", "remembering"},
+                  [df.emotion_type.AGITATION] = {true, "agitated", "dwelling upon"},
+                  [df.emotion_type.AGGRAVATION] = {true, "aggravated", "dwelling upon"},
+                  [df.emotion_type.AGONY] = {false, "agony", "reliving"},
+                  [df.emotion_type.ALARM] = {true, "alarmed", "reliving"},
+                  [df.emotion_type.ALIENATION] = {false, "alienated", "dwelling upon"},
+                  [df.emotion_type.AMAZEMENT] = {true, "amazed", "remembering"},
+                  [df.emotion_type.AMBIVALENCE] = {true, "ambivalent", "remembering"},
+                  [df.emotion_type.AMUSEMENT] = {true, "amused", "remembering"},
+                  [df.emotion_type.ANGER] = {true, "angry", "dwelling upon"},
+                  [df.emotion_type.ANGST] = {true, "existential crisis", "dwelling upon", "in "},
+                  [df.emotion_type.ANGUISH] = {true, "anguish", "reliving", "in "},
+                  [df.emotion_type.ANNOYANCE] = {true, "annoyed", "dwelling upon"},
+                  [df.emotion_type.ANXIETY] = {false, "anxious", "dwelling upon"},
+                  [df.emotion_type.APATHY] = {true, "apathetic", "remembering"},
+                  [df.emotion_type.AROUSAL] = {true, "aroused", "remembering"},
+                  [df.emotion_type.ASTONISHMENT] = {true, "astonished", "remembering"},
+                  [df.emotion_type.AVERSION] = {false, "aversion", "dwelling upon"},
+                  [df.emotion_type.AWE] = {true, "awe", "in ", "remembering"},
+                  [df.emotion_type.BITTERNESS] = {false, "bitter", "dwelling upon"},
+                  [df.emotion_type.BLISS] = {true, "blissful", "remembering"},
+                  [df.emotion_type.BOREDOM] = {true, "bored", "dwelling upon"},
+                  [df.emotion_type.CARING] = {false, "caring", "remembering"},
+                  [df.emotion_type.CONFUSION] = {true, "confused", "dwelling upon"},
+                  [df.emotion_type.CONTEMPT] = {true, "contemptuous", "dwelling upon"},
+                  [df.emotion_type.CONTENTMENT] = {true, "content", "remembering"},
+                  [df.emotion_type.DEFEAT] = {false, "defeated", "dwelling upon"},
+                  [df.emotion_type.DEJECTION] = {true, "dejected", "dwelling upon"},
+                  [df.emotion_type.DELIGHT] = {true, "delighted", "remembering"},
+                  [df.emotion_type.DESPAIR] = {true, "despair", "dwelling upon", "in "},
+                  [df.emotion_type.DISAPPOINTMENT] = {false, "disappointed", "dwelling upon"},
+                  [df.emotion_type.DISGUST] = {true, "disgusted", "dwelling upon"},
+                  [df.emotion_type.DISILLUSIONMENT] = {true, "disillusioned", "dwelling upon"},
+                  [df.emotion_type.DISLIKE] = {false, "dislike", "dwelling upon"},
+                  [df.emotion_type.DISMAY] = {true, "dismayed", "reliving"},
+                  [df.emotion_type.DISPLEASURE] = {false, "displeasure", "dwelling upon"},
+                  [df.emotion_type.DISTRESS] = {true, "distressed", "reliving"},
+                  [df.emotion_type.DOUBT] = {true, "doubt", "in ", "dwelling upon"},
+                  [df.emotion_type.EAGERNESS] = {true, "eager", "remembering"},
+                  [df.emotion_type.ELATION] = {true, "elated", "remembering"},
+                  [df.emotion_type.EMBARRASSMENT] = {true, "embarrassed", "dwelling upon"},
+                  [df.emotion_type.EMPATHY] = {false, "empathy", "remembering"},
+                  [df.emotion_type.EMPTINESS] = {false, "empty", "dwelling upon"},
+                  [df.emotion_type.ENJOYMENT] = {false, "enjoyment", "remembering"},
+                  [df.emotion_type.ENTHUSIASM] = {true, "enthusiastic", "remembering"},
+                  [df.emotion_type.EUPHORIA] = {false, "euphoric", "remembering"},
+                  [df.emotion_type.EXASPERATION] = {true, "exasperated", "dwelling upon"},
+                  [df.emotion_type.EXCITEMENT] = {true, "excited", "remembering"},
+                  [df.emotion_type.EXHILARATION] = {true, "exhilarated", "remembering"},
+                  [df.emotion_type.EXPECTANCY] = {true, "expectant", "remembering"},
+                  [df.emotion_type.FEAR] = {true, "afraid", "reliving"},
+                  [df.emotion_type.FEROCITY] = {false, "ferocity", "reliving"},
+                  [df.emotion_type.FONDNESS] = {false, "fondness", "remembering"},
+                  [df.emotion_type.FREEDOM] = {false, "free", "remembering"},
+                  [df.emotion_type.FRIGHT] = {true, "frightened", "reliving"},
+                  [df.emotion_type.FRUSTRATION] = {true, "frustrated", "dwelling upon"},
+                  [df.emotion_type.GAIETY] = {false, "gaiety", "remembering"},
+                  [df.emotion_type.GLEE] = {true, "gleeful", "remembering"},
+                  [df.emotion_type.GLOOM] = {true, "gloomy", "dwelling upon"},
+                  [df.emotion_type.GLUMNESS] = {false, "glum", "dwelling upon"},
+                  [df.emotion_type.GRATITUDE] = {false, "gratitude", "remembering"},
+                  [df.emotion_type.GRIEF] = {nil, "grieved", "dwelling upon"},
+                  [df.emotion_type.GRIM_SATISFACTION] = {false, "grim satisfaction", "remembering"},
+                  [df.emotion_type.GROUCHINESS] = {true, "grouchy", "dwelling upon"},
+                  [df.emotion_type.GRUMPINESS] = {true, "grumpy", "dwelling upon"},
+                  [df.emotion_type.GUILT] = {false, "guilty", "dwelling upon"},
+                  [df.emotion_type.HAPPINESS] = {false, "happy", "remembering"},
+                  [df.emotion_type.HATRED] = {false, "hateful", "dwelling upon"},
+                  [df.emotion_type.HOPE] = {false, "hope", "remembering"},
+                  [df.emotion_type.HOPELESSNESS] = {false, "hopeless", "dwelling upon"},
+                  [df.emotion_type.HORROR] = {true, "horrified", "reliving"},
+                  [df.emotion_type.HUMILIATION] = {false, "humiliated", "dwelling upon"},
+                  [df.emotion_type.INSULT] = {false, "insulted", "dwelling upon"},
+                  [df.emotion_type.INTEREST] = {true, "interested", "remembering"},
+                  [df.emotion_type.IRRITATION] = {true, "insulted", "dwelling upon"},
+                  [df.emotion_type.ISOLATION] = {false, "isolated", "dwelling upon"},
+                  [df.emotion_type.JOLLINESS] = {true, "jolly", "remembering"},
+                  [df.emotion_type.JOVIALITY] = {false, "jovial", "remembering"},
+                  [df.emotion_type.JOY] = {false, "joy", "remembering"},
+                  [df.emotion_type.JUBILATION] = {true, "jubilant", "remembering"},
+                  [df.emotion_type.LOATHING] = {false, "loathing", "dwelling upon"},
+                  [df.emotion_type.LONELINESS] = {false, "lonely", "dwelling upon"},
+                  [df.emotion_type.LOVE] = {false, "love", "remembering"},
+                  [df.emotion_type.LUST] = {false, "lustful", "remembering"},
+                  [df.emotion_type.MISERY] = {false, "miserable", "dwelling upon"},
+                  [df.emotion_type.MORTIFICATION] = {true, "mortified", "dwelling upon"},
+                  [df.emotion_type.NERVOUSNESS] = {false, "nervous", "dwelling upon"},
+                  [df.emotion_type.NOSTALGIA] = {false, "nostalgic", "remembering"},
+                  [df.emotion_type.OPTIMISM] = {false, "optimistic", "remembering"},
+                  [df.emotion_type.OUTRAGE] = {true, "outraged", "dwelling upon"},
+                  [df.emotion_type.PANIC] = {nil, "panicked", "reliving"},
+                  [df.emotion_type.PATIENCE] = {false, "patient", "remembering"},
+                  [df.emotion_type.PASSION] = {false, "passionate", "remembering"},
+                  [df.emotion_type.PESSIMISM] = {true, "pessimistic", "dwelling upon"},
+                  [df.emotion_type.PLEASURE] = {false, "pleasure", "remembering"},
+                  [df.emotion_type.PRIDE] = {true, "proud", "remembering"},
+                  [df.emotion_type.RAGE] = {nil, "rages", "reliving"},
+                  [df.emotion_type.RAPTURE] = {true, "enraptured", "remembering"},
+                  [df.emotion_type.REJECTION] = {false, "rejected", "dwelling upon"},
+                  [df.emotion_type.RELIEF] = {true, "relieved", "remembering"},
+                  [df.emotion_type.REGRET] = {false, "regretful", "dwelling upon"},
+                  [df.emotion_type.REMORSE] = {false, "remorseful", "dwelling upon"},
+                  [df.emotion_type.REPENTANCE] = {false, "repentant", "dwelling upon"},
+                  [df.emotion_type.RESENTMENT] = {true, "resentful", "dwelling upon"},
                   [df.emotion_type.RIGHTEOUS_INDIGNATION] = {false, "indignant"},
-                  [df.emotion_type.SADNESS] = {false, "sad"},
-                  [df.emotion_type.SATISFACTION] = {false, "satisfied"},
-                  [df.emotion_type.SELF_PITY] = {false, "self-pity"},
-                  [df.emotion_type.SERVILE] = {false, "servile"},
-                  [df.emotion_type.SHAKEN] = {true, "shaken"},
-                  [df.emotion_type.SHAME] = {true, "ashamed"},
-                  [df.emotion_type.SHOCK] = {true, "shocked"},
-                  [df.emotion_type.SUSPICION] = {true, "suspicious"},
-                  [df.emotion_type.SYMPATHY] = {false, "sympathy"},
-                  [df.emotion_type.TENDERNESS] = {false, "tenderness"},
-                  [df.emotion_type.TERROR] = {true, "terrified"},
-                  [df.emotion_type.THRILL] = {true, "thrilled"},
-                  [df.emotion_type.TRIUMPH] = {false, "triumph"},
-                  [df.emotion_type.UNEASINESS] = {true, "uneasy"},
-                  [df.emotion_type.UNHAPPINESS] = {false, "unhappy"},
-                  [df.emotion_type.VENGEFULNESS] = {false, "vengeful"},
-                  [df.emotion_type.WONDER] = {false, "wonder"},
-                  [df.emotion_type.WORRY] = {true, "worried"},
-                  [df.emotion_type.WRATH] = {false, "wrathful"},
-                  [df.emotion_type.ZEAL] = {false, "zealous"},
-                  [df.emotion_type.RESTLESS] = {false, "restless"},
-                  [df.emotion_type.ADMIRATION] = {false, "admiration"}}
+                  [df.emotion_type.SADNESS] = {false, "sad", "dwelling upon"},
+                  [df.emotion_type.SATISFACTION] = {false, "satisfied", "remembering"},
+                  [df.emotion_type.SELF_PITY] = {false, "self-pity", "dwelling upon"},
+                  [df.emotion_type.SERVILE] = {false, "servile", "remembering"},
+                  [df.emotion_type.SHAKEN] = {true, "shaken", "reliving"},
+                  [df.emotion_type.SHAME] = {true, "ashamed", "dwelling upon"},
+                  [df.emotion_type.SHOCK] = {true, "shocked", "reliving"},
+                  [df.emotion_type.SUSPICION] = {true, "suspicious", "dwelling upon"},
+                  [df.emotion_type.SYMPATHY] = {false, "sympathy", "remembering"},
+                  [df.emotion_type.TENDERNESS] = {false, "tenderness", "remembering"},
+                  [df.emotion_type.TERROR] = {true, "terrified", "reliving"},
+                  [df.emotion_type.THRILL] = {true, "thrilled", "remembering"},
+                  [df.emotion_type.TRIUMPH] = {false, "triumph", "remembering"},
+                  [df.emotion_type.UNEASINESS] = {true, "uneasy", "dwelling upon"},
+                  [df.emotion_type.UNHAPPINESS] = {false, "unhappy", "dwelling upon"},
+                  [df.emotion_type.VENGEFULNESS] = {false, "vengeful", "dwelling upon"},
+                  [df.emotion_type.WONDER] = {false, "wonder", "remembering"},
+                  [df.emotion_type.WORRY] = {true, "worried", "dwelling upon"},
+                  [df.emotion_type.WRATH] = {false, "wrathful", "reliving"},
+                  [df.emotion_type.ZEAL] = {false, "zealous", "remembering"},
+                  [df.emotion_type.RESTLESS] = {false, "restless", "dwelling upon"},
+                  [df.emotion_type.ADMIRATION] = {false, "admiration", "remembering"}}
 
 --------------------------------------------
 
@@ -1236,11 +1237,121 @@ function display_name (subthought)
   if artifact then
     return dfhack.TranslateName (artifact.name, false)  --### Probably DF bug to display native name here...
       
-  elseif item then  --### Wwhat does the "type" parameter in getDescription do? Doesn't seem to have any effect?
+  elseif item then  --### What does the "type" parameter in getDescription do? Doesn't seem to have any effect?
     return add_article (dfhack.items.getDescription (item, 0))
     
   else
     return "a piece"
+  end
+end
+
+--------------------------------------------
+
+function Perform_Of (subthought)
+  local incident = df.incident.find (subthought)
+  
+  if incident.subtype == 6 then
+    if incident.unk_v42_1.t6_performance.performance_event == df.performance_event_type.STORY then
+      if incident.unk_v42_1.t6_performance.written_content_id == -1 then  --  Historical event
+        local hist_event = df.history_event.find (incident.unk_v42_1.t6_performance.reference_id)  --###
+        
+        return "telling a historical story"  --###
+        
+      else
+        return "telling the " .. tostring (df.written_content_type [content.type]) .. " " .. content.title .. " story"  --###
+      end
+      
+    elseif incident.unk_v42_1.t6_performance.performance_event == df.performance_event_type.POETRY then
+      if incident.unk_v42_1.t6_performance.written_content_id == -1 then  --  Poetic Form
+        return "reciting the poetic form " .. dfhack.TranslateName (df.poetic_form.find (incident.unk_v42_1.t6_performance.reference_id).name, true) --###
+        
+      else
+        local content = df.written_content.find (incident.unk_v42_1.t6_performance.written_content_id)
+
+        return "reciting the " .. tostring (df.written_content_type [content.type]) .. " " .. content.title  --###
+      end
+      
+    elseif incident.unk_v42_1.t6_performance.performance_event == df.performance_event_type.MUSIC then
+      if incident.unk_v42_1.t6_performance.written_content_id == -1 then  --  Musical Form
+        return "performing the musical form " .. dfhack.TranslateName (df.musical_form.find (incident.unk_v42_1.t6_performance.reference_id).name, true) --###
+        
+      else
+        local content = df.written_content.find (incident.unk_v42_1.t6_performance.written_content_id)
+
+        return "performing the " .. tostring (df.written_content_type [content.type]) .. " " .. content.title  --### How to find sing/play, performer, etc.?
+      end
+      
+    elseif incident.unk_v42_1.t6_performance.performance_event == df.performance_event_type.DANCE then
+      if incident.unk_v42_1.t6_performance.written_content_id == -1 then  --  Dance Form
+        return "performing the dance form " .. dfhack.TranslateName (df.dance_form.find (incident.unk_v42_1.t6_performance.reference_id).name, true)  --###
+        
+      else
+        local content = df.written_content.find (incident.unk_v42_1.t6_performance.written_content_id)
+
+        return "performing the " .. tostring (df.written_content_type [content.type]) .. " " .. content.title  --###
+      end
+      
+    else
+      return "*Unknown performance event_type value " .. tostring (incident.unk_v42_1.t6_performance.performance_event) .. "*"
+    end
+
+  else
+    return "*Unknown incident subtype value " .. tostring (incident.subtype) .. "*"
+  end
+end
+
+--------------------------------------------
+
+function Watch_Perform_Of (subthought)
+  local incident = df.incident.find (subthought)
+  
+  if incident.subtype == 6 then
+    if incident.unk_v42_1.t6_performance.performance_event == df.performance_event_type.STORY then
+      if incident.unk_v42_1.t6_performance.written_content_id == -1 then  --  Historical event
+        local hist_event = df.history_event.find (incident.unk_v42_1.t6_performance.reference_id)  --###
+        
+        return "a historical story being told"  --### "I saw a dwarf tell the story of the impersonation of the human Athel Councilrought by the human Istro Worthybutters
+                                                    --###  before The Room Of Deciding in the late summer of 196 at the Mushrooms of Mortification. ..."
+      else
+        return "the " .. tostring (df.written_content_type [content.type]) .. " " .. content.title .. " story being told"  --###
+      end
+      
+    elseif incident.unk_v42_1.t6_performance.performance_event == df.performance_event_type.POETRY then
+      if incident.unk_v42_1.t6_performance.written_content_id == -1 then  --  Poetic Form
+        return "the poetic form " .. dfhack.TranslateName (df.poetic_form.find (incident.unk_v42_1.t6_performance.reference_id).name, true) .. " being recited" --###
+        
+      else
+        local content = df.written_content.find (incident.unk_v42_1.t6_performance.written_content_id)
+
+        return "the " .. tostring (df.written_content_type [content.type]) .. " " .. content.title .. " being recited"  --###
+      end
+      
+    elseif incident.unk_v42_1.t6_performance.performance_event == df.performance_event_type.MUSIC then
+      if incident.unk_v42_1.t6_performance.written_content_id == -1 then  --  Musical Form
+        return "the musical form " .. dfhack.TranslateName (df.musical_form.find (incident.unk_v42_1.t6_performance.reference_id).name, true) .. " being performed" --###
+        
+      else
+        local content = df.written_content.find (incident.unk_v42_1.t6_performance.written_content_id)
+
+        return "the " .. tostring (df.written_content_type [content.type]) .. " " .. content.title .. " being performed"  --### How to find sing/play, performer, etc.?
+      end
+      
+    elseif incident.unk_v42_1.t6_performance.performance_event == df.performance_event_type.DANCE then
+      if incident.unk_v42_1.t6_performance.written_content_id == -1 then  --  Dance Form
+        return "the dance form " .. dfhack.TranslateName (df.dance_form.find (incident.unk_v42_1.t6_performance.reference_id).name, true) .. " being performed" --###
+        
+      else
+        local content = df.written_content.find (incident.unk_v42_1.t6_performance.written_content_id)
+
+        return "the " .. tostring (df.written_content_type [content.type]) .. " " .. content.title .. " being performed"  --###
+      end
+      
+    else
+      return "*Unknown performance event_type value " .. tostring (incident.unk_v42_1.t6_performance.performance_event) .. "*"
+    end
+
+  else
+    return "*Unknown incident subtype value " .. tostring (incident.subtype) .. "*"
   end
 end
 
@@ -1254,81 +1365,105 @@ end
 --    [he]
 --    [his]
 --
+--  Optional Present/Memory token:
+--    {PPP } or
+--    {PPP |MMM }
+--    where PPP is the text displayed when it's a current emotion, while MMM is the one displayed for a memory.
+--    If there's no replacement for PPP (i.e. the memory version just lacks that text), the '|' is not present.
+--    If there's no present text the token is absent (there's no known case of a memory version that doesn't
+--    replace a current version text).
+--
 -- ### Works without parameters comments below means the text has been DFHacked to display, but it's unknown if naturally generated instances have parameters.
 --
+
 local unit_thoughts =
   {[df.unit_thought_type.None] = {["caption"] = ""},
-   [df.unit_thought_type.Conflict] = {["caption"] = "while in conflict"}, --###unk7? type: TERROR, unk2: 100, strength: 100, subthought: -1, severity: 0, flags: ffff, unk7: 127
-   [df.unit_thought_type.Trauma] = {["caption"] = "after experiencing trauma"},   --###unk7? type: FEAR, unk2: 100, strength: 100, subthought: -1, severity: 0, flags: tftf, unk7: 123
-   [df.unit_thought_type.WitnessDeath] = {["caption"] = "after seeing [subthought] die", -- type: ANYTHING, unk2: 0, strength: 0, subthought: 364, severity: 0, flags: ffff, unk7: 0
+   [df.unit_thought_type.Conflict] = {["caption"] = "{while in }conflict"}, --###unk7? type: TERROR, unk2: 100, strength: 100, subthought: -1, severity: 0, flags: ffff, unk7: 127
+   [df.unit_thought_type.Trauma] = {["caption"] = "{after }experiencing trauma"},   --###unk7? type: FEAR, unk2: 100, strength: 100, subthought: -1, severity: 0, flags: tftf, unk7: 123
+   [df.unit_thought_type.WitnessDeath] = {["caption"] = "{after }seeing [subthought] die", -- type: ANYTHING, unk2: 0, strength: 0, subthought: 364, severity: 0, flags: ffff, unk7: 0
                                           ["subthought"] = {"df.global.world.incidents.all id",
                                                             (function (subthought) 
                                                                return incident_victim (subthought)
                                                              end)}},
-   [df.unit_thought_type.UnexpectedDeath] = {["caption"] = "at the unexpected death of somebody",  -- type: SHOCK, unk2: 0, strength: 0, subthought: 134129, severity: 0, flags: fftf, unk7: 0
-                                                                                                  -- subthought = hf id. Not printed except as the primary thought "I can't believe Jeha Ramwills the Wild Fog is dead. <emotion text>"
-                                             ["extended_caption"] = "at the unexpected death of [subthought]",
+   [df.unit_thought_type.UnexpectedDeath] = {["caption"] = "{at }the unexpected death of somebody",  -- type: SHOCK, unk2: 0, strength: 0, subthought: 134129, severity: 0, flags: fftf, unk7: 0
+                                                                                                   -- subthought = hf id. Not printed except as the primary thought "I can't believe Jeha Ramwills the Wild Fog is dead. <emotion text>"
+                                             ["extended_caption"] = "{at }the unexpected death of [subthought]",
                                              ["subthought"] = {"hf id",
                                                                (function (subthought)
                                                                   return hf_name (subthought)
                                                                 end)}},
-   [df.unit_thought_type.Death] = {["caption"] = "at somebody's death",  -- subthought = hf id. Not printed except as the primary thought "Jeha Ramwills the Wild Fog is really dead. <emotion text>"  -- type: GRIEF, unk2: 0, strength: 0, subthought: 94110, severity: 0, flags: fftf, unk7: 0
-                                   ["extended_caption"] = "at [subthought]'s death",
+   [df.unit_thought_type.Death] = {["caption"] = "{at }somebody's death",  -- subthought = hf id. Not printed except as the primary thought "Jeha Ramwills the Wild Fog is really dead. <emotion text>"  -- type: GRIEF, unk2: 0, strength: 0, subthought: 94110, severity: 0, flags: fftf, unk7: 0
+                                   ["extended_caption"] = "{at }[subthought]'s death",
                                    ["subthought"] = {"hf id",
                                                      (function (subthought)
                                                         return hf_name (subthought)
                                                       end)}},
-   [df.unit_thought_type.Kill] = {["caption"] = "while killing somebody",  -- Not printed except as primary thought. "<Dorf> killed Seba Ironcombine. <emotion text>"
-                                  ["extra_caption"] = "while killing [subthought]",
+   [df.unit_thought_type.Kill] = {["caption"] = "{while }killing somebody",  -- Not printed except as primary thought. "<Dorf> killed Seba Ironcombine. <emotion text>"
+                                  ["extra_caption"] = "{while }killing [subthought]",
                                   ["subthought"] = {"df.global.world.incidents.all id",
                                                     (function (subthought) 
                                                        return incident_victim (subthought)
                                                      end)}},
-   [df.unit_thought_type.LoveSeparated] = {["caption"] = "at being separated from a loved one"},  --### type: SADNESS, unk2: 50, strength: 50, subthought: 129684, severity: 0, flags: fftf, unk7: 0. ###subthought
-   [df.unit_thought_type.LoveReunited] = {["caption"] = "after being reunited with a loved one"}, --### Failed to produce. hf id?
-   [df.unit_thought_type.JoinConflict] = {["caption"] = "when joining an existing conflict"}, --### type: VENGEFULNESS, unk2: 100, strength: 100, subthought: 62737, severity: 0, flags: fftf, unk7: 0. ###subthought = incident id ? HF id?
-   [df.unit_thought_type.MakeMasterwork] = {["caption"] = "after producing a masterwork"}, -- type: SATISFACTION, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fttf, unk7: 0
-   [df.unit_thought_type.MadeArtifact] = {["caption"] = "after creating an artifact",  --  Not printed except as primary thought "I shall name you Oakenpools And More. <emotion text>".-- type: SATISFACTION, unk2: 0, strength: 0, subthought: 103702, severity: 0, flags: fttf, unk7: 0
-                                          ["extended_caption"] = "after creating [subthought]",
+   [df.unit_thought_type.LoveSeparated] = {["caption"] = "{at }being separated from a loved one",  -- type: SADNESS, unk2: 50, strength: 50, subthought: 129684, severity: 0, flags: fftf, unk7: 0.
+                                           ["extended_caption"] = "{at }being separated from [subthought]",
+                                           ["subthought"] = {"df.global.world.historical_figure.all id",
+                                                             (function (subthought)
+                                                                return hf_name (subthought)
+                                                              end)}},
+   [df.unit_thought_type.LoveReunited] = {["caption"] = "{after }being reunited with a loved one",
+                                           ["extended_caption"] = "{after }being reunited with [subthought]",
+                                           ["subthought"] = {"df.global.world.historical_figure.all id",
+                                                             (function (subthought)
+                                                                return hf_name (subthought)
+                                                              end)}},
+   [df.unit_thought_type.JoinConflict] = {["caption"] = "{when }joining an existing conflict"}, --### type: VENGEFULNESS, unk2: 100, strength: 100, subthought: 62737, severity: 0, flags: fftf, unk7: 0. ###subthought = incident id ? HF id?
+   [df.unit_thought_type.MakeMasterwork] = {["caption"] = "{after }producing a masterwork"}, -- type: SATISFACTION, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fttf, unk7: 0
+   [df.unit_thought_type.MadeArtifact] = {["caption"] = "{after }creating an artifact",  --  Not printed except as primary thought "I shall name you Oakenpools And More. <emotion text>".-- type: SATISFACTION, unk2: 0, strength: 0, subthought: 103702, severity: 0, flags: fttf, unk7: 0
+                                          ["extended_caption"] = "{after }creating [subthought]",
                                           {"df.global.world.artifacts.all id",
                                            (function (subthought)
                                               return artifact_name (subthought)
                                             end)},
                                           nil},
-   [df.unit_thought_type.MasterSkill] = {["caption"] = "upon mastering [subthought]",  -- type: SATISFACTION, unk2: 0, strength: 0, subthought: 35, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.MasterSkill] = {["caption"] = "{upon }mastering [subthought]",  -- type: SATISFACTION, unk2: 0, strength: 0, subthought: 35, severity: 0, flags: fftf, unk7: 0
                                          ["subthought"] = {"df.job_skill value",
                                                            (function (subthought)
                                                               return skill_name (subthought)
                                                             end)}},
-   [df.unit_thought_type.NewRomance] = {["caption"] = "as [he] was caught up in a new romance"},  --### Works without parameters
-   [df.unit_thought_type.BecomeParent] = {["caption"] = "after becoming a parent"}, -- type: BLISS, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: ffff, unk7: 0
+   [df.unit_thought_type.NewRomance] = {["caption"] = "{as [he] was caught up in }a new romance",  -- type: LOVE, unk2: 0, strength: 0, subthought: 135231, severity: 0, flags: fftf, unk7: 0
+                                        ["extended_caption"] = "Oh, [subthought]...",
+                                           ["subthought"] = {"df.global.world.historical_figure.all id",
+                                                             (function (subthought)
+                                                                return hf_name (subthought)
+                                                              end)}},
+   [df.unit_thought_type.BecomeParent] = {["caption"] = "{after }becoming a parent"}, -- type: BLISS, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: ffff, unk7: 0
    [df.unit_thought_type.NearConflict] = {["caption"] = "being near to a conflict"},  --### Works without parameters
-   [df.unit_thought_type.CancelAgreement] = {["caption"] = "after an agreement was cancelled"},  --### Works without parameters. Spelling as in DF.
-   [df.unit_thought_type.JoinTravel] = {["caption"] = "upon joining a traveling group"},  --### Works without parameters
-   [df.unit_thought_type.SiteControlled] = {["caption"] = "after a site was controlled"},  --### Works without parameters
-   [df.unit_thought_type.TributeCancel] = {["caption"] = "after a tribute cancellation"},  --### Works without parameters
-   [df.unit_thought_type.Incident] = {["caption"] = "after an incident",                            --  Not printed except as primary thought.
-                                       ["extra_caption"] = "after an incident with [subthought]",
+   [df.unit_thought_type.CancelAgreement] = {["caption"] = "{after }an agreement was cancelled"},  --### Works without parameters. Spelling as in DF.
+   [df.unit_thought_type.JoinTravel] = {["caption"] = "{upon }joining a traveling group"},  --### Works without parameters
+   [df.unit_thought_type.SiteControlled] = {["caption"] = "{after }a site was controlled"},  --### Works without parameters
+   [df.unit_thought_type.TributeCancel] = {["caption"] = "{after }a tribute cancellation"},  --### Works without parameters
+   [df.unit_thought_type.Incident] = {["caption"] = "{after }an incident",                   --  Not printed except as primary thought.
+                                      ["extra_caption"] = "{after }an incident with [subthought]",
                                       ["subthought"] = {"df.global.world.incidents.all id",
                                                         (function (subthought) 
                                                            return incident_victim (subthought)
                                                          end)}},
-   [df.unit_thought_type.HearRumor] = {["caption"] = "after hearing a rumor"},  --### Works without parameters
-   [df.unit_thought_type.MilitaryRemoved] = {["caption"] = "after being removed from a military group"},  --### Works without parameters
-   [df.unit_thought_type.StrangerWeapon] = {["caption"] = "when a stranger advanced with a weapon"},  --### Works without parameters
-   [df.unit_thought_type.StrangerSneaking] = {["caption"] = "after seeing a stranger sneaking around"},  --###
-   [df.unit_thought_type.SawDrinkBlood] = {["caption"] = "after witnessing a night creature drinking blood"}, --###
+   [df.unit_thought_type.HearRumor] = {["caption"] = "{after }hearing a rumor"},  --### Works without parameters
+   [df.unit_thought_type.MilitaryRemoved] = {["caption"] = "{after }being removed from a military group"},  --### Works without parameters
+   [df.unit_thought_type.StrangerWeapon] = {["caption"] = "{when }a stranger advanced with a weapon"},  --### Works without parameters
+   [df.unit_thought_type.StrangerSneaking] = {["caption"] = "{after }seeing a stranger sneaking around"},  --###
+   [df.unit_thought_type.SawDrinkBlood] = {["caption"] = "{after }witnessing a night creature drinking blood"}, --###
    [df.unit_thought_type.Complained] = {["caption"] = "[subthought]",  -- type: SATISFACTION, unk2: 25, strength: 25, subthought: 48, severity: 0, flags: fftf, unk7: 0
                                         ["subthought"] = {"request enum",
                                                           (function (subthought)
                                                              return complained_thought (subthought)
                                                            end)}},
-   [df.unit_thought_type.ReceivedComplaint] = {["caption"] = "while being [subthought] by an unhappy citizen",
+   [df.unit_thought_type.ReceivedComplaint] = {["caption"] = "{while }being [subthought] by an unhappy citizen",
                                                ["subthought"] = {"request enum",
                                                                  (function (subthought)
                                                                     return received_complaint_thought (subthought)
                                                                   end)}},
-   [df.unit_thought_type.AdmireBuilding] = {["caption"] = "near a [severity][subthought]", -- type: PLEASURE, unk2: 0, strength: 0, subthought: 6, severity: 15, flags: fftf, unk7: 0
+   [df.unit_thought_type.AdmireBuilding] = {["caption"] = "{near }a [severity][subthought]", -- type: PLEASURE, unk2: 0, strength: 0, subthought: 6, severity: 15, flags: fftf, unk7: 0
                                             ["subthought"] = {"df.building_type value",
                                                               (function (subthought)
                                                                  return building_of (subthought)
@@ -1338,7 +1473,7 @@ local unit_thoughts =
                                                                return building_quality_of (severity)
                                                              end)}},
    
-   [df.unit_thought_type.AdmireOwnBuilding] = {["caption"] = "near [his] own [severity][subthought]", -- type: PLEASURE, unk2: 0, strength: 0, subthought: 1, severity: 240, flags: fftf, unk7: 0
+   [df.unit_thought_type.AdmireOwnBuilding] = {["caption"] = "{near }[his] own [severity][subthought]", -- type: PLEASURE, unk2: 0, strength: 0, subthought: 1, severity: 240, flags: fftf, unk7: 0
                                                ["subthought"] = {"df.building_type value",
                                                                  (function (subthought)
                                                                     return building_of (subthought)
@@ -1347,7 +1482,7 @@ local unit_thoughts =
                                                                (function (severity)
                                                                   return building_quality_of (severity)
                                                                 end)}},                                                 
-   [df.unit_thought_type.AdmireArrangedBuilding] = {["caption"] = "near a [severity]tastefully arranged [subthought]", -- type: PLEASURE, unk2: 0, strength: 0, subthought: 53, severity: 100, flags: fftf, unk7: 0
+   [df.unit_thought_type.AdmireArrangedBuilding] = {["caption"] = "{near }a [severity]tastefully arranged [subthought]", -- type: PLEASURE, unk2: 0, strength: 0, subthought: 53, severity: 100, flags: fftf, unk7: 0
                                                     ["subthought"] = {"df.building_type value",
                                                                       (function (subthought)
                                                                          return building_of (subthought)
@@ -1357,7 +1492,7 @@ local unit_thoughts =
                                                                        return building_quality_of (severity)
                                                                      end)}},
 
-   [df.unit_thought_type.AdmireOwnArrangedBuilding] = {["caption"] = "near [his] own [severity]tastefully arranged [subthought]",
+   [df.unit_thought_type.AdmireOwnArrangedBuilding] = {["caption"] = "{near }[his] own [severity]tastefully arranged [subthought]",
                                                        ["subthought"] = {"df.building_type value",
                                                                          (function (subthought)
                                                                             return building_of (subthought)
@@ -1366,20 +1501,20 @@ local unit_thoughts =
                                                                        (function (severity)
                                                                           return building_quality_of (severity)
                                                                         end)}},
-   [df.unit_thought_type.LostPet] = {["caption"] = "after losing a pet"},  --### Works without parameters
-   [df.unit_thought_type.ThrownStuff] = {["caption"] = "after throwing something"},  --### Works without parameters
-   [df.unit_thought_type.JailReleased] = {["caption"] = "after being released from confinement"}, -- type: FREEDOM, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: ffff, unk7: 0
-   [df.unit_thought_type.Miscarriage] = {["caption"] = "after a miscarriage"},  -- type: ANGUISH, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.SpouseMiscarriage] = {["caption"] = "after [his] spouse's miscarriage"},  -- type: ANGUISH, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.OldClothing] = {["caption"] = "to be wearing old clothing"}, -- type: IRRITATION, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.TatteredClothing] = {["caption"] = "to be wearing tattered clothing"}, -- type: BITTERNESS, unk2: 100, strength: 100, subthought: -1, severity: 0, flags: ffff, unk7: 0
-   [df.unit_thought_type.RottedClothing] = {["caption"] = "to have clothes rot off of [his] body"},  -- type: IRRITATION, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.GhostNightmare] = {["caption"] = "after being tormented in nightmares by [subthought]",
+   [df.unit_thought_type.LostPet] = {["caption"] = "{after }losing a pet"},  --### Works without parameters
+   [df.unit_thought_type.ThrownStuff] = {["caption"] = "{after }throwing something"},  --### Works without parameters
+   [df.unit_thought_type.JailReleased] = {["caption"] = "{after }being released from confinement"}, -- type: FREEDOM, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: ffff, unk7: 0
+   [df.unit_thought_type.Miscarriage] = {["caption"] = "{after }a miscarriage"},  -- type: ANGUISH, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.SpouseMiscarriage] = {["caption"] = "{after }[his] spouse's miscarriage"},  -- type: ANGUISH, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.OldClothing] = {["caption"] = "{to be }wearing old clothing"}, -- type: IRRITATION, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.TatteredClothing] = {["caption"] = "{to be }wearing tattered clothing"}, -- type: BITTERNESS, unk2: 100, strength: 100, subthought: -1, severity: 0, flags: ffff, unk7: 0
+   [df.unit_thought_type.RottedClothing] = {["caption"] = "{to have }clothes rot off of [his] body"},  -- type: IRRITATION, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.GhostNightmare] = {["caption"] = "{after }being tormented in nightmares by [subthought]",
                                             ["subthought"] = {"df.unit_relationship_type value",
                                                               (function (subthought)
                                                                  return unit_relationship_text_of (subthought)
                                                                end)}},
-   [df.unit_thought_type.GhostHaunt] = {["caption"] = "after being [severity] by [subthought]",
+   [df.unit_thought_type.GhostHaunt] = {["caption"] = "{after }being [severity] by [subthought]",
                                         ["subthought"] = {"df.unit_relationship_type value",
                                                           (function (subthought)
                                                              return unit_relationship_text_of (subthought)
@@ -1388,81 +1523,81 @@ local unit_thoughts =
                                                         (function (severity)
                                                            return haunt_enum_text_of (severity)
                                                          end)}},
-   [df.unit_thought_type.Spar] = {["caption"] = "after a sparring session"},  -- type: EXHILARATION, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.UnableComplain] = {["caption"] = "after being unable to [subthought]",
+   [df.unit_thought_type.Spar] = {["caption"] = "{after }a sparring session"},  -- type: EXHILARATION, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.UnableComplain] = {["caption"] = "{after }being unable to [subthought]",
                                             ["subthought"] = {"request enum",
                                                               (function (subthought)
                                                                  return unable_complain_thought (subthought)
                                                                end)}},
-   [df.unit_thought_type.LongPatrol] = {["caption"] = "during long patrol duty"},  --### Works without parameters
-   [df.unit_thought_type.SunNausea] = {["caption"] = "after being nauseated by the sun"},  --### Annoying misspelling "bu" -- type: HOPELESSNESS, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.SunIrritated] = {["caption"] = "at being out in the sunshine again"}, -- type: ANNOYANCE, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.Drowsy] = {["caption"] = "when drowsy"}, -- type: IRRITATION, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.VeryDrowsy] = {["caption"] = "when utterly sleep-deprived"},  --### Works without parameters
-   [df.unit_thought_type.Thirsty] = {["caption"] = "when thirsty"}, -- type: IRRITATION, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.Dehydrated] = {["caption"] = "when dehydrated"},  --### Works without parameters
-   [df.unit_thought_type.Hungry] = {["caption"] = "when hungry"}, -- type: IRRITATION, unk2: 10, strength: 10, subthought: -1, severity: 0, flags: ffff, unk7: 0
-   [df.unit_thought_type.Starving] = {["caption"] = "when starving"}, -- type: PANIC, unk2: 100, strength: 100, subthought: -1, severity: 0, flags: ffff, unk7: 0
-   [df.unit_thought_type.MajorInjuries] = {["caption"] = "after suffering a major injury"}, -- type: SHAKEN, unk2: 100, strength: 100, subthought: -1, severity: 0, flags: fftf, unk7: 68
-   [df.unit_thought_type.MinorInjuries] = {["caption"] = "after suffering a minor injury"}, -- type: ANNOYANCE, unk2: 10, strength: 10, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.SleepNoise] = {["caption"] = "after [severity]",
+   [df.unit_thought_type.LongPatrol] = {["caption"] = "{during }long patrol duty"},  --### Works without parameters
+   [df.unit_thought_type.SunNausea] = {["caption"] = "{after }being nauseated by the sun"},  --### Annoying misspelling "bu" -- type: HOPELESSNESS, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.SunIrritated] = {["caption"] = "{at }being out in the sunshine again"}, -- type: ANNOYANCE, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.Drowsy] = {["caption"] = "{when |being }drowsy"}, -- type: IRRITATION, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.VeryDrowsy] = {["caption"] = "{when |being }utterly sleep-deprived"},  --### Works without parameters
+   [df.unit_thought_type.Thirsty] = {["caption"] = "{when |being }thirsty"}, -- type: IRRITATION, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.Dehydrated] = {["caption"] = "{when |being}dehydrated"},  --### Works without parameters
+   [df.unit_thought_type.Hungry] = {["caption"] = "{when |being }hungry"}, -- type: IRRITATION, unk2: 10, strength: 10, subthought: -1, severity: 0, flags: ffff, unk7: 0
+   [df.unit_thought_type.Starving] = {["caption"] = "{when |being }starving"}, -- type: PANIC, unk2: 100, strength: 100, subthought: -1, severity: 0, flags: ffff, unk7: 0
+   [df.unit_thought_type.MajorInjuries] = {["caption"] = "{after }suffering a major injury"}, -- type: SHAKEN, unk2: 100, strength: 100, subthought: -1, severity: 0, flags: fftf, unk7: 68
+   [df.unit_thought_type.MinorInjuries] = {["caption"] = "{after }suffering a minor injury"}, -- type: ANNOYANCE, unk2: 10, strength: 10, subthought: -1, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.SleepNoise] = {["caption"] = "{after }[severity]",
                                         ["severity"] = {"sleep noise enum",
                                                         (function (severity)
                                                            return sleep_noise_text (severity)
                                                          end)}},
-   [df.unit_thought_type.Rest] = {["caption"] = "after being able to rest and recuperate"},  -- type: RESTLESS, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.FreakishWeather] = {["caption"] = "when caught in freakish weather"}, --  type: UNEASINESS, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.Rain] = {["caption"] = "when caught in the rain"}, -- type: DEJECTION, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.SnowStorm] = {["caption"] = "when caught in a snow storm"},  --### Works without parameters
-   [df.unit_thought_type.Miasma] = {["caption"] = "after retching on a miasma"}, -- type: DISGUST, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: ffff, unk7: 0
-   [df.unit_thought_type.Smoke] = {["caption"] = "after choking on smoke underground"}, -- type: ANNOYANCE, unk2: 100, strength: 100, subthought: -1, severity: 0, flags: ffff, unk7: 0
+   [df.unit_thought_type.Rest] = {["caption"] = "{after }being able to rest and recuperate"},  -- type: RESTLESS, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.FreakishWeather] = {["caption"] = "{when |being }caught in freakish weather"}, --  type: UNEASINESS, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.Rain] = {["caption"] = "{when |being }caught in the rain"}, -- type: DEJECTION, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.SnowStorm] = {["caption"] = "{when |being }caught in a snow storm"},  --### Works without parameters
+   [df.unit_thought_type.Miasma] = {["caption"] = "{after }retching on a miasma"}, -- type: DISGUST, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: ffff, unk7: 0
+   [df.unit_thought_type.Smoke] = {["caption"] = "{after }choking on smoke underground"}, -- type: ANNOYANCE, unk2: 100, strength: 100, subthought: -1, severity: 0, flags: ffff, unk7: 0
    [df.unit_thought_type.Waterfall] = {["caption"] = "being near to a waterfall"},  --  RELIEF, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.Dust] = {["caption"] = "after choking on dust underground"}, -- type: ANNOYANCE, unk2: 80, strength: 80, subthought: -1, severity: 0, flags: ffff, unk7: 0
+   [df.unit_thought_type.Dust] = {["caption"] = "{after }choking on dust underground"}, -- type: ANNOYANCE, unk2: 80, strength: 80, subthought: -1, severity: 0, flags: ffff, unk7: 0
    [df.unit_thought_type.Demands] = {["caption"] = "considering the state of demands"},  -- type: DISAPPOINTMENT, unk2: 0, strength: 0, subthought: -1, severity: -1, flags: fftf, unk7: 0
    [df.unit_thought_type.ImproperPunishment] = {["caption"] = "that a criminal could not be properly punished"},  --### Works without parameters
-   [df.unit_thought_type.PunishmentReduced] = {["caption"] = "to have [his] punishment reduced"},  --### Works without parameters
-   [df.unit_thought_type.Elected] = {["caption"] = "to be elected"},  -- type: EAGERNESS, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.Reelected] = {["caption"] = "to be re-elected"},  --### Works without parameters
+   [df.unit_thought_type.PunishmentReduced] = {["caption"] = "{to have |having }[his] punishment reduced"},  --### Works without parameters
+   [df.unit_thought_type.Elected] = {["caption"] = "{to be |being }elected"},  -- type: EAGERNESS, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.Reelected] = {["caption"] = "{to be |being }re-elected"},  --### Works without parameters
    [df.unit_thought_type.RequestApproved] = {["caption"] = "having a request approved"},  --### Works without parameters
    [df.unit_thought_type.RequestIgnored] = {["caption"] = "having a request ignored"},  --### Works without parameters
    [df.unit_thought_type.NoPunishment] = {["caption"] = "that nobody could be punished for a failure"},  --### Works without parameters
-   [df.unit_thought_type.PunishmentDelayed] = {["caption"] = "to have [his] punishment delayed"},  --### Works without parameters
-   [df.unit_thought_type.DelayedPunishment] = {["caption"] = "after the delayed punishment of a criminal"},  --### Works without parameters
+   [df.unit_thought_type.PunishmentDelayed] = {["caption"] = "{to have |having }[his] punishment delayed"},  --### Works without parameters
+   [df.unit_thought_type.DelayedPunishment] = {["caption"] = "{after }the delayed punishment of a criminal"},  --### Works without parameters
    [df.unit_thought_type.ScarceCageChain] = {["caption"] = "considering the scarcity of cages and chains"},  --### Works without parameters
    [df.unit_thought_type.MandateIgnored] = {["caption"] = "having a mandate ignored"},  --### Works without parameters
    [df.unit_thought_type.MandateDeadlineMissed] = {["caption"] = "having a mandate deadline missed"},  --### Works without parameters
-   [df.unit_thought_type.LackWork] = {["caption"] = "after the lack of work last season"},  --### Works without parameters
-   [df.unit_thought_type.SmashedBuilding] = {["caption"] = "after smashing up a building"},  --### Works without parameters
-   [df.unit_thought_type.ToppledStuff] = {["caption"] = "after toppling something over"},  --### Works without parameters
-   [df.unit_thought_type.NoblePromotion] = {["caption"] = "after receiving a higher rank of nobility"},  --### Works without parameters
-   [df.unit_thought_type.BecomeNoble] = {["caption"] = "after entering the nobility"},  --### Works without parameters
-   [df.unit_thought_type.Cavein] = {["caption"] = "after being knocked out during a cave-in"}, -- type: CONFUSION, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.MandateDeadlineMet] = {["caption"] = "to have a mandate deadline met"},  --### Works without parameters
-   [df.unit_thought_type.Uncovered] = {["caption"] = "to be uncovered"},  -- type: AMBIVALENCE, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftt, unk7: 0
-   [df.unit_thought_type.NoShirt] = {["caption"] = "to have no shirt"},  -- type: AMBIVALENCE, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftt, unk7: 0
-   [df.unit_thought_type.NoShoes] = {["caption"] = "to have no shoes"},  -- type: AMBIVALENCE, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftt, unk7: 0
-   [df.unit_thought_type.EatPet] = {["caption"] = "after being forced to eat a treasured pet to survive"},  --### Works without parameters
-   [df.unit_thought_type.EatLikedCreature] = {["caption"] = "after being forced to eat a beloved creature to survive"},  --### Works without parameters
-   [df.unit_thought_type.EatVermin] = {["caption"] = "after being forced to eat vermin to survive",  -- type: RELIEF, unk2: 0, strength: 0, subthought: 49, severity: 0, flags: fftf, unk7: 0
-                                       ["extended_caption"] = "after being forced to eat [subthought] to survive",
+   [df.unit_thought_type.LackWork] = {["caption"] = "{after }the lack of work last season"},  --### Works without parameters
+   [df.unit_thought_type.SmashedBuilding] = {["caption"] = "{after }smashing up a building"},  --### Works without parameters
+   [df.unit_thought_type.ToppledStuff] = {["caption"] = "{after }toppling something over"},  --### Works without parameters
+   [df.unit_thought_type.NoblePromotion] = {["caption"] = "{after }receiving a higher rank of nobility"},  --### Works without parameters
+   [df.unit_thought_type.BecomeNoble] = {["caption"] = "{after }entering the nobility"},  --### Works without parameters
+   [df.unit_thought_type.Cavein] = {["caption"] = "{after }being knocked out during a cave-in"}, -- type: CONFUSION, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.MandateDeadlineMet] = {["caption"] = "{to have |having }a mandate deadline met"},  --### Works without parameters
+   [df.unit_thought_type.Uncovered] = {["caption"] = "{to be |being }uncovered"},  -- type: AMBIVALENCE, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftt, unk7: 0
+   [df.unit_thought_type.NoShirt] = {["caption"] = "{to have |having }no shirt"},  -- type: AMBIVALENCE, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftt, unk7: 0
+   [df.unit_thought_type.NoShoes] = {["caption"] = "{to have |having}no shoes"},  -- type: AMBIVALENCE, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftt, unk7: 0
+   [df.unit_thought_type.EatPet] = {["caption"] = "{after }being forced to eat a treasured pet to survive"},  --### Works without parameters
+   [df.unit_thought_type.EatLikedCreature] = {["caption"] = "{after }being forced to eat a beloved creature to survive"},  --### Works without parameters
+   [df.unit_thought_type.EatVermin] = {["caption"] = "{after }being forced to eat vermin to survive",  -- type: RELIEF, unk2: 0, strength: 0, subthought: 49, severity: 0, flags: fftf, unk7: 0
+                                       ["extended_caption"] = "{after }being forced to eat [subthought] to survive",
                                        ["subthought"] = {"df.global.world.raws.creatures.all index",
                                                          (function (subthought)
                                                             return df.global.world.raws.creatures.all [subthought].name [1]
                                                           end)}},
-   [df.unit_thought_type.FistFight] = {["caption"] = "after starting a fist fight"},  --### Works without parameters
-   [df.unit_thought_type.GaveBeating] = {["caption"] = "after punishing somebody with a beating"},  --### Works without parameters
-   [df.unit_thought_type.GotBeaten] = {["caption"] = "punished by beating"},  --### Works without parameters
-   [df.unit_thought_type.GaveHammering] = {["caption"] = "after beating somebody with a hammer"},  --### Works without parameters
-   [df.unit_thought_type.GotHammered] = {["caption"] = "after being beaten with a hammer"},  --### Works without parameters
-   [df.unit_thought_type.NoHammer] = {["caption"] = "after being unable to find a hammer"},  --### Works without parameters
+   [df.unit_thought_type.FistFight] = {["caption"] = "{after }starting a fist fight"},  --### Works without parameters
+   [df.unit_thought_type.GaveBeating] = {["caption"] = "{after }punishing somebody with a beating"},  --### Works without parameters
+   [df.unit_thought_type.GotBeaten] = {["caption"] = "{after }being beating"},  --### Works without parameters
+   [df.unit_thought_type.GaveHammering] = {["caption"] = "{after }beating somebody with a hammer"},  --### Works without parameters
+   [df.unit_thought_type.GotHammered] = {["caption"] = "{after }being beaten with a hammer"},  --### Works without parameters
+   [df.unit_thought_type.NoHammer] = {["caption"] = "{after }being unable to find a hammer"},  --### Works without parameters
    [df.unit_thought_type.SameFood] = {["caption"] = "eating the same old food"},  --### Works without parameters
-   [df.unit_thought_type.AteRotten] = {["caption"] = "after eating rotten food"},  --### Works without parameters
-   [df.unit_thought_type.GoodMeal] = {["caption"] = "after eating [severity]", -- type: CONTENTMENT, unk2: 0, strength: 0, subthought: -1, severity: 1, flags: fftf, unk7: 0
+   [df.unit_thought_type.AteRotten] = {["caption"] = "{after }eating rotten food"},  --### Works without parameters
+   [df.unit_thought_type.GoodMeal] = {["caption"] = "{after }eating [severity]", -- type: CONTENTMENT, unk2: 0, strength: 0, subthought: -1, severity: 1, flags: fftf, unk7: 0
                                       ["severity"] = {"df.item_quality value",
                                                       (function (severity)
                                                          return food_quality_of (severity)
                                                        end)}},
-   [df.unit_thought_type.GoodDrink] = {["caption"] = "after having [severity] drink", -- type: CONTENTMENT, unk2: 0, strength: 0, subthought: -1, severity: 1, flags: fftf, unk7: 0
+   [df.unit_thought_type.GoodDrink] = {["caption"] = "{after }having [severity] drink", -- type: CONTENTMENT, unk2: 0, strength: 0, subthought: -1, severity: 1, flags: fftf, unk7: 0
                                        ["severity"] = {"df.item_quality value",
                                                        (function (severity)
                                                           return drink_quality_of (severity)
@@ -1471,12 +1606,12 @@ local unit_thoughts =
    [df.unit_thought_type.MoreCabinets] = {["caption"] = "not having enough cabinets"},  --### Works without parameters
    [df.unit_thought_type.MoreWeaponRacks] = {["caption"] = "not having enough weapon racks"},  --### Works without parameters
    [df.unit_thought_type.MoreArmorStands] = {["caption"] = "not having enough armor stands"},  --### Works without parameters
-   [df.unit_thought_type.RoomPretension] = {["caption"] = "by a lesser's pretentious [subthought] arrangements", 
+   [df.unit_thought_type.RoomPretension] = {["caption"] = "{by }a lesser's pretentious [subthought] arrangements", 
                                             ["subthought"] = {"undefined room_type enum",
                                                               (function (subthought)
                                                                  return pretention_room_of (subhtought)
                                                                end)}},
-   [df.unit_thought_type.LackTables] = {["caption"] = "at the lack of dining tables"},  -- type: ANNOYANCE, unk2: 100, strength: 100, subthought: -1, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.LackTables] = {["caption"] = "{at }the lack of dining tables"},  -- type: ANNOYANCE, unk2: 100, strength: 100, subthought: -1, severity: 0, flags: fftf, unk7: 0
    [df.unit_thought_type.CrowdedTables] = {["caption"] = "eating at a crowded table"},  -- type: IRRITATION, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
    [df.unit_thought_type.DiningQuality] = {["caption"] = "dining in [severity] dining room",  -- type: BLISS, unk2: 0, strength: 0, subthought: -1, severity: 4, flags: fftf, unk7: 0
                                            ["severity"] = {"df.item_quality value",
@@ -1484,87 +1619,92 @@ local unit_thoughts =
                                                               return dining_room_quality_of (severity)
                                                             end)}},
    [df.unit_thought_type.NoDining] = {["caption"] = "being without a proper dining room"},  -- type: ANNOYANCE, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.LackChairs] = {["caption"] = "at the lack of chairs"},  -- type: ANNOYANCE, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.TrainingBond] = {["caption"] = "after forming a bond with an animal training partner"}, -- type: AFFECTION, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.Rescued] = {["caption"] = "after being rescued"},  -- type: GRATITUDE, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftt, unk7: 0
-   [df.unit_thought_type.RescuedOther] = {["caption"] = "after bringing somebody to rest in bed"},  -- type: SYMPATHY, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.SatisfiedAtWork] = {["caption"] = "at work"},  --  ####subthought ignored mostly. Not "slaughter an animal" -- type: SATISFACTION, unk2: 0, strength: 0, subthought: 105, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.TaxedLostProperty] = {["caption"] = "after losing property to the tax collector's escorts"},  --### Works without parameters
-   [df.unit_thought_type.Taxed] = {["caption"] = "after being taxed"},  --### Works without parameters
+   [df.unit_thought_type.LackChairs] = {["caption"] = "{at }the lack of chairs"},  -- type: ANNOYANCE, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.TrainingBond] = {["caption"] = "{after }forming a bond with an animal training partner"}, -- type: AFFECTION, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.Rescued] = {["caption"] = "{after }being rescued"},  -- type: GRATITUDE, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftt, unk7: 0
+   [df.unit_thought_type.RescuedOther] = {["caption"] = "{after }bringing somebody to rest in bed"},  -- type: SYMPATHY, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.SatisfiedAtWork] = {["caption"] = "{at }work",  --  ####subthought ignored mostly. Not "slaughter an animal" -- type: SATISFACTION, unk2: 0, strength: 0, subthought: 105, severity: 0, flags: fftf, unk7: 0
+                                              ["extended_caption"] = "{at }work with [subthought]",
+                                              ["subthought"] = {"df.job_type enum value",
+                                                                (function (subthought)
+                                                                   return string.lower (df.job_type [subthought])
+                                                                 end)}},
+   [df.unit_thought_type.TaxedLostProperty] = {["caption"] = "{after }losing property to the tax collector's escorts"},  --### Works without parameters
+   [df.unit_thought_type.Taxed] = {["caption"] = "{after }being taxed"},  --### Works without parameters
    [df.unit_thought_type.LackProtection] = {["caption"] = "not having adequate protection"},  --### Works without parameters
-   [df.unit_thought_type.TaxRoomUnreachable] = {["caption"] = "after being unable to reach a room for tax collection"},  --### Works without parameters
-   [df.unit_thought_type.TaxRoomMisinformed] = {["caption"] = "after being misinformed about a room for tax collection"},  --### Works without parameters
+   [df.unit_thought_type.TaxRoomUnreachable] = {["caption"] = "{after }being unable to reach a room for tax collection"},  --### Works without parameters
+   [df.unit_thought_type.TaxRoomMisinformed] = {["caption"] = "{after }being misinformed about a room for tax collection"},  --### Works without parameters
    [df.unit_thought_type.PleasedNoble] = {["caption"] = "having pleased a noble"},  --### Works without parameters
    [df.unit_thought_type.TaxCollectionSmooth] = {["caption"] = "that the tax collection went smoothly"},  --### Works without parameters
    [df.unit_thought_type.DisappointedNoble] = {["caption"] = "having disappointed a noble"},  --### Works without parameters
    [df.unit_thought_type.TaxCollectionRough] = {["caption"] = "that the tax collection didn't go smoothly"},  --### Works without parameters
-   [df.unit_thought_type.MadeFriend] = {["caption"] = "after making a friend"}, --### type: FONDNESS, unk2: 0, strength: 0, subthought: 102208, severity: 0, flags: fftf, unk7: 0. subthought = HF id?
-   [df.unit_thought_type.FormedGrudge] = {["caption"] = "after forming a grudge"},  --### type: DISLIKE, unk2: 0, strength: 0, subthought: 7648, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.AnnoyedVermin] = {["caption"] = "after being accosted by [subthought]", -- type: ANNOYANCE, unk2: 0, strength: 0, subthought: 528, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.MadeFriend] = {["caption"] = "{after }making a friend"}, --### type: FONDNESS, unk2: 0, strength: 0, subthought: 102208, severity: 0, flags: fftf, unk7: 0. subthought = HF id?
+   [df.unit_thought_type.FormedGrudge] = {["caption"] = "{after }forming a grudge"},  --### type: DISLIKE, unk2: 0, strength: 0, subthought: 7648, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.AnnoyedVermin] = {["caption"] = "{after }being accosted by [subthought]", -- type: ANNOYANCE, unk2: 0, strength: 0, subthought: 528, severity: 0, flags: fftf, unk7: 0
                                            ["subthought"] = {"df.global.world.raws.creatures.all index",
                                                              (function (subthought)
                                                                 return df.global.world.raws.creatures.all [subthought].name [1]
                                                               end)}},
-   [df.unit_thought_type.NearVermin] = {["caption"] = "after being near [subthought]",  -- type: ENJOYMENT, unk2: 0, strength: 0, subthought: 215, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.NearVermin] = {["caption"] = "{after }being near [subthought]",  -- type: ENJOYMENT, unk2: 0, strength: 0, subthought: 215, severity: 0, flags: fftf, unk7: 0
                                         ["subthought"] = {"df.global.world.raws.creatures.all index",
                                                           (function (subthought)
                                                              return df.global.world.raws.creatures.all [subthought].name [1]
                                                            end)}},
-   [df.unit_thought_type.PesteredVermin] = {["caption"] = "after being pestered by [subthought]", -- type: DISTRESS, unk2: 0, strength: 0, subthought: 477, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.PesteredVermin] = {["caption"] = "{after }being pestered by [subthought]", -- type: DISTRESS, unk2: 0, strength: 0, subthought: 477, severity: 0, flags: fftf, unk7: 0
                                             ["subthought"] = {"df.global.world.raws.creatures.all index",
                                                               (function (subthought)
                                                                  return df.global.world.raws.creatures.all [subthought].name [1]
                                                                end)}},
-   [df.unit_thought_type.AcquiredItem] = {["caption"] = "after a satisfying acquisition"}, -- type: PLEASURE, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.AdoptedPet] = {["caption"] =  "after adopting a new pet",  -- type: HAPPINESS, unk2: 0, strength: 0, subthought: 171, severity: 0, flags: fftf, unk7: 0
-                                        ["extended_caption"] = "after adopting a new pet [subthought]",
+   [df.unit_thought_type.AcquiredItem] = {["caption"] = "{after }a satisfying acquisition"}, -- type: PLEASURE, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.AdoptedPet] = {["caption"] =  "{after }adopting a new pet",  -- type: HAPPINESS, unk2: 0, strength: 0, subthought: 171, severity: 0, flags: fftf, unk7: 0
+                                        ["extended_caption"] = "{after }adopting a new pet [subthought]",
                                         ["subthought"] = {"df.global.world.raws.creatures.all index",
                                                           (function (subthought)
                                                              return df.global.world.raws.creatures.all [subthought].name [0]
                                                            end)}},
-   [df.unit_thought_type.Jailed] = {["caption"] = "after being confined"}, -- type: ANGER, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: ffff, unk7: 0
-   [df.unit_thought_type.Bath] = {["caption"] = "after a bath"}, -- type: BLISS, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: ffff, unk7: 0
-   [df.unit_thought_type.SoapyBath] = {["caption"] = "after a soapy bath"},  -- type: BLISS, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.SparringAccident] = {["caption"] = "after killing somebody by accident while sparring"},  --### Works without parameters
-   [df.unit_thought_type.Attacked] = {["caption"] = "after being attacked"}, -- type: SHOCK, unk2: 50, strength: 50, subthought: -1, severity: 0, flags: ffff, unk7: 53
-   [df.unit_thought_type.AttackedByDead] = {["caption"] = "after being attacked by dead [HF relative]"},--### HF relative = subthought (or severity)?
+   [df.unit_thought_type.Jailed] = {["caption"] = "{after }being confined"}, -- type: ANGER, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: ffff, unk7: 0
+   [df.unit_thought_type.Bath] = {["caption"] = "{after }a bath"}, -- type: BLISS, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: ffff, unk7: 0
+   [df.unit_thought_type.SoapyBath] = {["caption"] = "{after }a soapy bath"},  -- type: BLISS, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.SparringAccident] = {["caption"] = "{after }killing somebody by accident while sparring"},  --### Works without parameters
+   [df.unit_thought_type.Attacked] = {["caption"] = "{after }being attacked"}, -- type: SHOCK, unk2: 50, strength: 50, subthought: -1, severity: 0, flags: ffff, unk7: 53
+   [df.unit_thought_type.AttackedByDead] = {["caption"] = "{after }being attacked by dead [HF relative]"},--### HF relative = subthought (or severity)?
    [df.unit_thought_type.SameBooze] = {["caption"] = "drinking the same old booze"},  -- type: GROUCHINESS, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.DrinkBlood] = {["caption"] = "while forced to drink bloody water"},  --### Works without parameters
-   [df.unit_thought_type.DrinkSlime] = {["caption"] = "while forced to drink slime"},  --### Works without parameters
-   [df.unit_thought_type.DrinkVomit] = {["caption"] = "while forced to drink vomit"},  --### Works without parameters
-   [df.unit_thought_type.DrinkGoo] = {["caption"] = "while forced to drink gooey water"},  --### Works without parameters
-   [df.unit_thought_type.DrinkIchor] = {["caption"] = "while forced to drink ichorous water"},  --### Works without parameters
-   [df.unit_thought_type.DrinkPus] = {["caption"] = "while forced to drink purulent water"},  --### Works without parameters
+   [df.unit_thought_type.DrinkBlood] = {["caption"] = "{while |being }forced to drink bloody water"},  --### Works without parameters
+   [df.unit_thought_type.DrinkSlime] = {["caption"] = "{while |being }forced to drink slime"},  --### Works without parameters
+   [df.unit_thought_type.DrinkVomit] = {["caption"] = "{while |being }forced to drink vomit"},  --### Works without parameters
+   [df.unit_thought_type.DrinkGoo] = {["caption"] = "{while |being }forced to drink gooey water"},  --### Works without parameters
+   [df.unit_thought_type.DrinkIchor] = {["caption"] = "{while |being}forced to drink ichorous water"},  --### Works without parameters
+   [df.unit_thought_type.DrinkPus] = {["caption"] = "[while |being }forced to drink purulent water"},  --### Works without parameters
    [df.unit_thought_type.NastyWater] = {["caption"] = "drinking nasty water"},  --### Works without parameters
-   [df.unit_thought_type.DrankSpoiled] = {["caption"] = "after drinking something spoiled"},  --### Works without parameters
-   [df.unit_thought_type.LackWell] = {["caption"] = "after drinking water without a well"},  --### Works without parameters
-   [df.unit_thought_type.NearCaged] = {["caption"] = "after being near to a [subthought] in a cage",
+   [df.unit_thought_type.DrankSpoiled] = {["caption"] = "{after }drinking something spoiled"},  --### Works without parameters
+   [df.unit_thought_type.LackWell] = {["caption"] = "{after }drinking water without a well"},  --### Works without parameters
+   [df.unit_thought_type.NearCaged] = {["caption"] = "{after }being near to a [subthought] in a cage",
                                        ["subthought"] = {"df.global.world.raws.creature.all index",
                                                          (function (subthought)
                                                             return df.global.world.raws.creatures.all [subthought].name [0]
                                                           end)}},
-   [df.unit_thought_type.NearCagedHated] = {["caption"] = "after being near to a [animal] in a cage",
+   [df.unit_thought_type.NearCagedHated] = {["caption"] = "{after }being near to a [animal] in a cage",
                                             ["subthought"] = {"df.global.world.raws.creature.all index",
                                                               (function (subthought)
                                                                  return df.global.world.raws.creatures.all [subthought].name [0]
                                                                end)}},
-   [df.unit_thought_type.LackBedroom] = {["caption"] = "after sleeping without a proper room"},  -- type: EMBARRASSMENT, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftt, unk7: 0
-   [df.unit_thought_type.BedroomQuality] = {["caption"] = "after sleeping in a [severity]", -- type: CONTENTMENT, unk2: 0, strength: 0, subthought: -1, severity: 5, flags: fftf, unk7: 0  --### Spelling fixed in original
+   [df.unit_thought_type.LackBedroom] = {["caption"] = "{after }sleeping without a proper room"},  -- type: EMBARRASSMENT, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftt, unk7: 0
+   [df.unit_thought_type.BedroomQuality] = {["caption"] = "{after }sleeping in a [severity]", -- type: CONTENTMENT, unk2: 0, strength: 0, subthought: -1, severity: 5, flags: fftf, unk7: 0  --### Spelling fixed in original
                                             ["severity"] = {"df.item_quality value",
                                              (function (severity)
                                                 return bedroom_quality_of (severity)
                                               end)}},
-   [df.unit_thought_type.SleptFloor] = {["caption"] = "after sleeping on the floor"},  --### Works without parameters
-   [df.unit_thought_type.SleptMud] = {["caption"] = "after sleeping in the mud"},  --### Works without parameters
-   [df.unit_thought_type.SleptGrass] = {["caption"] = "after sleeping in the grass"},  -- type: ANNOYANCE, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.SleptRoughFloor] = {["caption"] = "after sleeping on a rough cave floor"},  --### Works without parameters
-   [df.unit_thought_type.SleptRocks] = {["caption"] = "after sleeping on rocks"},  -- type: ANNOYANCE, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.SleptIce] = {["caption"] = "after sleeping on ice"},  --### Works without parameters
-   [df.unit_thought_type.SleptDirt] = {["caption"] = "after sleeping in the dirt"},  -- type: ANNOYANCE, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.SleptDriftwood] = {["caption"] = "after sleeping on a pile of driftwood"},  --### Works without parameters
-   [df.unit_thought_type.ArtDefacement] = {["caption"] = "after suffering the travesty of art defacement"},  -- type: EMPTINESS, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.Evicted] = {["caption"] = "after being evicted"},  --### Works without parameters
-   [df.unit_thought_type.GaveBirth] = {["caption"] = "after giving birth to [subthought_severity]",  -- type: ADORATION, unk2: 0, strength: 0, subthought: -1, severity: 3, flags: ffff, unk7: 0
+   [df.unit_thought_type.SleptFloor] = {["caption"] = "{after }sleeping on the floor"},  --### Works without parameters
+   [df.unit_thought_type.SleptMud] = {["caption"] = "{after }sleeping in the mud"},  --### Works without parameters
+   [df.unit_thought_type.SleptGrass] = {["caption"] = "{after }sleeping in the grass"},  -- type: ANNOYANCE, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.SleptRoughFloor] = {["caption"] = "{after }sleeping on a rough cave floor"},  --### Works without parameters
+   [df.unit_thought_type.SleptRocks] = {["caption"] = "{after }sleeping on rocks"},  -- type: ANNOYANCE, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.SleptIce] = {["caption"] = "{after }sleeping on ice"},  --### Works without parameters
+   [df.unit_thought_type.SleptDirt] = {["caption"] = "{after }sleeping in the dirt"},  -- type: ANNOYANCE, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.SleptDriftwood] = {["caption"] = "{after }sleeping on a pile of driftwood"},  --### Works without parameters
+   [df.unit_thought_type.ArtDefacement] = {["caption"] = "{after }suffering the travesty of art defacement"},  -- type: EMPTINESS, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.Evicted] = {["caption"] = "{after }being evicted"},  --### Works without parameters
+   [df.unit_thought_type.GaveBirth] = {["caption"] = "{after }giving birth to [subthought_severity]",  -- type: ADORATION, unk2: 0, strength: 0, subthought: -1, severity: 3, flags: ffff, unk7: 0
                                        ["subthought_severity"] = {"gender, child_count",
                                                                   (function (subthought, severity)
                                                                      return child_birth_of (subthought, severity)
@@ -1574,10 +1714,10 @@ local unit_thoughts =
                                                                         (function (subthought, severity)
                                                                            return spouse_birth_of (subthought, severity)
                                                                          end)}},
-   [df.unit_thought_type.ReceivedWater] = {["caption"] = "after receiving water"}, -- type: SATISFACTION, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.GaveWater] = {["caption"] = "after giving somebody water"}, -- type: SYMPATHY, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.ReceivedFood] = {["caption"] = "after receiving food"}, -- type: SATISFACTION, unk2: 100, strength: 100, subthought: -1, severity: 0, flags: ffff, unk7: 0
-   [df.unit_thought_type.GaveFood] = {["caption"] = "after giving somebody food"},  -- type: SYMPATHY, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.ReceivedWater] = {["caption"] = "{after }receiving water"}, -- type: SATISFACTION, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.GaveWater] = {["caption"] = "{after }giving somebody water"}, -- type: SYMPATHY, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.ReceivedFood] = {["caption"] = "{after }receiving food"}, -- type: SATISFACTION, unk2: 100, strength: 100, subthought: -1, severity: 0, flags: ffff, unk7: 0
+   [df.unit_thought_type.GaveFood] = {["caption"] = "{after }giving somebody food"},  -- type: SYMPATHY, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
    [df.unit_thought_type.Talked] = {["caption"] = "talking with [subthought]", -- type: FONDNESS, unk2: 0, strength: 0, subthought: 13, severity: 0, flags: fftf, unk7: 0
                                     ["subthought"] = {"df.unit_relationship_type value",
                                                       (function (subthought)
@@ -1601,150 +1741,160 @@ local unit_thoughts =
                                                          (function (severity)
                                                             return tomb_quality_of (severity)
                                                           end)}},
-   [df.unit_thought_type.TombLack] = {["caption"] = "about not having a tomb after gaining another year"},  --### Works without parameters
-   [df.unit_thought_type.TalkToNoble] = {["caption"] = "after talking to a pillar of society"},  --### Works without parameters
-   [df.unit_thought_type.InteractPet] = {["caption"] = "after interacting with a pet", --  type: FONDNESS, unk2: 0, strength: 0, subthought: 171, severity: 0, flags: fftf, unk7: 0
-                                         ["extended_caption"] = "after interacting with a pet [subthought]",
+   [df.unit_thought_type.TombLack] = {["caption"] = "{about }not having a tomb after gaining another year"},  --### Works without parameters
+   [df.unit_thought_type.TalkToNoble] = {["caption"] = "{after }talking to a pillar of society"},  --### Works without parameters
+   [df.unit_thought_type.InteractPet] = {["caption"] = "{after }interacting with a pet", --  type: FONDNESS, unk2: 0, strength: 0, subthought: 171, severity: 0, flags: fftf, unk7: 0
+                                         ["extended_caption"] = "{after }interacting with a pet [subthought]",
                                          ["subthought"] = {"df.global.world.raws.creatures.all index",
                                                            (function (subthought)
                                                               return df.global.world.raws.creatures.all [subthought].name [0]
                                                             end)}},
-   [df.unit_thought_type.ConvictionCorpse] = {["caption"] = "after a long-dead corpse was convicted of a crime"},  --### Works without parameters
-   [df.unit_thought_type.ConvictionAnimal] = {["caption"] = "after an animal was convicted of a crime"},  --### Works without parameters
-   [df.unit_thought_type.ConvictionVictim] = {["caption"] = "after the bizarre conviction against all reason of the victim of a crime"},  --### Works without parameters
-   [df.unit_thought_type.ConvictionJusticeSelf] = {["caption"] = "upon receiving justice through a criminal's conviction"},  --### Works without parameters
+   [df.unit_thought_type.ConvictionCorpse] = {["caption"] = "{after }a long-dead corpse was convicted of a crime"},  --### Works without parameters
+   [df.unit_thought_type.ConvictionAnimal] = {["caption"] = "{after }an animal was convicted of a crime"},  --### Works without parameters
+   [df.unit_thought_type.ConvictionVictim] = {["caption"] = "{after }the bizarre conviction against all reason of the victim of a crime"},  --### Works without parameters
+   [df.unit_thought_type.ConvictionJusticeSelf] = {["caption"] = "{upon }receiving justice through a criminal's conviction"},  --### Works without parameters
    [df.unit_thought_type.ConvictionJusticeFamily] = {["caption"] = "when a family member received justice through a criminal's conviction"},  --### Works without parameters
    [df.unit_thought_type.Decay] = {["caption"] = "after being forced to endure the decay of [subthought]",  -- type: RIGHTEOUS_INDIGNATION, unk2: 0, strength: 0, subthought: 11, severity: 0, flags: ffff, unk7: 0
                                    ["subthought"] = {"df.unit_relationship_type value",
                                                      (function (subthought)
                                                         return decay_of (subthought)
                                                       end)}},
-   [df.unit_thought_type.NeedsUnfulfilled] = {["caption"] = "after [subthought_severity]",
+   [df.unit_thought_type.NeedsUnfulfilled] = {["caption"] = "{after }[subthought_severity]",
                                                ["subthought_severity"] = {"df.need_type value, (HF id)",
                                                                           (function (subthought, severity)
                                                                              return unfulfulled_need_of (subthought, severity)
                                                                            end)}},
-   [df.unit_thought_type.Prayer] = {["caption"] = "after communing with [subthought]", -- type: RAPTURE, unk2: 71, strength: 100, subthought: 266, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.Prayer] = {["caption"] = "{after }communing with [subthought]", -- type: RAPTURE, unk2: 71, strength: 100, subthought: 266, severity: 0, flags: fftf, unk7: 0
                                     ["subthought"] = {"HF id",
                                                       (function (subthought)
                                                          return hf_name (subthought)
                                                        end)}},
-   [df.unit_thought_type.DrinkWithoutCup] = {["caption"] = "after having a drink without using a goblet, cup or mug"}, -- type: ANNOYANCE, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.ResearchBreakthrough] = {["caption"] = "after making a breakthrough concerning [subthought_severity]",
+   [df.unit_thought_type.DrinkWithoutCup] = {["caption"] = "{after }having a drink without using a goblet, cup or mug"}, -- type: ANNOYANCE, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.ResearchBreakthrough] = {["caption"] = "{after }making a breakthrough concerning [subthought_severity]",
                                                   ["subthought_severity"] = {"knowledge_scholar_category_flag index, flag index",
                                                                              (function (subthought, severity)
                                                                                 return get_topic (subthought, severity)
                                                                               end)}},
-   [df.unit_thought_type.ResearchStalled] = {["caption"] = "after being unable to advance the study of [subthought_severity]",  -- type: ACCEPTANCE, unk2: 0, strength: 0, subthought: 8, severity: 1, flags: fftf, unk7: 0
+   [df.unit_thought_type.ResearchStalled] = {["caption"] = "{after }being unable to advance the study of [subthought_severity]",  -- type: ACCEPTANCE, unk2: 0, strength: 0, subthought: 8, severity: 1, flags: fftf, unk7: 0
                                              ["subthought_severity"] = {"knowledge_scholar_category_flag index, flag index",
                                                                         (function (subthought, severity)
                                                                            return get_topic (subthought, severity)
                                                                          end)}},
-   [df.unit_thought_type.PonderTopic] = {["caption"] = "after pondering [subthought_severity]",  -- DONE type: INTEREST, unk2: 0, strength: 0, subthought: 12, severity: 10, flags: fftf, unk7: 0
+   [df.unit_thought_type.PonderTopic] = {["caption"] = "{after }pondering [subthought_severity]",  -- DONE type: INTEREST, unk2: 0, strength: 0, subthought: 12, severity: 10, flags: fftf, unk7: 0
                                          ["subthought_severity"] = {"knowledge_scholar_category_flag index, flag index",
                                                                     (function (subthought, severity)
                                                                        return get_topic (subthought, severity)
                                                                      end)}},
-   [df.unit_thought_type.DiscussTopic] = {["caption"] = "after discussing [subthought_severity]",  -- type: CONTENTMENT, unk2: 0, strength: 0, subthought: 13, severity: 20, flags: fftf, unk7: 0
+   [df.unit_thought_type.DiscussTopic] = {["caption"] = "{after }discussing [subthought_severity]",  -- type: CONTENTMENT, unk2: 0, strength: 0, subthought: 13, severity: 20, flags: fftf, unk7: 0
                                           ["subthought_severity"] = {"knowledge_scholar_category_flag index, flag index",
                                                                      (function (subthought, severity)
                                                                         return get_topic (subthought, severity)
                                                                       end)}},
-   [df.unit_thought_type.Syndrome] = {["caption"] = "due to [subthought]", -- type: EUPHORIA, unk2: 0, strength: 0, subthought: 70, severity: 59, flags: fftf, unk7: 0 --### severity?
+   [df.unit_thought_type.Syndrome] = {["caption"] = "{due to }[subthought]", -- type: EUPHORIA, unk2: 0, strength: 0, subthought: 70, severity: 59, flags: fftf, unk7: 0 --### severity?
                                       ["subthought"] = {"df.global.world.raws.syndromes.all id",
                                                         (function (subthought)
                                                            return df.syndrome.find (subthought).syn_name
                                                          end)}},
-   [df.unit_thought_type.Perform] = {["caption"] = "while performing"}, -- type: ENJOYMENT, unk2: 0, strength: 0, subthought: 3815, severity: 0, flags: fftf, unk7: 0  --### subthought = Incident id?
-   [df.unit_thought_type.WatchPerform] = {["caption"] = "after watching a performance"},--### type: DELIGHT, unk2: 100 (0), strength 100 (0), subthought: 225, severity: 0, flags: fftf, unk7: 0 => "I saw a human recite Music Painful at the Eternal Breakfast of Lunch. How very delightful!"  --### Subthought?
-   [df.unit_thought_type.RemoveTroupe] = {["caption"] = "after being removed from a performance troupe"},  --### Works without parameters
-   [df.unit_thought_type.LearnTopic] = {["caption"] = "after learning about [subthought_severity]", -- type: SATISFACTION, unk2: 0, strength: 0, subthought: 5, severity: 4, flags: fftf, unk7: 0
+   [df.unit_thought_type.Perform] = {["caption"] = "{while }performing", -- type: ENJOYMENT, unk2: 0, strength: 0, subthought: 3815, severity: 0, flags: fftf, unk7: 0
+                                     ["extended_caption"] = "{while} [subthought]",
+                                     ["subthought"] = {"df.global.world.incidents.all id",
+                                                       (function (subthought)
+                                                          return Perform_Of (subthought)
+                                                        end)}},                                     
+   [df.unit_thought_type.WatchPerform] = {["caption"] = "{after }watching a performance",  -- type: DELIGHT, unk2: 100 (0), strength 100 (0), subthought: 225, severity: 0, flags: fftf, unk7: 0 => "I saw a human recite Music Painful at the Eternal Breakfast of Lunch. How very delightful!" 
+                                          ["extended_caption"] = "{after }watching [subthought]",
+                                          ["subthought"] = {"df.global.world.incidents.all id",
+                                                            (function (subthought)
+                                                               return Watch_Perform_Of (subthought)
+                                                             end)}},
+   [df.unit_thought_type.RemoveTroupe] = {["caption"] = "{after }being removed from a performance troupe"},  --### Works without parameters
+   [df.unit_thought_type.LearnTopic] = {["caption"] = "{after }learning about [subthought_severity]", -- type: SATISFACTION, unk2: 0, strength: 0, subthought: 5, severity: 4, flags: fftf, unk7: 0
                                         ["subthought_severity"] = {"knowledge_scholar_category_flag index, flag index",
                                                                    (function (subthought, severity)
                                                                       return get_topic (subthought, severity)
                                                                     end)}},
-   [df.unit_thought_type.LearnSkill] = {["caption"] = "after learning about [subthought]", -- type: SATISFACTION, unk2: 0, strength: 0, subthought: 101, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.LearnSkill] = {["caption"] = "{after }learning about [subthought]", -- type: SATISFACTION, unk2: 0, strength: 0, subthought: 101, severity: 0, flags: fftf, unk7: 0
                                         ["subthought"] = {"df.job_skill value",
                                                           (function (subthought)
                                                              return string.lower (df.job_skill [subthought])
                                                            end)}},
-   [df.unit_thought_type.LearnBook] = {["caption"] = "after learning [subthought]", -- type: SATISFACTION, unk2: 0, strength: 0, subthought: 194395, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.LearnBook] = {["caption"] = "{after }learning [subthought]", -- type: SATISFACTION, unk2: 0, strength: 0, subthought: 194395, severity: 0, flags: fftf, unk7: 0
                                        ["subthought"] = {"df.global.world.written_contents.all id",
                                                          (function (subthought)
                                                             return df.written_content.find (subthought).title
                                                           end)}},
-   [df.unit_thought_type.LearnInteraction] = {["caption"] = "after learning [subthought]",
+   [df.unit_thought_type.LearnInteraction] = {["caption"] = "{after }learning [subthought]",
                                               ["subthought"] = {"#df.global.world.raws.interactions id",
                                                (function (subthought)
                                                   if #df.global.world.raws.interactions [subthought].sources > 0 then
                                                     return df.global.world.raws.interactions [subthought].sources [0].name
       
                                                   else
-                                                    return "after learning powerful secrets."
+                                                    return "powerful secrets."
                                                   end
                                                 end)}},
-   [df.unit_thought_type.LearnPoetry] = {["caption"] = "after learning [subthought]",
+   [df.unit_thought_type.LearnPoetry] = {["caption"] = "{after  }learning [subthought]",  -- type: SATISFACTION, unk2: 0, strength: 0, subthought: 28, severity: 0, flags: fftf, unk7: 0
                                          ["subthought"] = {"df.global.world.poetic_forms.all id",
                                                            (function (subthought)
                                                               return dfhack.TranslateName (df.poetic_form.find (subthought).name, true)
                                                             end)}},
-   [df.unit_thought_type.LearnMusic] = {["caption"] = "after learning [subthought]",
+   [df.unit_thought_type.LearnMusic] = {["caption"] = "{after }learning [subthought]", -- type: INTEREST, unk2: 0, strength: 0, subthought: 61, severity: 0, flags: fftf, unk7: 0
                                         ["subthought"] = {"df.global.world.musical_forms.all id",
                                                           (function (subthought)
                                                              return dfhack.TranslateName (df.musical_form.find (subthought).name, true)
                                                            end)}},
-   [df.unit_thought_type.LearnDance] = {["caption"] = "after learning [subthought]",
+   [df.unit_thought_type.LearnDance] = {["caption"] = "{after }learning [subthought]",
                                         ["subthought"] = {"df.global.world.dance_forms.all id",
                                                           function (subthought)
                                                             return dfhack.TranslateName (df.dance_form.find (emotion.subthought).name, true)
                                                           end}},
-   [df.unit_thought_type.TeachTopic] = {["caption"] = "after teaching [subthought_severity]",
+   [df.unit_thought_type.TeachTopic] = {["caption"] = "{after }teaching [subthought_severity]",  -- type: PRIDE, unk2: 0, strength: 0, subthought: 12, severity: 7, flags: fftf, unk7: 0
                                         ["subthought_severity"] = {"knowledge_scholar_category_flag index, flag index",
                                                                    (function (subthought, severity)
                                                                       return get_topic (subthought, severity)
                                                                     end)}},
-   [df.unit_thought_type.TeachSkill] = {["caption"] = "after teaching [subthought]", -- type: SATISFACTION, unk2: 0, strength: 0, subthought: 103, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.TeachSkill] = {["caption"] = "{after }teaching [subthought]", -- type: SATISFACTION, unk2: 0, strength: 0, subthought: 103, severity: 0, flags: fftf, unk7: 0
                                         ["subthought"] = {"df.job_skill value",
                                                           (function (subthought)
                                                              return string.lower (df.job_skill [subthought])
                                                            end)}},
-   [df.unit_thought_type.ReadBook] = {["caption"] = "after reading [subthought]",  -- type: SATISFACTION, unk2: 0, strength: 0, subthought: 194395, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.ReadBook] = {["caption"] = "{after }reading [subthought]",  -- type: SATISFACTION, unk2: 0, strength: 0, subthought: 194395, severity: 0, flags: fftf, unk7: 0
                                       ["subthought"] = {"written contents.all index",
                                                         (function (subthought)
-                                                           return df.written_content.find (subthought).title
+                                                           return df.written_content.find (subthought).title--### Handle untitled
                                                          end)}},
-   [df.unit_thought_type.WriteBook] = {["caption"] = "after writing [subthought]",-- type: SATISFACTION, unk2: 0, strength: 0, subthought: 582252, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.WriteBook] = {["caption"] = "{after }writing [subthought]",-- type: SATISFACTION, unk2: 0, strength: 0, subthought: 582252, severity: 0, flags: fftf, unk7: 0
                                        ["subthought"] = {"written contents.all index",
                                                          (function (subthought)
                                                             return df.written_content.find (subthought).title
                                                           end)}},
-   [df.unit_thought_type.BecomeResident] = {["caption"] = "after being granted residency",  -- type: SATISFACTION, unk2: 0, strength: 0, subthought: 1791, severity: 0, flags: fftf, unk7: 0 ###Caption spell correction.
-                                            ["extended_caption"] = "after being granted residency at [subthought]",
+   [df.unit_thought_type.BecomeResident] = {["caption"] = "{after }being granted residency",  -- type: SATISFACTION, unk2: 0, strength: 0, subthought: 1791, severity: 0, flags: fftf, unk7: 0 ###Caption spell correction.
+                                            ["extended_caption"] = "{after }being granted residency at [subthought]",
                                             ["subthought"] = {"site id",
                                                               (function (subthought)
                                                                  return dfhack.TranslateName (df.world_site.find (subthought).name, true)
                                                                end)}},
-   [df.unit_thought_type.BecomeCitizen] = {["caption"] = "after being granted citizenship",  -- type: SATISFACTION, unk2: 100, strength: 100, subthought: 8359, severity: 0, flags: ffff, unk7: 0
-                                           ["extended_caption"] = "after becoming a citizen of [subthought]",
+   [df.unit_thought_type.BecomeCitizen] = {["caption"] = "{after }being granted citizenship",  -- type: SATISFACTION, unk2: 100, strength: 100, subthought: 8359, severity: 0, flags: ffff, unk7: 0
+                                           ["extended_caption"] = "{after }becoming a citizen of [subthought]",
                                            ["subthought"] = {"df.historical_entity id",
                                                              (function (subthought)
                                                                 return dfhack.TranslateName (df.historical_entity.find (subthought).name, true)
                                                               end)}},
-   [df.unit_thought_type.DenyResident] = {["caption"] = "after being denied residency",  -- type: INSULT, unk2: 0, strength: 0, subthought: 1837, severity: 0, flags: fftf, unk7: 0
-                                          ["extended_caption"] = "after being denied residency at [subthought]",
+   [df.unit_thought_type.DenyResident] = {["caption"] = "{after }being denied residency",  -- type: INSULT, unk2: 0, strength: 0, subthought: 1837, severity: 0, flags: fftf, unk7: 0
+                                          ["extended_caption"] = "{after }being denied residency at [subthought]",
                                           ["subthought"] = {"site id",
                                                             (function (subthought)
                                                                return dfhack.TranslateName (df.world_site.find (subthought).name, true)
                                                              end)}},
-   [df.unit_thought_type.DenyCitizen] = {["caption"] = "after being denied citizenship",  --### Works without parameters. The below is a guess based on BecomeCitizen
+   [df.unit_thought_type.DenyCitizen] = {["caption"] = "{after }being denied citizenship",  --### Works without parameters. The below is a guess based on BecomeCitizen
                                          ["extended_caption"] = "after being refused to become a citizen of [subthought]",
                                          ["subthought"] = {"df.historical_entity id",
                                                            (function (subthought)
                                                               return dfhack.TranslateName (df.historical_entity.find (subthought).name, true)
                                                             end)}},
-   [df.unit_thought_type.LeaveTroupe] = {["caption"] = "after leaving a performance troupe"},  --### Works without parameters
-   [df.unit_thought_type.MakeBelieve] = {["caption"] = "after playing make believe"}, -- type: ENJOYMENT, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.PlayToy] = {["caption"] = "after playing with [subthought]", -- type: ENJOYMENT, unk2: 0, strength: 0, subthought: 0, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.LeaveTroupe] = {["caption"] = "{after }leaving a performance troupe"},  --### Works without parameters
+   [df.unit_thought_type.MakeBelieve] = {["caption"] = "{after }playing make believe"}, -- type: ENJOYMENT, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.PlayToy] = {["caption"] = "{after }playing with [subthought]", -- type: ENJOYMENT, unk2: 0, strength: 0, subthought: 0, severity: 0, flags: fftf, unk7: 0
                                      ["subthought"] = {"df.global.world.raws.itemdefs.toys index",
                                                        (function (subthought)
                                                           return df.global.world.raws.itemdefs.toys [subthought].name
@@ -1752,25 +1902,25 @@ local unit_thoughts =
    [df.unit_thought_type.DreamAbout] = {["caption"] = "*DREAMABOUT*"},  --### Looks like there should be parameters... Empty without Not HF id nor unit id.
    [df.unit_thought_type.Dream] = {["caption"] = "*DREAM*"},  --### Looks like there should be parameters... Empty without
    [df.unit_thought_type.Nightmare] = {["caption"] = "*NIGHTMARE*"},  --### Looks like there should be parameters... Empty without
-   [df.unit_thought_type.Argument] = {["caption"] = "after getting into an argument", -- type: BITTERNESS, unk2: 0, strength: 0, subthought: 99640, severity: 0, flags: fftf, unk7: 0. "I got into an argument with Niri Matchedsaffron. <emotion>"
-                                      ["extended_caption"] = "after getting into an argument with [subthought]",
+   [df.unit_thought_type.Argument] = {["caption"] = "{after }getting into an argument", -- type: BITTERNESS, unk2: 0, strength: 0, subthought: 99640, severity: 0, flags: fftf, unk7: 0. "I got into an argument with Niri Matchedsaffron. <emotion>"
+                                      ["extended_caption"] = "{after }getting into an argument with [subthought]",
                                       ["subthought"] = {"HF id",
                                                         (function (subthought)
                                                            return dfhack.TranslateName (df.historical_figure.find (subthought).name, true)
                                                          end)}},
-   [df.unit_thought_type.CombatDrills] = {["caption"] = "after combat drills"},  -- type: PLEASURE, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.ArcheryPractice] = {["caption"] = "after practicing at the archery target"},  --### Works without parameters
-   [df.unit_thought_type.ImproveSkill] = {["caption"] = "upon improving [subthought]", -- type: SATISFACTION, unk2: 0, strength: 0, subthought: 10, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.CombatDrills] = {["caption"] = "{after }combat drills"},  -- type: PLEASURE, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.ArcheryPractice] = {["caption"] = "{after }practicing at the archery target"},  --### Works without parameters
+   [df.unit_thought_type.ImproveSkill] = {["caption"] = "{upon }improving [subthought]", -- type: SATISFACTION, unk2: 0, strength: 0, subthought: 10, severity: 0, flags: fftf, unk7: 0
                                           ["subthought"] = {"df.job_skill value",
                                                             (function (subthought)
                                                                return string.lower (df.job_skill [subthought])
                                                              end)}},
-   [df.unit_thought_type.WearItem] = {["caption"] = "after putting on a [severity] item",-- type: CONTENTMENT, unk2: 0, strength: 0, subthought: -1, severity: 1, flags: fftf, unk7: 0
+   [df.unit_thought_type.WearItem] = {["caption"] = "{after }putting on a [severity] item",-- type: CONTENTMENT, unk2: 0, strength: 0, subthought: -1, severity: 1, flags: fftf, unk7: 0
                                       ["severity"] = {"df.item_quality value",
                                                       (function (severity)
                                                          return item_quality_of (severity)
                                                        end)}},
-   [df.unit_thought_type.RealizeValue] = {["caption"] = "after realizing the [level] of [value]", -- type: SATISFACTION, unk2: 0, strength: 0, subthought: 6, severity: 29, flags: fftf, unk7: 0
+   [df.unit_thought_type.RealizeValue] = {["caption"] = "{after }realizing the [level] of [value]", -- type: SATISFACTION, unk2: 0, strength: 0, subthought: 6, severity: 29, flags: fftf, unk7: 0
                                           ["subthought_severity"] = {"df.value_type value, value strength",
                                                                      (function (subthought, severity)
                                                                         return realize_value_of (subthought, severity)
@@ -1791,17 +1941,17 @@ local unit_thoughts =
    [df.unit_thought_type.PreserveBody] = {["caption"] = "*PRESERVEBODY*"},  --### Requires parameters?
    [df.unit_thought_type.Murdered] = {["caption"] = "after murdering somebody"},  --### Parameters?
    [df.unit_thought_type.HistEventCollection] = {["caption"] = "*HISTEVENTCOLLECTION*"},  --### Requires parameters?
-   [df.unit_thought_type.ViewOwnDisplay] = {["caption"] = "after viewing [subthought] in a personal museum",
+   [df.unit_thought_type.ViewOwnDisplay] = {["caption"] = "{after }viewing [subthought] in a personal museum",
                                             ["subthought"] = {"df.global.world.artifacts.all id ELSE df.global.world.items.all id",
                                                               (function (subthought)
                                                                  return display_name (subthought)
                                                                end)}},
-   [df.unit_thought_type.ViewDisplay] = {["caption"] = "after viewing [subthought] on display", -- type: PLEASURE, unk2: 0, strength: 0, subthought: 11222, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.ViewDisplay] = {["caption"] = "{after }viewing [subthought] on display", -- type: PLEASURE, unk2: 0, strength: 0, subthought: 11222, severity: 0, flags: fftf, unk7: 0
                                          ["subthought"] = {"df.global.world.artifacts.all id ELSE df.global.world.items.all id",
                                                            (function (subthought)
                                                               return display_name (subthought)
                                                             end)}},
-   [df.unit_thought_type.AcquireArtifact] = {["caption"] = "after acquiring [subthought]",
+   [df.unit_thought_type.AcquireArtifact] = {["caption"] = "{after }acquiring [subthought]",
                                              ["subthought"] = {"df.global.world.artifacts.all id",
                                                                (function (subthought)
                                                                   local artifact = df.artifact_record.find (subthought)
@@ -1813,9 +1963,9 @@ local unit_thoughts =
                                                                     return "an unknown artifact"
                                                                   end
                                                                 end)}},
-   [df.unit_thought_type.DenySanctuary] = {["caption"] = "after a child was turned away from sanctuary"},  --### Works without parameters
-   [df.unit_thought_type.CaughtSneaking] = {["caption"] = "after being caught sneaking"},  -- type: FEROCITY, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.GaveArtifact] = {["caption"] = "after [subthought] was given away",
+   [df.unit_thought_type.DenySanctuary] = {["caption"] = "{after }a child was turned away from sanctuary"},  --### Works without parameters
+   [df.unit_thought_type.CaughtSneaking] = {["caption"] = "{after }being caught sneaking"},  -- type: FEROCITY, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
+   [df.unit_thought_type.GaveArtifact] = {["caption"] = "{after }[subthought] was given away",
                                           ["subthought"] = {"df.global.world.artifacts.all id",
                                                             (function (subthought)
                                                                local artifact = df.artifact_record.find (subthought)
@@ -1826,7 +1976,12 @@ local unit_thoughts =
                                                                else
                                                                  return "an unknown artifact"
                                                                end
-                                                             end)}}}
+                                                             end)}},
+   [df.unit_thought_type.SawDeadBody] = {["caption"] = "{after }seeing [subthought]'s dead body",
+                                         ["subthought"] = {"df.global.world.incidents.all id",
+                                                           (function (subthought) 
+                                                              return incident_victim (subthought)
+                                                            end)}}}
         
 --------------------------------------------
 
@@ -1845,6 +2000,26 @@ function token_extractor (str)
            
   else
     return str, nil, nil
+  end
+end
+
+--------------------------------------------
+
+function present_token_extractor (str)
+  local start = str:find ('{', 1, #str, true)
+  local stop = str:find ('}', 1, #str, true)
+  local separator = str:find ('|', 1, #str, true)
+  
+  if start then
+    if separator then
+      return str:sub (start + 1, separator - 1), str:sub (separator + 1, stop - 1), str:sub (stop + 1, #str)
+      
+    else    
+      return str:sub (start + 1, stop - 1), "", str:sub (stop + 1, #str)
+    end
+    
+  else
+    return "", "", str
   end
 end
 
@@ -1902,8 +2077,8 @@ function print_emotion_value (gender, emotion)
       dfhack.print (feel_tense (emotion))
     end
     
-    if emotions [emotion.type] [3] then
-      dfhack.print (emotions [emotion.type] [3])
+    if emotions [emotion.type] [4] then
+      dfhack.print (emotions [emotion.type] [4])
     end
     
     dfhack.color (df.emotion_type.attrs [emotion.type].color)
@@ -1915,16 +2090,20 @@ end
 
 function print_emotion (gender, emotion)
   local base_color
+  local memory_color
   local front
   local token
   local rear
-
+  local present_token
+  local memory_token
+  
   if unit_thoughts [emotion.thought].extended_caption then
     front, token, rear = token_extractor (unit_thoughts [emotion.thought].extended_caption)
     
   else
     front, token, rear = token_extractor (unit_thoughts [emotion.thought].caption)
   end
+  
   
   while token do
     if token == "subthought" then
@@ -1959,14 +2138,30 @@ function print_emotion (gender, emotion)
     front, token, rear = token_extractor (front)
   end
   
+  present_token, memory_token, front = present_token_extractor (front)
+  
   if emotion.strength > 0 then
     base_color = COLOR_WHITE
+    memory_color = COLOR_LIGHTMAGENTA
   else
     base_color = COLOR_GREY
+    memory_color = COLOR_MAGENTA
   end
     
   print_emotion_value (gender, emotion)
-  dfhack.color (base_color)
+  
+  if emotion.flags [5] then
+    dfhack.color (memory_color)
+--    printall (emotion) dfhack.print (df.emotion_type [emotion.type])
+    dfhack.print (emotions [emotion.type] [3] .. " ")
+    dfhack.color (base_color)  
+    dfhack.print (memory_token)
+  
+  else
+    dfhack.color (base_color)  
+    dfhack.print (present_token)  
+  end
+  
   dfhack.println (front .. ".")
 end
 
@@ -2468,11 +2663,11 @@ function thoughts ()
           
           elseif preference.type == df.unit_preference.T_type.LikeColor then
             dfhack.println (Pronoun .. " likes the color " .. 
-                            df.global.world.raws.language.colors [preference.color_id].name .. ".")
+                            df.global.world.raws.descriptors.colors [preference.color_id].name .. ".")
           
           elseif preference.type == df.unit_preference.T_type.LikeShape then
             dfhack.println (Pronoun .. " likes the shape of " .. 
-                            df.global.world.raws.language.shapes [preference.shape_id].name_plural .. ".")
+                            df.global.world.raws.descriptors.shapes [preference.shape_id].name_plural .. ".")
           
           elseif preference.type == df.unit_preference.T_type.LikePoeticForm then
             dfhack.println (Pronoun .. " likes the words of " .. 
