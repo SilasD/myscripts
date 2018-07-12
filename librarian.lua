@@ -1204,11 +1204,26 @@ function Librarian ()
         
       elseif ref._type == df.general_ref_entity then
         local entity = df.historical_entity.find (ref.entity_id)
+        local race
+        local name
+        
+        if entity.race == -1 then
+          race = "<unknown race>"
           
+        else
+          race = df.global.world.raws.creatures.all [entity.race].name [2]
+        end
+          
+        if entity.name then
+          name = dfhack.TranslateName (entity.name, true) .. "/" .. dfhack.TranslateName (entity.name, false)
+          
+        else
+          name "<unknown name>"
+        end
+        
         if entity then
-          table.insert (text, "Reference: The " .. df.global.world.raws.creatures.all [entity.race].name [2] .. " " ..
-                              df.historical_entity_type [entity.type] .. " " ..
-                              dfhack.TranslateName (entity.name, true) .. "/" .. dfhack.TranslateName (entity.name, false) .. " information\n")
+          table.insert (text, "Reference: The " ..  race .. " " ..
+                              df.historical_entity_type [entity.type] .. " " .. name .. " information\n")
             
         else
           table.insert (text, "Reference: Unknown entity (culled?) information\n")
@@ -1839,7 +1854,7 @@ function Librarian ()
        "- The Science and Values pages also have a Remote Works list containing all works existing in the DF", NEWLINE,
        "  world outside of your fortress, allowing you to find out which works you might want to 'acquire' via", NEWLINE,
        "  raids...", NEWLINE,
-       "Version 0.12 2018-05-22", NEWLINE,
+       "Version 0.13 2018-07-12", NEWLINE,
        "Comments:", NEWLINE,
        "- The term 'work' is used above for a reason. A 'work' is a unique piece of written information. Currently", NEWLINE,
        "  it seems DF is restricted to a single 'work' per book/codex/scroll/quire, but the data structures allow", NEWLINE,
