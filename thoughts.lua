@@ -3,7 +3,7 @@
 --  In addition to that screen, relations are attempted to be reproduced as well.
 --
 --  It is a work in progress, and things marked with ### are things that haven't been seen or have other outstanding issues.
---  Version 0.7 2018-06-28
+--  Version 0.8 2018-07-12
 
 --### At least the emotion thought enum has been extended since work on this script started. Remains to check if other things are missing/updated.
 --    Should probably switch to a list style as the one with "values" plus a startup check to automatically flag any additional values for more items.
@@ -416,7 +416,7 @@ local emotions = {[df.emotion_type.ANYTHING] = {false, "ANYTHING", "remembering"
                   [df.emotion_type.REMORSE] = {false, "remorseful", "dwelling upon"},
                   [df.emotion_type.REPENTANCE] = {false, "repentant", "dwelling upon"},
                   [df.emotion_type.RESENTMENT] = {true, "resentful", "dwelling upon"},
-                  [df.emotion_type.RIGHTEOUS_INDIGNATION] = {false, "indignant"},
+                  [df.emotion_type.RIGHTEOUS_INDIGNATION] = {false, "indignant", "dwelling upon"},
                   [df.emotion_type.SADNESS] = {false, "sad", "dwelling upon"},
                   [df.emotion_type.SATISFACTION] = {false, "satisfied", "remembering"},
                   [df.emotion_type.SELF_PITY] = {false, "self-pity", "dwelling upon"},
@@ -504,7 +504,7 @@ end
 --------------------------------------------
 
 function artifact_name (id)
-  local artifact = df.artifact_record.find (emotion.subthought)
+  local artifact = df.artifact_record.find (id)
     
   if artifact then
     return dfhack.TranslateName (artifact.name, true)
@@ -598,8 +598,13 @@ end
 
 --------------------------------------------
 
-function building_of (value)  --###  Use map to print nicely
-  return df.building_type [value]
+function building_of (value)
+  if df.building_type.attrs [value].name then
+    return df.building_type.attrs [value].name
+    
+  else
+    return df.building_type [value]
+  end
 end
 
 --------------------------------------------
@@ -1247,48 +1252,79 @@ end
 
 --------------------------------------------
 
-function Perform_Of (subthought)
+function Perform_Of (subthought, self)
   local incident = df.incident.find (subthought)
   
   if incident.subtype == 6 then
+    local location = ""
+    
+    if incident.unk_v42_1.t6_performance.anon_1 ~= -1 then
+      location = " at " .. dfhack.TranslateName (df.world_site.find (incident.site).buildings [incident.unk_v42_1.t6_performance.anon_1].name, true)
+    end
+    
     if incident.unk_v42_1.t6_performance.performance_event == df.performance_event_type.STORY then
       if incident.unk_v42_1.t6_performance.written_content_id == -1 then  --  Historical event
         local hist_event = df.history_event.find (incident.unk_v42_1.t6_performance.reference_id)  --###
         
-        return "telling a historical story"  --###
+        return "telling a historical story" .. location  --###
         
       else
-        return "telling the " .. tostring (df.written_content_type [content.type]) .. " " .. content.title .. " story"  --###
+        return "telling the " .. tostring (df.written_content_type [content.type]) .. " " .. content.title .. " story" .. location  --###
       end
       
     elseif incident.unk_v42_1.t6_performance.performance_event == df.performance_event_type.POETRY then
       if incident.unk_v42_1.t6_performance.written_content_id == -1 then  --  Poetic Form
-        return "reciting the poetic form " .. dfhack.TranslateName (df.poetic_form.find (incident.unk_v42_1.t6_performance.reference_id).name, true) --###
+        return "reciting the poetic form " .. dfhack.TranslateName (df.poetic_form.find (incident.unk_v42_1.t6_performance.reference_id).name, true) .. location --###
         
       else
         local content = df.written_content.find (incident.unk_v42_1.t6_performance.written_content_id)
 
-        return "reciting the " .. tostring (df.written_content_type [content.type]) .. " " .. content.title  --###
+        return "reciting the " .. tostring (df.written_content_type [content.type]) .. " " .. content.title .. location --###
       end
       
     elseif incident.unk_v42_1.t6_performance.performance_event == df.performance_event_type.MUSIC then
+      local instrument = "singing"
+        
+      for i, participant in ipairs (incident.unk_v42_1.t6_performance.participants) do
+        if participant.anon_3.hfid == self then
+          local musical_form = df.musical_form.find (incident.unk_v42_1.t6_performance.anon_3)  --###  Still needs to find out how to simulate
+
+          if musical_form.anon_4 [participant.anon_2].instrument_subtype == -1 then
+            if (musical_form.anon_4 [participant.anon_2].anon_1 % 2) == 1 then
+              instrument = "singing"
+            
+            elseif math.floor (musical_form.anon_4 [participant.anon_2].anon_1 / 4) % 2 == 1 then
+              instrument = "chanting"
+            
+            else
+              instrument = "speaking"
+            end
+            
+          else
+            instrument = "playing the " .. df.global.world.raws.itemdefs.instruments [musical_form.anon_4 [participant.anon_2].instrument_subtype].name .. " in"
+          end
+          
+          break
+        end
+      end
+    
       if incident.unk_v42_1.t6_performance.written_content_id == -1 then  --  Musical Form
-        return "performing the musical form " .. dfhack.TranslateName (df.musical_form.find (incident.unk_v42_1.t6_performance.reference_id).name, true) --###
+        return instrument .. " the musical form " .. dfhack.TranslateName (df.musical_form.find (incident.unk_v42_1.t6_performance.reference_id).name, true) .. location  --###
         
       else
         local content = df.written_content.find (incident.unk_v42_1.t6_performance.written_content_id)
 
-        return "performing the " .. tostring (df.written_content_type [content.type]) .. " " .. content.title  --### How to find sing/play, performer, etc.?
+        return instrument .. " the " .. tostring (df.written_content_type [content.type]) .. " " .. content.title .. location  --### How to find sing/play, performer, etc.?
       end
       
     elseif incident.unk_v42_1.t6_performance.performance_event == df.performance_event_type.DANCE then
       if incident.unk_v42_1.t6_performance.written_content_id == -1 then  --  Dance Form
-        return "performing the dance form " .. dfhack.TranslateName (df.dance_form.find (incident.unk_v42_1.t6_performance.reference_id).name, true)  --###
+        return "performing the dance form " .. dfhack.TranslateName (df.dance_form.find (incident.unk_v42_1.t6_performance.reference_id).name, true) .. location --###
         
       else
         local content = df.written_content.find (incident.unk_v42_1.t6_performance.written_content_id)
 
-        return "performing the " .. tostring (df.written_content_type [content.type]) .. " " .. content.title  --###
+        return "performing the " .. tostring (df.written_content_type [content.type]) .. " " .. content.title .. location --###
       end
       
     else
@@ -1306,44 +1342,56 @@ function Watch_Perform_Of (subthought)
   local incident = df.incident.find (subthought)
   
   if incident.subtype == 6 then
+    local location = ""
+    
+    if incident.unk_v42_1.t6_performance.anon_1 ~= -1 then
+      location = " at " .. dfhack.TranslateName (df.world_site.find (incident.site).buildings [incident.unk_v42_1.t6_performance.anon_1].name, true)
+    end
+    
     if incident.unk_v42_1.t6_performance.performance_event == df.performance_event_type.STORY then
       if incident.unk_v42_1.t6_performance.written_content_id == -1 then  --  Historical event
         local hist_event = df.history_event.find (incident.unk_v42_1.t6_performance.reference_id)  --###
         
-        return "a historical story being told"  --### "I saw a dwarf tell the story of the impersonation of the human Athel Councilrought by the human Istro Worthybutters
-                                                    --###  before The Room Of Deciding in the late summer of 196 at the Mushrooms of Mortification. ..."
+        return "a historical story being told" .. location --### "I saw a dwarf tell the story of the impersonation of the human Athel Councilrought by the human Istro Worthybutters
+                                                           --###  before The Room Of Deciding in the late summer of 196 at the Mushrooms of Mortification. ..."
       else
-        return "the " .. tostring (df.written_content_type [content.type]) .. " " .. content.title .. " story being told"  --###
+        return "the " .. tostring (df.written_content_type [content.type]) .. " " .. content.title .. " story being told" .. location --###
       end
       
     elseif incident.unk_v42_1.t6_performance.performance_event == df.performance_event_type.POETRY then
       if incident.unk_v42_1.t6_performance.written_content_id == -1 then  --  Poetic Form
-        return "the poetic form " .. dfhack.TranslateName (df.poetic_form.find (incident.unk_v42_1.t6_performance.reference_id).name, true) .. " being recited" --###
+        return hf_name (incident.unk_v42_1.t6_performance.participants [0].anon_3.hfid) .. " recite the poetic form " .. 
+          dfhack.TranslateName (df.poetic_form.find (incident.unk_v42_1.t6_performance.reference_id).name, true) .. location
         
       else
-        local content = df.written_content.find (incident.unk_v42_1.t6_performance.written_content_id)
+        local content = df.written_content.find (incident.unk_v42_1.t6_performance.written_content_id)       
 
-        return "the " .. tostring (df.written_content_type [content.type]) .. " " .. content.title .. " being recited"  --###
+        return hf_name (incident.unk_v42_1.t6_performance.participants [0].anon_3.hfid) .. " recite the " .. tostring (df.written_content_type [content.type]) .. " " .. 
+          content.title .. location
       end
       
     elseif incident.unk_v42_1.t6_performance.performance_event == df.performance_event_type.MUSIC then
       if incident.unk_v42_1.t6_performance.written_content_id == -1 then  --  Musical Form
-        return "the musical form " .. dfhack.TranslateName (df.musical_form.find (incident.unk_v42_1.t6_performance.reference_id).name, true) .. " being performed" --###
+        return hf_name (incident.unk_v42_1.t6_performance.participants [0].anon_3.hfid) .. " perform the musical form " .. 
+          dfhack.TranslateName (df.musical_form.find (incident.unk_v42_1.t6_performance.reference_id).name, true) .. location --### How to find sing/play, etc.? What about multiple performers?
         
       else
         local content = df.written_content.find (incident.unk_v42_1.t6_performance.written_content_id)
-
-        return "the " .. tostring (df.written_content_type [content.type]) .. " " .. content.title .. " being performed"  --### How to find sing/play, performer, etc.?
+        
+        return hf_name (incident.unk_v42_1.t6_performance.participants [0].anon_3.hfid) .. " perform the " .. 
+          tostring (df.written_content_type [content.type]) .. " " .. content.title .. location  --### How to find sing/play, performer, etc.? What about multiple performers?
       end
       
     elseif incident.unk_v42_1.t6_performance.performance_event == df.performance_event_type.DANCE then
       if incident.unk_v42_1.t6_performance.written_content_id == -1 then  --  Dance Form
-        return "the dance form " .. dfhack.TranslateName (df.dance_form.find (incident.unk_v42_1.t6_performance.reference_id).name, true) .. " being performed" --###
+        return hf_name (incident.unk_v42_1.t6_performance.participants [0].anon_3.hfid) .. " perform the dance form " .. 
+          dfhack.TranslateName (df.dance_form.find (incident.unk_v42_1.t6_performance.reference_id).name, true) .. location  --### Multiple performers?
         
       else
         local content = df.written_content.find (incident.unk_v42_1.t6_performance.written_content_id)
 
-        return "the " .. tostring (df.written_content_type [content.type]) .. " " .. content.title .. " being performed"  --###
+        return hf_name (incident.unk_v42_1.t6_performance.participants [0].anon_3.hfid) .. " perform the " .. 
+          tostring (df.written_content_type [content.type]) .. " " .. content.title .. loation  --### Multiple performers?
       end
       
     else
@@ -1362,6 +1410,7 @@ end
 --    [subthought]
 --    [severity]
 --    [subthought_severity]
+--    [subthought_self]
 --    [he]
 --    [his]
 --
@@ -1420,11 +1469,10 @@ local unit_thoughts =
    [df.unit_thought_type.MakeMasterwork] = {["caption"] = "{after }producing a masterwork"}, -- type: SATISFACTION, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fttf, unk7: 0
    [df.unit_thought_type.MadeArtifact] = {["caption"] = "{after }creating an artifact",  --  Not printed except as primary thought "I shall name you Oakenpools And More. <emotion text>".-- type: SATISFACTION, unk2: 0, strength: 0, subthought: 103702, severity: 0, flags: fttf, unk7: 0
                                           ["extended_caption"] = "{after }creating [subthought]",
-                                          {"df.global.world.artifacts.all id",
-                                           (function (subthought)
-                                              return artifact_name (subthought)
-                                            end)},
-                                          nil},
+                                          ["subthought"] = {"df.global.world.artifacts.all id",
+                                                            (function (subthought)
+                                                               return artifact_name (subthought)
+                                                             end)}},
    [df.unit_thought_type.MasterSkill] = {["caption"] = "{upon }mastering [subthought]",  -- type: SATISFACTION, unk2: 0, strength: 0, subthought: 35, severity: 0, flags: fftf, unk7: 0
                                          ["subthought"] = {"df.job_skill value",
                                                            (function (subthought)
@@ -1432,10 +1480,10 @@ local unit_thoughts =
                                                             end)}},
    [df.unit_thought_type.NewRomance] = {["caption"] = "{as [he] was caught up in }a new romance",  -- type: LOVE, unk2: 0, strength: 0, subthought: 135231, severity: 0, flags: fftf, unk7: 0
                                         ["extended_caption"] = "Oh, [subthought]...",
-                                           ["subthought"] = {"df.global.world.historical_figure.all id",
-                                                             (function (subthought)
-                                                                return hf_name (subthought)
-                                                              end)}},
+                                        ["subthought"] = {"df.global.world.historical_figure.all id",
+                                                          (function (subthought)
+                                                             return hf_name (subthought)
+                                                           end)}},
    [df.unit_thought_type.BecomeParent] = {["caption"] = "{after }becoming a parent"}, -- type: BLISS, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: ffff, unk7: 0
    [df.unit_thought_type.NearConflict] = {["caption"] = "being near to a conflict"},  --### Works without parameters
    [df.unit_thought_type.CancelAgreement] = {["caption"] = "{after }an agreement was cancelled"},  --### Works without parameters. Spelling as in DF.
@@ -1458,7 +1506,7 @@ local unit_thoughts =
                                                           (function (subthought)
                                                              return complained_thought (subthought)
                                                            end)}},
-   [df.unit_thought_type.ReceivedComplaint] = {["caption"] = "{while }being [subthought] by an unhappy citizen",
+   [df.unit_thought_type.ReceivedComplaint] = {["caption"] = "{while }being [subthought] by an unhappy citizen",  -- type: EMPATHY, unk2: 0, strength: 0, subthought: 29, severity: 0, flags: fftf, unk7: 0
                                                ["subthought"] = {"request enum",
                                                                  (function (subthought)
                                                                     return received_complaint_thought (subthought)
@@ -1563,16 +1611,16 @@ local unit_thoughts =
    [df.unit_thought_type.NoPunishment] = {["caption"] = "that nobody could be punished for a failure"},  --### Works without parameters
    [df.unit_thought_type.PunishmentDelayed] = {["caption"] = "{to have |having }[his] punishment delayed"},  --### Works without parameters
    [df.unit_thought_type.DelayedPunishment] = {["caption"] = "{after }the delayed punishment of a criminal"},  --### Works without parameters
-   [df.unit_thought_type.ScarceCageChain] = {["caption"] = "considering the scarcity of cages and chains"},  --### Works without parameters
+   [df.unit_thought_type.ScarceCageChain] = {["caption"] = "considering the scarcity of cages and chains"},  -- type: FRUSTRATION, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
    [df.unit_thought_type.MandateIgnored] = {["caption"] = "having a mandate ignored"},  --### Works without parameters
    [df.unit_thought_type.MandateDeadlineMissed] = {["caption"] = "having a mandate deadline missed"},  --### Works without parameters
    [df.unit_thought_type.LackWork] = {["caption"] = "{after }the lack of work last season"},  --### Works without parameters
    [df.unit_thought_type.SmashedBuilding] = {["caption"] = "{after }smashing up a building"},  --### Works without parameters
    [df.unit_thought_type.ToppledStuff] = {["caption"] = "{after }toppling something over"},  --### Works without parameters
    [df.unit_thought_type.NoblePromotion] = {["caption"] = "{after }receiving a higher rank of nobility"},  --### Works without parameters
-   [df.unit_thought_type.BecomeNoble] = {["caption"] = "{after }entering the nobility"},  --### Works without parameters
+   [df.unit_thought_type.BecomeNoble] = {["caption"] = "{after }entering the nobility"},  -- type: SATISFACTION, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
    [df.unit_thought_type.Cavein] = {["caption"] = "{after }being knocked out during a cave-in"}, -- type: CONFUSION, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.MandateDeadlineMet] = {["caption"] = "{to have |having }a mandate deadline met"},  --### Works without parameters
+   [df.unit_thought_type.MandateDeadlineMet] = {["caption"] = "{to have |having }a mandate deadline met"},  -- type: RELIEF, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
    [df.unit_thought_type.Uncovered] = {["caption"] = "{to be |being }uncovered"},  -- type: AMBIVALENCE, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftt, unk7: 0
    [df.unit_thought_type.NoShirt] = {["caption"] = "{to have |having }no shirt"},  -- type: AMBIVALENCE, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftt, unk7: 0
    [df.unit_thought_type.NoShoes] = {["caption"] = "{to have |having}no shoes"},  -- type: AMBIVALENCE, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftt, unk7: 0
@@ -1627,7 +1675,7 @@ local unit_thoughts =
                                               ["extended_caption"] = "{at }work with [subthought]",
                                               ["subthought"] = {"df.job_type enum value",
                                                                 (function (subthought)
-                                                                   return string.lower (df.job_type [subthought])
+                                                                   return string.lower (df.job_type.attrs [subthought].caption)
                                                                  end)}},
    [df.unit_thought_type.TaxedLostProperty] = {["caption"] = "{after }losing property to the tax collector's escorts"},  --### Works without parameters
    [df.unit_thought_type.Taxed] = {["caption"] = "{after }being taxed"},  --### Works without parameters
@@ -1677,7 +1725,7 @@ local unit_thoughts =
    [df.unit_thought_type.DrinkPus] = {["caption"] = "[while |being }forced to drink purulent water"},  --### Works without parameters
    [df.unit_thought_type.NastyWater] = {["caption"] = "drinking nasty water"},  --### Works without parameters
    [df.unit_thought_type.DrankSpoiled] = {["caption"] = "{after }drinking something spoiled"},  --### Works without parameters
-   [df.unit_thought_type.LackWell] = {["caption"] = "{after }drinking water without a well"},  --### Works without parameters
+   [df.unit_thought_type.LackWell] = {["caption"] = "{after }drinking water without a well"},  -- type: ANNOYANCE, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
    [df.unit_thought_type.NearCaged] = {["caption"] = "{after }being near to a [subthought] in a cage",
                                        ["subthought"] = {"df.global.world.raws.creature.all index",
                                                          (function (subthought)
@@ -1697,7 +1745,7 @@ local unit_thoughts =
    [df.unit_thought_type.SleptFloor] = {["caption"] = "{after }sleeping on the floor"},  --### Works without parameters
    [df.unit_thought_type.SleptMud] = {["caption"] = "{after }sleeping in the mud"},  --### Works without parameters
    [df.unit_thought_type.SleptGrass] = {["caption"] = "{after }sleeping in the grass"},  -- type: ANNOYANCE, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.SleptRoughFloor] = {["caption"] = "{after }sleeping on a rough cave floor"},  --### Works without parameters
+   [df.unit_thought_type.SleptRoughFloor] = {["caption"] = "{after }sleeping on a rough cave floor"},  -- type: ANNOYANCE, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
    [df.unit_thought_type.SleptRocks] = {["caption"] = "{after }sleeping on rocks"},  -- type: ANNOYANCE, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
    [df.unit_thought_type.SleptIce] = {["caption"] = "{after }sleeping on ice"},  --### Works without parameters
    [df.unit_thought_type.SleptDirt] = {["caption"] = "{after }sleeping in the dirt"},  -- type: ANNOYANCE, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
@@ -1742,7 +1790,34 @@ local unit_thoughts =
                                                             return tomb_quality_of (severity)
                                                           end)}},
    [df.unit_thought_type.TombLack] = {["caption"] = "{about }not having a tomb after gaining another year"},  --### Works without parameters
-   [df.unit_thought_type.TalkToNoble] = {["caption"] = "{after }talking to a pillar of society"},  --### Works without parameters
+   [df.unit_thought_type.TalkToNoble] = {["caption"] = "{after }talking to a pillar of society",  --  type: APATHY, unk2: 0, strength: 0, subthought: 2555, severity: 0, flags: fftf, unk7: 0
+                                         ["extended_caption"] = "{after }talking to the [subthought]",
+                                         ["subthought"] = {"noble HF id",
+                                                           (function (subthought)
+                                                              local site = df.global.world.world_data.active_site [0]
+                                                              local entity = df.historical_entity.find (site.entity_links [1].entity_id)
+                                                              local title = "<unknown>"
+                                                              
+                                                              for i, assignment in ipairs (entity.positions.assignments) do
+                                                                if assignment.histfig == subthought then
+                                                                  local hf = df.historical_figure.find (subthought)
+                                                                
+                                                                  if hf.sex == 0 and entity.positions.own [assignment.position_id].name_female [0] ~= "" then
+                                                                    title = entity.positions.own [assignment.position_id].name_female [0]
+                                                                    
+                                                                  elseif hf.sex == 1 and entity.positions.own [assignment.position_id].name_male [0] ~= "" then
+                                                                    title = entity.positions.own [assignment.position_id].name_male [0]
+                                                                    
+                                                                  else                                                                    
+                                                                    title = entity.positions.own [assignment.position_id].name [0]
+                                                                  end
+                                                                  
+                                                                  break
+                                                                end
+                                                              end
+                                                              
+                                                              return title .. " " .. hf_name (subthought)
+                                                            end)}},
    [df.unit_thought_type.InteractPet] = {["caption"] = "{after }interacting with a pet", --  type: FONDNESS, unk2: 0, strength: 0, subthought: 171, severity: 0, flags: fftf, unk7: 0
                                          ["extended_caption"] = "{after }interacting with a pet [subthought]",
                                          ["subthought"] = {"df.global.world.raws.creatures.all index",
@@ -1796,10 +1871,10 @@ local unit_thoughts =
                                                            return df.syndrome.find (subthought).syn_name
                                                          end)}},
    [df.unit_thought_type.Perform] = {["caption"] = "{while }performing", -- type: ENJOYMENT, unk2: 0, strength: 0, subthought: 3815, severity: 0, flags: fftf, unk7: 0
-                                     ["extended_caption"] = "{while} [subthought]",
-                                     ["subthought"] = {"df.global.world.incidents.all id",
-                                                       (function (subthought)
-                                                          return Perform_Of (subthought)
+                                     ["extended_caption"] = "{while} [subthought_self]",
+                                     ["subthought_self"] = {"df.global.world.incidents.all id, hfid",
+                                                       (function (subthought, self)
+                                                          return Perform_Of (subthought, self)
                                                         end)}},                                     
    [df.unit_thought_type.WatchPerform] = {["caption"] = "{after }watching a performance",  -- type: DELIGHT, unk2: 100 (0), strength 100 (0), subthought: 225, severity: 0, flags: fftf, unk7: 0 => "I saw a human recite Music Painful at the Eternal Breakfast of Lunch. How very delightful!" 
                                           ["extended_caption"] = "{after }watching [subthought]",
@@ -1977,7 +2052,7 @@ local unit_thoughts =
                                                                  return "an unknown artifact"
                                                                end
                                                              end)}},
-   [df.unit_thought_type.SawDeadBody] = {["caption"] = "{after }seeing [subthought]'s dead body",
+   [df.unit_thought_type.SawDeadBody] = {["caption"] = "{after }seeing [subthought]'s dead body",  -- type: UNEASINESS, unk2: 0, strength: 0, subthought: 348, severity: 0, flags: fftf, unk7: 0
                                          ["subthought"] = {"df.global.world.incidents.all id",
                                                            (function (subthought) 
                                                               return incident_victim (subthought)
@@ -2088,7 +2163,7 @@ end
 
 ------------------------------------------
 
-function print_emotion (gender, emotion)
+function print_emotion (gender, emotion, self)
   local base_color
   local memory_color
   local front
@@ -2118,6 +2193,10 @@ function print_emotion (gender, emotion)
 --     dfhack.println (df.unit_thought_type [emotion.thought])  --  Activate for debugging when it blows up...
       front = front .. unit_thoughts [emotion.thought].subthought_severity [2] (emotion.subthought, emotion.severity) .. rear
       
+    elseif token == "subthought_self" then
+--     dfhack.println (df.unit_thought_type [emotion.thought])  --  Activate for debugging when it blows up...
+      front = front .. unit_thoughts [emotion.thought].subthought_self [2] (emotion.subthought, self) .. rear
+
     elseif token == "he" then
 --     dfhack.println (df.unit_thought_type [emotion.thought])  --  Activate for debugging when it blows up...
       front = front .. gender_translation.he [gender] .. rear
@@ -2360,11 +2439,11 @@ function thoughts ()
   for i, emotion in ipairs (emotions) do
     if emotion.thought ~= - 1 then  --  Filter out null cases. Suspect deaths which can no longer be tracked.    
       if emotion.thought ~= df.unit_thought_type.WitnessDeath then
-        print_emotion (unit.sex, emotion)
+        print_emotion (unit.sex, emotion, unit.hist_figure_id)
       
       elseif not mentioned_death then
         dfhack.print (tostring (death_count) .. " X ")
-        print_emotion (unit.sex, emotion)      
+        print_emotion (unit.sex, emotion, unit.hist_figure_id)      
         mentioned_death = true
       end
     end
@@ -2568,16 +2647,17 @@ function thoughts ()
                (material.mode == "plant" or
                 material.mode == "creature") then
               dfhack.print (Pronoun .. " prefers to consume ")
+              
               if preference.item_type == df.item_type.DRINK or 
                  preference.item_type == df.item_type.LIQUID_MISC then  --  The state in the preferences seems locked to Solid
                 dfhack.println (material.material.state_name.Liquid .. ".")
               
-              else
+              else                
                 if material.material.prefix == "" then
                   dfhack.println (material.material.state_name.Solid .. ".")
                 
                 else
-                  dfhack.println (material.material.prefix .. ".")
+                  dfhack.println (material.material.prefix .. " " .. material.material.state_name.Solid .. ".")
                 end
               end            
             
