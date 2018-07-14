@@ -1854,7 +1854,7 @@ function Librarian ()
        "- The Science and Values pages also have a Remote Works list containing all works existing in the DF", NEWLINE,
        "  world outside of your fortress, allowing you to find out which works you might want to 'acquire' via", NEWLINE,
        "  raids...", NEWLINE,
-       "Version 0.13 2018-07-12", NEWLINE,
+       "Version 0.14 2018-07-14", NEWLINE,
        "Comments:", NEWLINE,
        "- The term 'work' is used above for a reason. A 'work' is a unique piece of written information. Currently", NEWLINE,
        "  it seems DF is restricted to a single 'work' per book/codex/scroll/quire, but the data structures allow", NEWLINE,
@@ -2632,7 +2632,7 @@ function Librarian ()
                                                                               [Values_Page.Strength_List.selected - 4]
                                                                               [index]))
         Values_Page.Book_List:setChoices (Produce_Book_List (Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1]
-                                                                                     [Values_Page.Strength_List.selected - 1]
+                                                                                     [Values_Page.Strength_List.selected - 4]
                                                                                      [index] [2]), 1)
       end
     end
