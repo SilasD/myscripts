@@ -2771,7 +2771,7 @@ function biomemanipulator ()
     return Item .. string.rep (' ', Size - string.len (Item))
   end
    
-  --===========================================================================
+  --============================================================
 
   function Fit_Right (Item, Size)
     if string.len (Item) > Size then
@@ -4231,7 +4231,7 @@ function biomemanipulator ()
 --       "% = Temperate Brackish River   & = Tropical Brackish River", NEWLINE,
 --       "( = Temperate Saltwater River  ) = Tropical Saltwater River", NEWLINE,
        NEWLINE,       
-       "Version 0.34, 2018-01-15", NEWLINE,
+       "Version 0.35, 2018-07-29", NEWLINE,
        "Caveats: Only tested to a limited degree.", NEWLINE,
        "Making silly changes are likely to lead to either silly results or nothing at all.", NEWLINE,
        "This script makes use of some unnamed DFHack data structure fields and will cease to work when/if those", NEWLINE,
@@ -8620,9 +8620,10 @@ function biomemanipulator ()
 
       guiScript.start (function ()
         local ret, idx, choice = guiScript.showListPrompt ("Choose layer material:", nil, 3, List, nil, true)
+        
         if ret then
           for i, material in ipairs (df.global.world.raws.inorganics) do
-            if material.id == List [idx].text then
+            if material.id == List [idx] then
               geo_biome.layers [index].mat_index = i
               if material.flags.SEDIMENTARY then
                 geo_biome.layers [index].type = df.geo_layer_type.SEDIMENTARY
@@ -8648,7 +8649,7 @@ function biomemanipulator ()
                   geo_biome.layers [index].vein_mat:erase (k)
                   geo_biome.layers [index].vein_nested_in:erase (k)
                   geo_biome.layers [index].vein_type:erase (k)
-                  geo_biome.layers [index].vein_unk_38:delete (k)
+                  geo_biome.layers [index].vein_unk_38:erase (k)
                 end
               end
                 
@@ -8660,7 +8661,7 @@ function biomemanipulator ()
               break
             end
           end
-          end       
+        end       
       end)
       
     elseif keys [keybindings.geo_add.key] and Focus == "Geo" and Geo_Page.Vein.active then
