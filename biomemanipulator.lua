@@ -4231,7 +4231,7 @@ function biomemanipulator ()
 --       "% = Temperate Brackish River   & = Tropical Brackish River", NEWLINE,
 --       "( = Temperate Saltwater River  ) = Tropical Saltwater River", NEWLINE,
        NEWLINE,       
-       "Version 0.35, 2018-07-29", NEWLINE,
+       "Version 0.36, 2018-07-29", NEWLINE,
        "Caveats: Only tested to a limited degree.", NEWLINE,
        "Making silly changes are likely to lead to either silly results or nothing at all.", NEWLINE,
        "This script makes use of some unnamed DFHack data structure fields and will cease to work when/if those", NEWLINE,
@@ -8614,7 +8614,7 @@ function biomemanipulator ()
            material.flags.IGNEOUS_EXTRUSIVE or
            material.flags.METAMORPHIC or
            material.flags.SOIL then
-             table.insert (List, material.id)
+             table.insert (List, {text = material.id})
         end       
       end
 
@@ -8623,7 +8623,7 @@ function biomemanipulator ()
         
         if ret then
           for i, material in ipairs (df.global.world.raws.inorganics) do
-            if material.id == List [idx] then
+            if material.id == List [idx].text then
               geo_biome.layers [index].mat_index = i
               if material.flags.SEDIMENTARY then
                 geo_biome.layers [index].type = df.geo_layer_type.SEDIMENTARY
@@ -8692,7 +8692,7 @@ function biomemanipulator ()
                (location == df.environment_type.IGNEOUS_EXTRUSIVE and Layer_Material.flags.IGNEOUS_EXTRUSIVE) then  -- or
               -- (location == df.environment_type.ALLUVIAL and Layer_Material.flags.ALLUVIAL) then  -- No Alluvial flag!
               Found = true
-              table.insert (List, material.id)
+              table.insert (List, {text = material.id})
             end
           end                     
         end
@@ -8700,7 +8700,7 @@ function biomemanipulator ()
         if not Found then
           for k, mat_index in ipairs (material.environment_spec.mat_index) do
             if mat_index == geo_biome.layers [layer_index - 1].mat_index then
-              table.insert (List, material.id)
+              table.insert (List, {text = material.id})
               break
             end
           end
@@ -8809,7 +8809,7 @@ function biomemanipulator ()
               end              
 
               if not Found then
-                table.insert (List, material.id)
+                table.insert (List, {text = material.id})
               end
             end
           end
