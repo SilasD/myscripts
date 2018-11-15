@@ -1567,7 +1567,7 @@ local unit_thoughts =
                                                               (function (subthought)
                                                                  return unit_relationship_text_of (subthought)
                                                                end)}},
-   [df.unit_thought_type.GhostHaunt] = {["caption"] = "{after }being [severity] by [subthought]",
+   [df.unit_thought_type.GhostHaunt] = {["caption"] = "{after }being [severity] by [subthought]",  -- type: HORROR, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
                                         ["subthought"] = {"df.unit_relationship_type value",
                                                           (function (subthought)
                                                              return unit_relationship_text_of (subthought)
@@ -1577,7 +1577,7 @@ local unit_thoughts =
                                                            return haunt_enum_text_of (severity)
                                                          end)}},
    [df.unit_thought_type.Spar] = {["caption"] = "{after }a sparring session"},  -- type: EXHILARATION, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.UnableComplain] = {["caption"] = "{after }being unable to [subthought]",
+   [df.unit_thought_type.UnableComplain] = {["caption"] = "{after }being unable to [subthought]",  -- type: ISOLATION, unk2: 0, strength: 0, subthought: 29, severity: 0, flags: fftf, unk7: 0
                                             ["subthought"] = {"request enum",
                                                               (function (subthought)
                                                                  return unable_complain_thought (subthought)
@@ -1610,7 +1610,7 @@ local unit_thoughts =
    [df.unit_thought_type.ImproperPunishment] = {["caption"] = "that a criminal could not be properly punished"},  --### Works without parameters
    [df.unit_thought_type.PunishmentReduced] = {["caption"] = "{to have |having }[his] punishment reduced"},  --### Works without parameters
    [df.unit_thought_type.Elected] = {["caption"] = "{to be |being }elected"},  -- type: EAGERNESS, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.Reelected] = {["caption"] = "{to be |being }re-elected"},  --### Works without parameters
+   [df.unit_thought_type.Reelected] = {["caption"] = "{to be |being }re-elected"},  -- type: ELATION, unk2: 100, strength: 100, subthought: -1, severity: 0, flags: fftf, unk7: 0
    [df.unit_thought_type.RequestApproved] = {["caption"] = "having a request approved"},  --### Works without parameters
    [df.unit_thought_type.RequestIgnored] = {["caption"] = "having a request ignored"},  --### Works without parameters
    [df.unit_thought_type.NoPunishment] = {["caption"] = "that nobody could be punished for a failure"},  -- type: OUTRAGE, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
@@ -1622,7 +1622,7 @@ local unit_thoughts =
    [df.unit_thought_type.LackWork] = {["caption"] = "{after }the lack of work last season"},  --### Works without parameters
    [df.unit_thought_type.SmashedBuilding] = {["caption"] = "{after }smashing up a building"},  -- type: REGRET, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
    [df.unit_thought_type.ToppledStuff] = {["caption"] = "{after }toppling something over"},  -- type: TRIUMPH, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
-   [df.unit_thought_type.NoblePromotion] = {["caption"] = "{after }receiving a higher rank of nobility"},  --### Works without parameters
+   [df.unit_thought_type.NoblePromotion] = {["caption"] = "{after }receiving a higher rank of nobility"},  -- type: SATISFACTION, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
    [df.unit_thought_type.BecomeNoble] = {["caption"] = "{after }entering the nobility"},  -- type: SATISFACTION, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
    [df.unit_thought_type.Cavein] = {["caption"] = "{after }being knocked out during a cave-in"}, -- type: CONFUSION, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
    [df.unit_thought_type.MandateDeadlineMet] = {["caption"] = "{to have |having }a mandate deadline met"},  -- type: RELIEF, unk2: 0, strength: 0, subthought: -1, severity: 0, flags: fftf, unk7: 0
