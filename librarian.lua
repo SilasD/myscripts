@@ -1182,7 +1182,7 @@ function Librarian ()
          ref._type == df.general_ref_building or
          --  ref._type == df.general_ref_entity or
          ref._type == df.general_ref_locationst or
-         ref._type == df.general_ref_interactionst or
+         --  ref._type == df.general_ref_interactionst or
          ref._type == df.general_ref_abstract_buildingst or
          --  ref._type == df.general_ref_historical_eventst or
          ref._type == df.general_ref_spherest or
@@ -1228,7 +1228,22 @@ function Librarian ()
         else
           table.insert (text, "Reference: Unknown entity (culled?) information\n")
         end
-          
+       
+      elseif ref._type == df.general_ref_interactionst then       
+        local resolved = false
+        
+        for i, str in ipairs (df.global.world.raws.interactions [ref.interaction_id].str) do
+          if str.value:find ("IS_NAME:", 1) ~= nil then
+            table.insert (text, 'Interaction reference: "' .. str.value:sub (str.value:find (":", 1) + 1, str.value:len () - 1) .. '"\n')
+            resolved = true
+            break
+          end
+        end
+        
+        if not resolved then
+          table.insert (text, "Reference: unresolved Interaction information\n")
+        end
+        
       elseif ref._type == df.general_ref_historical_eventst then
         local event = df.history_event.find (ref.event_id)
           
@@ -1358,7 +1373,8 @@ function Librarian ()
             local entity = df.historical_entity.find (event.civ)
 
             if event.position_id ~= -1 and
-               entity then
+               entity and
+               #entity.positions.own > event.position_id then  --  ### Had a case of a reference to index 2 on a vector length 2, with next index being 3...
               position = " as " .. entity.positions.own [event.position_id].name [0]
             end
               
