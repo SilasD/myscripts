@@ -1094,7 +1094,7 @@ function regionmanipulator ()
        "sensitive and visible only when a corresponding item is in focus.", NEWLINE,
        "Apart from the fields, the UI also contains a 'graphic' grid over the region", NEWLINE,
        "which displays the corresponding data geographically.", NEWLINE, NEWLINE,
-       "Version 0.13, 2018-08-01"}
+       "Version 0.14, 2019-01-29"}
 
     for i, v in pairs (dsc) do
       table.insert (helptext, v)
@@ -3325,7 +3325,7 @@ function regionmanipulator ()
                               self:callback ("updateRiverVerticalActive"))
 
     elseif keys [keybindings.command_river_x.key] and 
-           region.river_vertical.active [x] [y] ~= 0 and
+           region.rivers_vertical.active [x] [y] ~= 0 and
            Focus == "River" then
       dialog.showInputPrompt ("Set river vertical course min x value",
                               {{text = "Vertical river x min:",
@@ -3336,7 +3336,7 @@ function regionmanipulator ()
                               self:callback ("updateRiverVerticalXMin"))
                               
     elseif keys [keybindings.command_river_X.key] and
-           region.river_vertical.active [x] [y] ~= 0 and
+           region.rivers_vertical.active [x] [y] ~= 0 and
            Focus == "River" then
       dialog.showInputPrompt ("Set river vertical course Max X value",
                               {{text = "Vertical river X Max:",
@@ -3359,7 +3359,7 @@ function regionmanipulator ()
                               self:callback ("updateRiverHorizontalActive"))
        
     elseif keys [keybindings.command_river_y.key] and 
-           region.river_horizontal.active [x] [y] ~= 0 and
+           region.rivers_horizontal.active [x] [y] ~= 0 and
            Focus == "River" then
       dialog.showInputPrompt ("Set river horizontal course min y value",
                               {{text = "Horizontal river y min:",
@@ -3370,7 +3370,7 @@ function regionmanipulator ()
                               self:callback ("updateRiverHorizontalYMin"))
                               
     elseif keys [keybindings.command_river_Y.key] and
-           region.river_horizontal.active [x] [y] ~= 0 and
+           region.rivers_horizontal.active [x] [y] ~= 0 and
            Focus == "River" then
       dialog.showInputPrompt ("Set river horizontal course Max Y value",
                               {{text = "Horizontal river Y Max:",
