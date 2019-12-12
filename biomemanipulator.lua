@@ -1734,18 +1734,30 @@ function biomemanipulator ()
     elseif s == 't' then
       return df.biome_type.TUNDRA
       
+    elseif s == 'p' then
+      return df.biome_type.SWAMP_TEMPERATE_FRESHWATER
+
     elseif s == 'r' then
       return df.biome_type.SWAMP_TEMPERATE_SALTWATER
       
+    elseif s == 'n' then
+      return df.biome_type.MARSH_TEMPERATE_FRESHWATER
+
     elseif s == 'y' then
       return df.biome_type.MARSH_TEMPERATE_SALTWATER
      
+    elseif s == 'P' then
+      return df.biome_type.SWAMP_TROPICAL_FRESHWATER
+
     elseif s == 'R' then
       return df.biome_type.SWAMP_TROPICAL_SALTWATER
        
     elseif s == 'M' then
       return df.biome_type.SWAMP_MANGROVE
       
+    elseif s == 'N' then
+      return df.biome_type.MARSH_TROPICAL_FRESHWATER
+
     elseif s == 'Y' then
       return df.biome_type.MARSH_TROPICAL_SALTWATER
       
@@ -1856,6 +1868,7 @@ function biomemanipulator ()
                        pole,
                        pos_y)
     local par = parameters
+    local world_height = df.global.world.worldgen.worldgen_parms.dim_y
     
     if not is_possible_biome (biome_type,
                               is_possible_tropical_area_by_latitude,
@@ -1897,6 +1910,42 @@ function biomemanipulator ()
         par.drainage = 30
       end
       
+    elseif biome_type == df.biome_type.SWAMP_TEMPERATE_FRESHWATER then
+      if par.elevation < 100 or par.elevation >= 150 then
+        par.elevation = 125
+      end
+      
+      if par.temperature < -5 or
+         (pole == -1 and par.temperature >= 75) then
+        par.temperature = 20
+      end
+      
+      if not is_possible_tropical_area_by_latitude then
+        if par.vegetation < 66  then
+          par.vegetation = 85
+          par.rainfall = 85
+        end
+        
+      elseif get_parameter_percentage (pole,
+                                       pos_y,
+                                       66,
+                                       world_height) >= 66 then
+        par.vegetation = 66
+        par.rainfall = 66
+        
+      else
+        par.vegetation = 100
+        par.rainfall = 100
+      end
+      
+      if par.drainage >= 33 then
+        par.drainage = 20
+      end
+      
+      if par.salinity >= 66 then
+        par.salinity = 0
+      end
+   
     elseif biome_type == df.biome_type.SWAMP_TEMPERATE_SALTWATER then
       if par.elevation < 100 or par.elevation >= 150 then
         par.elevation = 125
@@ -1909,15 +1958,19 @@ function biomemanipulator ()
       
       if not is_possible_tropical_area_by_latitude then
         if par.rainfall < 66 then
+          par.vegetation = 85
           par.rainfall = 85
         end
         
       elseif get_parameter_percentage (pole,
                                        pos_y,
-                                        66,
-                                       param.dim_y) >= 66 then
-        par.rainfall = 66        
+                                       66,
+                                       world_height) >= 66 then
+        par.vegetation = 66
+        par.rainfall = 66  
+        
       else
+        par.vegetation = 100
         par.rainfall = 100
       end
       
@@ -1929,38 +1982,41 @@ function biomemanipulator ()
         par.salinity = 75
       end
       
-    elseif biome_type == df.biome_type.SWAMP_TEMPERATE_FRESHWATER then
+    elseif biome_type == df.biome_type.MARSH_TEMPERATE_FRESHWATER then
       if par.elevation < 100 or par.elevation >= 150 then
         par.elevation = 125
       end
       
       if par.temperature < -5 or
-         (pole == -1 and par.temperature >= 75) then
+         (pole == -1 and par.temperature < 85)  then
         par.temperature = 20
       end
       
       if not is_possible_tropical_area_by_latitude then
         if par.vegetation < 33 or par.vegetation >= 66 then
-          par.vegetatation = 50
+          par.vegetation = 50
+          par.rainfall = 50
         end
         
       elseif get_parameter_percentage (pole,
                                        pos_y,
                                        33,
-                                       param.dim_y) >= 66 then
-        par.rainfall = 33        
+                                       world_height) >= 66 then
+        par.vegetation = 33
+        par.rainfall = 33
+        
       else
+        par.vegetation = 65
         par.rainfall = 65
       end
       
-      if par.drainage >= 33 then
+      if par.drainage >= 33 or par.drainage < 10 then
         par.drainage = 20
-      end
+      end                
       
       if par.salinity >= 66 then
         par.salinity = 0
       end
-            
     
     elseif biome_type == df.biome_type.MARSH_TEMPERATE_SALTWATER then
       if par.elevation < 100 or par.elevation >= 150 then
@@ -1975,14 +2031,18 @@ function biomemanipulator ()
       if not is_possible_tropical_area_by_latitude then
         if par.vegetation < 33 or par.vegetation >= 66 then
           par.vegetation = 50
+          par.rainfall = 50
         end
         
       elseif get_parameter_percentage (pole,
                                        pos_y,
                                        33,
-                                       param.dim_y) >= 66 then
-        par.rainfall = 33        
+                                       world_height) >= 66 then
+        par.vegetation = 33
+        par.rainfall = 33  
+        
       else
+        par.vegetation = 65
         par.rainfall = 65
       end
       
@@ -1994,38 +2054,42 @@ function biomemanipulator ()
         par.salinity = 75
       end
             
-    elseif biome_type == df.biome_type.MARSH_TEMPERATE_FRESHWATER then
+    elseif biome_type == df.biome_type.SWAMP_TROPICAL_FRESHWATER then
       if par.elevation < 100 or par.elevation >= 150 then
         par.elevation = 125
       end
       
       if par.temperature < -5 or
          (pole == -1 and par.temperature < 85)  then
-        par.temperature = 20
+        par.temperature = 90
       end
       
       if not is_possible_tropical_area_by_latitude then
         if par.vegetation < 66 then
           par.vegetation = 85
+          par.rainfall = 85
         end
       
       elseif get_parameter_percentage (pole,
                                        pos_y,
                                        66,
-                                       param.dim_y) < 66 then
-        par.rainfall = 66    
+                                       world_height) < 66 then
+        par.vegetation = 66
+        par.rainfall = 66
+        
       else
+        par.vegetation = 100
         par.rainfall = 100
       end
       
-      if par.drainage >= 33 or par.drainage < 10 then
+      if par.drainage >= 33 then
         par.drainage = 20
-      end                
+      end
       
       if par.salinity >= 66 then
         par.salinity = 0
       end
-    
+            
     elseif biome_type == df.biome_type.SWAMP_TROPICAL_SALTWATER then
       if par.elevation < 100 or par.elevation >= 150 then
         par.elevation = 125
@@ -2039,14 +2103,18 @@ function biomemanipulator ()
       if not is_possible_tropical_area_by_latitude then
         if par.vegetation < 66 then
           par.vegetation = 85
+          par.rainfall = 85
         end
       
       elseif get_parameter_percentage (pole,
                                        pos_y,
                                        66,
-                                       param.dim_y) < 66 then
-        par.rainfall = 66    
+                                       world_height) < 66 then
+        par.vegetation = 66
+        par.rainfall = 66
+        
       else
+        par.vegetation = 100
         par.rainfall = 100
       end
       
@@ -2071,14 +2139,18 @@ function biomemanipulator ()
       if not is_possible_tropical_area_by_latitude then
         if par.vegetation < 66 then
           par.vegetation = 85
+          par.rainfall = 85
         end
         
       elseif get_parameter_percentage (pole,
                                        pos_y,
                                        66,
-                                       param.dim_y) < 66 then
-        par.rainfall = 66    
+                                       world_height) < 66 then
+        par.vegetation = 66
+        par.rainfall = 66
+        
       else
+        par.vegetation = 100
         par.rainfall = 100
       end
       
@@ -2103,14 +2175,18 @@ function biomemanipulator ()
       if not is_possible_tropical_area_by_latitude then
         if par.vegetation < 33 or par.vegetation >= 66 then
           par.vegetation = 50
+          par.rainfall = 50
         end
         
       elseif get_parameter_percentage (pole,
                                        pos_y,
                                        33,
-                                       param.dim_y) < 66 then
-        par.rainfall = 33    
+                                       world_height) < 66 then
+        par.vegetation = 33
+        par.rainfall = 33
+        
       else
+        par.vegetation = 65
         par.rainfall = 65
       end
 
@@ -2135,14 +2211,18 @@ function biomemanipulator ()
       if not is_possible_tropical_area_by_latitude then
         if par.vegetation < 33 or par.vegetation >= 66 then
           par.vegetation = 50
+          par.rainfall = 50
         end
         
       elseif get_parameter_percentage (pole,
                                        pos_y,
                                        33,
-                                       param.dim_y) < 66 then
-        par.rainfall = 33    
+                                       world_height) < 66 then
+        par.vegetation = 33
+        par.rainfall = 33
+        
       else
+        par.vegetation = 65
         par.rainfall = 65
       end
 
@@ -2165,15 +2245,19 @@ function biomemanipulator ()
       
       if not is_possible_tropical_area_by_latitude then
         if par.rainfall < 66 then
+          par.vegetation = 85
           par.rainfall = 85
         end
         
       elseif get_parameter_percentage (pole,
                                        pos_y,
                                        66,
-                                       param.dim_y) >= 66 then
-        par.rainfall = 66        
+                                       world_height) >= 66 then
+        par.vegetation = 66
+        par.rainfall = 66
+        
       else
+        par.vegetation = 100
         par.rainfall = 100
       end
       
@@ -2192,15 +2276,19 @@ function biomemanipulator ()
       
       if not is_possible_tropical_area_by_latitude then
         if par.rainfall < 66 or par.rainfall > 74 then
+          par.vegetation = 70
           par.rainfall = 70
         end
         
       elseif get_parameter_percentage (pole,
                                        pos_y,
                                        66,
-                                       param.dim_y) >= 66 then
-        par.rainfall = 66        
+                                       world_height) >= 66 then
+        par.vegetation = 66
+        par.rainfall = 66
+        
       else
+        par.vegetation = 74
         par.rainfall = 74
       end
       
@@ -2220,15 +2308,19 @@ function biomemanipulator ()
       
       if not is_possible_tropical_area_by_latitude then
         if par.rainfall < 75 then
+          par.vegetation = 85
           par.rainfall = 85
         end
         
       elseif get_parameter_percentage (pole,
                                        pos_y,
                                        75,
-                                       param.dim_y) >= 66 then
+                                       world_height) >= 66 then
+        par.vegetation = 75
         par.rainfall = 75
+        
       else
+        par.vegetation = 100
         par.rainfall = 100
       end        
       
@@ -2248,15 +2340,19 @@ function biomemanipulator ()
       
       if is_tropical_area_by_latitude then
         if par.rainfall < 66 or par.rainfall > 74 then
+          par.vegetation = 70
           par.rainfall = 70
         end
         
       elseif get_parameter_percentage (pole,
                                        pos_y,
                                        66,
-                                       param.dim_y) < 66 then
+                                       world_height) < 66 then
+        par.vegetation = 66
         par.rainfall = 66
+        
       else
+        par.vegetation = 74
         par.rainfall = 74
       end
       
@@ -2277,9 +2373,12 @@ function biomemanipulator ()
       if get_parameter_percentage (pole,
                                    pos_y,
                                     75,
-                                    param.dim_y) < 66 then
+                                    world_height) < 66 then
+        par.vegetation = 75
         par.rainfall = 75
+        
       else
+        par.vegetation = 100
         par.rainfall = 100
       end
       
@@ -2297,6 +2396,7 @@ function biomemanipulator ()
         par.temperature = 90
       end
       
+      par.vegetation = 100
       par.rainfall = 100
       
       if par.drainage < 33 then
@@ -2315,15 +2415,19 @@ function biomemanipulator ()
       
       if not is_possible_tropical_area_by_latitude then
         if par.rainfall < 10 or par.rainfall > 19 then
+          par.vegetation = 15
           par.rainfall = 15
         end
         
       elseif get_parameter_percentage (pole,
                                        pos_y,
                                        10,
-                                       param.dim_y) >= 66 then
+                                       world_height) >= 66 then
+        par.vegetation = 10
         par.rainfall = 10
+        
       else
+        par.vegetation = 19
         par.rainfall = 19
       end
       
@@ -2339,15 +2443,19 @@ function biomemanipulator ()
       
       if not is_possible_tropical_area_by_latitude then
         if par.rainfall < 20 or par.rainfall > 32 then
+          par.vegetation = 25
           par.rainfall = 25
         end
         
       elseif get_parameter_percentage (pole,
                                        pos_y,
                                        20,
-                                       param.dim_y) >= 6 then
+                                       world_height) >= 6 then
+        par.vegetation = 20
         par.rainfall = 20
+        
       else
+        par.vegetation = 32
         par.rainfall = 32
       end
       
@@ -2363,15 +2471,19 @@ function biomemanipulator ()
 
       if not is_possible_tropical_area_by_latitude then
         if par.rainfall < 33 or par.rainfall > 65 then
+          par.vegetation = 50
           par.rainfall = 50
         end
         
       elseif get_parameter_percentage (pole,
                                        pos_y,
                                        33,
-                                       param.dim_y) >= 66 then
+                                       world_height) >= 66 then
+        par.vegetation = 33
         par.rainfall = 33
+        
       else
+        par.vegetation = 65
         par.rainfall = 65
       end
       
@@ -2391,15 +2503,19 @@ function biomemanipulator ()
       
       if is_tropical_area_by_latitude then
         if par.rainfall < 10 or par.rainfall > 19 then
+          par.vegetation = 15
           par.rainfall = 15
         end
         
       elseif get_parameter_percentage (pole,
                                        pos_y,
                                        10,
-                                       param.dim_y) < 66 then
+                                       world_height) < 66 then
+        par.vegetation = 10
         par.rainfall = 10
+        
       else
+        par.vegetation = 19
         par.rainfall = 19
       end
       
@@ -2415,15 +2531,19 @@ function biomemanipulator ()
       
       if is_tropical_area_by_latitude then
         if par.rainfall < 20 or par.rainfall > 32 then
+          par.vegetation = 25
           par.rainfall = 25
         end
     
       elseif get_parameter_percentage (pole,
                                        pos_y,
                                        20,
-                                       param.dim_y) < 6 then
+                                       world_height) < 6 then
+        par.vegetation = 20
         par.rainfall = 20
+        
       else
+        par.vegetation = 32
         par.rainfall = 32
       end
       
@@ -2439,15 +2559,19 @@ function biomemanipulator ()
 
       if is_tropical_area_by_latitude then
         if par.rainfall < 33 or par.rainfall > 65 then
+          par.vegetation = 50
           par.rainfall = 50
         end
         
       elseif get_parameter_percentage (pole,
                                        pos_y,
                                        33,
-                                       param.dim_y) < 66 then
+                                       world_height) < 66 then
+        par.vegetation = 33
         par.rainfall = 33
+        
       else
+        par.vegetation = 65
         par.rainfall = 65
       end
       
@@ -2465,6 +2589,7 @@ function biomemanipulator ()
       end
       
       if par.rainfall >= 10 then
+        par.vegetation = 6
         par.rainfall = 6
       end
       
@@ -2482,6 +2607,7 @@ function biomemanipulator ()
       end
       
       if par.rainfall >= 10 then
+        par.vegetation = 6
         par.rainfall = 6
       end
       
@@ -2499,6 +2625,7 @@ function biomemanipulator ()
       end
       
       if par.rainfall >= 10 then
+        par.vegetation = 6
         par.rainfall = 6
       end
       
@@ -4231,7 +4358,7 @@ function biomemanipulator ()
 --       "% = Temperate Brackish River   & = Tropical Brackish River", NEWLINE,
 --       "( = Temperate Saltwater River  ) = Tropical Saltwater River", NEWLINE,
        NEWLINE,       
-       "Version 0.36, 2018-07-29", NEWLINE,
+       "Version 0.37, 2019-12-12", NEWLINE,
        "Caveats: Only tested to a limited degree.", NEWLINE,
        "Making silly changes are likely to lead to either silly results or nothing at all.", NEWLINE,
        "This script makes use of some unnamed DFHack data structure fields and will cease to work when/if those", NEWLINE,
@@ -7203,7 +7330,7 @@ function biomemanipulator ()
     local biome_type = match_biome (value)
 
     if not biome_type then
-      dialog.showMessage ("Error!", "The Biome specification has to be one of the character depicting a biome (see Help)", COLOR_RED)
+      dialog.showMessage ("Error!", "The Biome specification has to be one of the characters depicting a biome (see Help)", COLOR_RED)
     
     elseif not is_possible_biome (biome_type,
                                   is_possible_tropical_area_by_latitude,
