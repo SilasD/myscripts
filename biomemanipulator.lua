@@ -548,8 +548,24 @@ function biomemanipulator ()
     region [Surface] = df.global.world.world_data.region_map [x]:_displace (y).region_id
   
   else
-    x = df.global.world.worldgen_status.width   --  Incorrectly named field
-    y = df.global.world.worldgen_status.height  --  Incorrectly named field
+    if true then  --  Backwards compatibility. Detect whether new or the old incorrect name is used.
+      local world = df.world:new ()
+      
+      for i, k in pairs (world.worldgen_status) do
+        if i == "width" then
+          x = df.global.world.worldgen_status.width   --  Incorrectly named field
+          y = df.global.world.worldgen_status.height  --  Incorrectly named field
+          break
+          
+        elseif i == "cursor_x" then
+          x = df.global.world.worldgen_status.cursor_x
+          y = df.global.world.worldgen_status.cursor_y
+          break
+        end
+      end
+      
+      world:delete()
+    end
   end
   
   for i, underground_region in ipairs (df.global.world.world_data.underground_regions) do
@@ -4358,7 +4374,7 @@ function biomemanipulator ()
 --       "% = Temperate Brackish River   & = Tropical Brackish River", NEWLINE,
 --       "( = Temperate Saltwater River  ) = Tropical Saltwater River", NEWLINE,
        NEWLINE,       
-       "Version 0.37, 2019-12-12", NEWLINE,
+       "Version 0.38, 2020-01-12", NEWLINE,
        "Caveats: Only tested to a limited degree.", NEWLINE,
        "Making silly changes are likely to lead to either silly results or nothing at all.", NEWLINE,
        "This script makes use of some unnamed DFHack data structure fields and will cease to work when/if those", NEWLINE,
