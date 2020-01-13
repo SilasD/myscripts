@@ -2857,7 +2857,25 @@ function biomemanipulator ()
         if list [k].name < list [i].name then
           temp = list [i]
           list [i] = list [k]
-          list [k] = temp          
+          list [k] = temp
+        end
+      end
+    end
+  end
+  
+  --============================================================
+
+  function Sort_Keep_First (list)  --  Ensures the first (default) item remains the first one in the list.
+    local temp
+    
+    for i, dummy in ipairs (list) do
+      if i > 1 then
+        for k = i + 1, #list do
+          if list [k].name < list [i].name then
+            temp = list [i]
+            list [i] = list [k]
+            list [k] = temp
+          end
         end
       end
     end
@@ -4374,7 +4392,7 @@ function biomemanipulator ()
 --       "% = Temperate Brackish River   & = Tropical Brackish River", NEWLINE,
 --       "( = Temperate Saltwater River  ) = Tropical Saltwater River", NEWLINE,
        NEWLINE,       
-       "Version 0.38, 2020-01-12", NEWLINE,
+       "Version 0.39, 2020-01-13", NEWLINE,
        "Caveats: Only tested to a limited degree.", NEWLINE,
        "Making silly changes are likely to lead to either silly results or nothing at all.", NEWLINE,
        "This script makes use of some unnamed DFHack data structure fields and will cease to work when/if those", NEWLINE,
@@ -5396,7 +5414,7 @@ function biomemanipulator ()
       end
     end
     
-    Sort (Weather_Page.Weather_List)
+    Sort_Keep_First (Weather_Page.Weather_List)
     
     Weather_Page.Weather =
       widgets.List {view_id = "Region Weather",
@@ -6973,7 +6991,7 @@ function biomemanipulator ()
           table.insert (Info, "  " .. df.breath_attack_type [target.breath_attack_type] .. "\n")
           
         else          
-          table.insert (Info, "Unsupported target type " .. target._type .. "\n")
+          table.insert (Info, "Unsupported target type " .. tostring (target._type) .. "\n")
         end
       end
           
