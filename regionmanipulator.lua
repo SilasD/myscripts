@@ -296,6 +296,24 @@ function regionmanipulator ()
             
    --============================================================
 
+  --  Backwards compatibility detection
+  --  
+  local subtype_info_updated = false
+  
+  if true then  --  To get the temporary variable's context expire
+    local subtype_info = df.world_site.T_subtype_info:new ()
+    for i, k in pairs (subtype_info) do
+      if i == "fortress_type" then
+        subtype_info_updated = true
+        break
+      end
+    end
+    
+    subtype_info:delete ()
+  end
+  
+   --============================================================
+
   function Range_Color (arg)
     if arg < 100 then
       return COLOR_WHITE
@@ -640,46 +658,94 @@ function regionmanipulator ()
     elseif site.type == df.world_site_type.Cave then
       return 'c', COLOR_LIGHTGREEN, "Cave"
       
-    elseif site.type == df.world_site_type.Monument and
-           site.subtype_info.lair_type == -1 and
-           site.subtype_info.is_monument == 0 then
-      return 't', COLOR_LIGHTGREEN, "Tomb"
-    end  
+    elseif site.type == df.world_site_type.ImportantLocation then
+      return 'i', COLOR_GREEN, "ImportantLocation"      
     
-    if site.type == df.world_site_type.ImportantLocation then
-      return 'i', COLOR_GREEN, "ImportantLocation"
-      
-    elseif site.type == df.world_site_type.LairShrine then
-      if site.subtype_info.lair_type == 0 or
-         site.subtype_info.lair_type == 1 or
-         site.subtype_info.lair_type == 4 then  --  Mountain lair?
-        return 'l', COLOR_GREEN, "Lair"
-        
-      elseif site.subtype_info.lair_type == 2 then
-        return 'L', COLOR_GREEN, "Labyrinth"
-        
-      elseif site.subtype_info.lair_type == 3 then
-        return 'S', COLOR_GREEN, "Shrine"
-        
-      else
-        return '?', COLOR_GREEN, "?LairShrine?"
-      end
-    
-    elseif site.type == df.world_site_type.Fortress then
-      return 'f', COLOR_LIGHTGREEN, "Fortress"
-      
     elseif site.type == df.world_site_type.Camp then
       return 'C', COLOR_LIGHTGREEN, "Camp"
-      
-    elseif site.type == df.world_site_type.Monument then
-      if site.subtype_info.lair_type == -1 then
-        return 'V', COLOR_GREEN, "Vault"
+    end
+
+    if subtype_info_updated then
+      if site.type == df.world_site_type.Fortress then
+        if site.subtype_info.fortress_type == df.fortress_type.CASTLE then
+          return 'e', COLOR_LIGHTGREEN, "Castle"
+          
+        elseif site.subtype_info.fortress_type == df.fortress_type.TOWER then
+          return 't', COLOR_LIGHTGREEN, "Tower"
+          
+        elseif site.subtype_info.fortress_type == df.fortress_type.MONASTERY then
+          return 'y', COLOR_LIGHTGREEN, "Monastery"
+          
+        elseif site.subtype_info.fortress_Type == df.fortress_type.FORT then
+          return 'f', COLOR_LIGHTGREEN, "Fort"
+        end
+       
+      elseif site.type == df.world_site_type.Monument then
+        if site.subtype_info.monument_type == df.monument_type.TOMB then
+          return 't', COLOR_LIGHTGREEN, "Tomb"
+    
+        elseif site.subtype_info.is_monument == df.monument_type.VAULT then
+          return 'V', COLOR_GREEN, "Vault"
         
-      else
-        return 'M', COLOR_GREEN, "Monument"
+        else
+          return 'M', COLOR_GREEN, "Monument"
+        end
+        
+      elseif site.type == df.world_site_type.LairShrine then
+        if site.subtype_info.lair_type == df.lair_type.SIMPLE_MOUND or
+           site.subtype_info.lair_type == df.lair_type.SIMPLE_BURROW or
+           site.subtype_info.lair_type == df.lair_type.WILDERNESS_LOCATION then  --  Mountain lair
+          return 'l', COLOR_GREEN, "Lair"
+        
+        elseif site.subtype_info.lair_type == df.lair_type.LABYRINTH then
+          return 'L', COLOR_GREEN, "Labyrinth"
+        
+        elseif site.subtype_info.lair_type == df.lair_type.SHRINE then
+          return 'S', COLOR_GREEN, "Shrine"
+        
+        else
+          return '?', COLOR_GREEN, "?LairShrine?"
+        end
+      end
+       
+    else
+      if site.type == df.world_site_type.Fortress then
+        if site.subtype_info.is_tower == 0 then
+          return 'f', COLOR_LIGHTGREEN, "Fortress"
+          
+        else
+          return 't', COLOR_LIGHTGREEN, "Tower"
+        end
+       
+      elseif site.type == df.world_site_type.Monument then
+        if site.subtype_info.is_monument == 0 then
+          return 't', COLOR_LIGHTGREEN, "Tomb"
+    
+        elseif site.subtype_info.is_monument == 1 then
+          return 'V', COLOR_GREEN, "Vault"
+        
+        else
+          return 'M', COLOR_GREEN, "Monument"
+        end
+        
+      elseif site.type == df.world_site_type.LairShrine then
+        if site.subtype_info.lair_type == 0 or
+           site.subtype_info.lair_type == 1 or
+           site.subtype_info.lair_type == 4 then  --  Mountain lair?
+          return 'l', COLOR_GREEN, "Lair"
+        
+        elseif site.subtype_info.lair_type == 2 then
+          return 'L', COLOR_GREEN, "Labyrinth"
+        
+        elseif site.subtype_info.lair_type == 3 then
+          return 'S', COLOR_GREEN, "Shrine"
+        
+        else
+          return '?', COLOR_GREEN, "?LairShrine?"
+        end
       end
     end
-    
+        
     return '!', COLOR_GREEN, "UnknownSite"
   end
   
@@ -1094,7 +1160,7 @@ function regionmanipulator ()
        "sensitive and visible only when a corresponding item is in focus.", NEWLINE,
        "Apart from the fields, the UI also contains a 'graphic' grid over the region", NEWLINE,
        "which displays the corresponding data geographically.", NEWLINE, NEWLINE,
-       "Version 0.14, 2019-01-29"}
+       "Version 0.15, 2020-02-15"}
 
     for i, v in pairs (dsc) do
       table.insert (helptext, v)
@@ -1238,7 +1304,7 @@ function regionmanipulator ()
        "up with the previous tile, but does not dictate the flow direction. If there", NEWLINE,
        "is no river specification for the 'previous' tile DF generates a source or", NEWLINE,
        "a sink there. x/y Min/Max controls the width of the river, and is expressed", NEWLINE,
-       "in in game tiles (0 to 47) within the mid level tile manipulated.", NEWLINE,
+       "in game tiles (0 to 47) within the mid level tile manipulated.", NEWLINE,
        "Is Brook controls whether the river is a brook or a stream. As opposed to", NEWLINE,
        "other changes, this change is retained by DF as the property lies with the", NEWLINE,
        "world tile rather than the region.", NEWLINE,
