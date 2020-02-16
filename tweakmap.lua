@@ -634,7 +634,7 @@ function tweakmap ()
     
         elseif line:find ("TITAN_ATTACK_TRIGGER:") then
           if third_colon ~= nil then
-            param.titan_attack_trigger ={}
+            param.titan_attack_trigger = {}
             param.titan_attack_trigger [0] = tonumber (line:sub (first_colon + 1, second_colon - 1))
             param.titan_attack_trigger [1] = tonumber (line:sub (second_colon + 1, third_colon - 1))
             param.titan_attack_trigger [2] = tonumber (line:sub (third_colon + 1, end_bracket - 1))
@@ -649,11 +649,22 @@ function tweakmap ()
         elseif line:find ("BOGEYMAN_NUMBER:") then
           param.bogeyman_number = tonumber (line:sub (first_colon + 1, end_bracket - 1))
         
+        elseif line:find ("NIGHTMARE_NUMBER:") then
+          param.nightmare_number = tonumber (line:sub (first_colon + 1, end_bracket - 1))
+        
         elseif line:find ("VAMPIRE_NUMBER:") then
           param.vampire_number = tonumber (line:sub (first_colon + 1, end_bracket - 1))
         
         elseif line:find ("WEREBEAST_NUMBER:") then
           param.werebeast_number = tonumber (line:sub (first_colon + 1, end_bracket - 1))
+        
+        elseif line:find ("WEREBEAST_ATTACK_TRIGGER:") then
+          if third_colon ~= nil then
+            param.werebeast_attack_trigger = {}
+            param.werebeast_attack_trigger [0] = tonumber (line:sub (first_colon + 1, second_colon - 1))
+            param.werebeast_attack_trigger [1] = tonumber (line:sub (second_colon + 1, third_colon - 1))
+            param.werebeast_attack_trigger [2] = tonumber (line:sub (third_colon + 1, end_bracket - 1))
+          end
         
         elseif line:find ("SECRET_NUMBER:") then
           param.secret_number = tonumber (line:sub (first_colon + 1, end_bracket - 1))
@@ -672,6 +683,24 @@ function tweakmap ()
         
         elseif line:find ("GENERATE_DIVINE_MATERIALS:") then
           param.generate_divine_materials = tonumber (line:sub (first_colon + 1, end_bracket - 1))
+        
+        elseif line:find ("ALLOW_DIVINATION:") then
+          param.allow_divination = tonumber (line:sub (first_colon + 1, end_bracket - 1))
+        
+        elseif line:find ("ALLOW_DEMONIC_EXPERIMENTS:") then
+          param.allow_demonic_experiments = tonumber (line:sub (first_colon + 1, end_bracket - 1))
+        
+        elseif line:find ("ALLOW_NECROMANCER_EXPERIMENTS:") then
+          param.allow_necromancer_experiments = tonumber (line:sub (first_colon + 1, end_bracket - 1))
+        
+        elseif line:find ("ALLOW_NECROMANCER_LIEUTENANTS:") then
+          param.allow_necromancer_lieutenants = tonumber (line:sub (first_colon + 1, end_bracket - 1))
+        
+        elseif line:find ("ALLOW_NECROMANCER_GHOULS:") then
+          param.allow_necromancer_ghouls = tonumber (line:sub (first_colon + 1, end_bracket - 1))
+        
+        elseif line:find ("ALLOW_NECROMANCER_SUMMONS:") then
+          param.allow_necromancer_summons = tonumber (line:sub (first_colon + 1, end_bracket - 1))
         
         elseif line:find ("GOOD_SQ_COUNTS:") then
           if third_colon ~= nil then
@@ -1364,7 +1393,15 @@ function tweakmap ()
     out_file:write ("     [DEMON_NUMBER:" .. tostring (param.demon_number) .. "]\n")
     out_file:write ("     [NIGHT_TROLL_NUMBER:" .. tostring (param.night_troll_number) .. "]\n")
     out_file:write ("     [BOGEYMAN_NUMBER:" .. tostring (param.bogeyman_number) .. "]\n")
+    if dfhack.pcall (function () local dummy = param.nightmare_number end) then
+      out_file:write ("     [NIGHTMARE_NUMBER:" .. tostring (param.nightmare_number) .. "]\n")
+    end  
     out_file:write ("     [VAMPIRE_NUMBER:" .. tostring (param.vampire_number) .. "]\n")
+    if dfhack.pcall (function () local dummy = param.werebeast_attack_trigger [0] end) then
+      out_file:write ("     [WEREBEAST_ATTACK_TRIGGER:" .. tostring (param.werebeast_attack_trigger [0]) .. ":" .. 
+                                                           tostring (param.werebeast_attack_trigger [1]) .. ":" ..
+                                                           tostring (param.werebeast_attack_trigger [2]).. "]\n")
+    end
     out_file:write ("     [WEREBEAST_NUMBER:" .. tostring (param.werebeast_number) .. "]\n")
     out_file:write ("     [SECRET_NUMBER:" .. tostring (param.secret_number) .. "]\n")
     out_file:write ("     [REGIONAL_INTERACTION_NUMBER:".. tostring (param.regional_interaction_number).. "]\n")
@@ -1372,6 +1409,14 @@ function tweakmap ()
     out_file:write ("     [EVIL_CLOUD_NUMBER:" .. tostring (param.evil_cloud_number) .. "]\n")
     out_file:write ("     [EVIL_RAIN_NUMBER:" .. tostring (param.evil_rain_number) .. "]\n")
     out_file:write ("     [GENERATE_DIVINE_MATERIALS:" .. tostring (param.generate_divine_materials) .. "]\n")
+    if dfhack.pcall (function () local dummy = param.allow_divination end) then
+      out_file:write ("     [ALLOW_DIVINATION:" .. tostring (param.allow_divination) .. "]\n")
+      out_file:write ("     [ALLOW_DEMONIC_EXPERIMENTS:" .. tostring (param.allow_demonic_experiments) .. "]\n")
+      out_file:write ("     [ALLOW_NECROMANCER_EXPERIMENTS:" .. tostring (param.allow_necromancer_experiments) .. "]\n")
+      out_file:write ("     [ALLOW_NECROMANCER_LIEUTENANTS:" .. tostring (param.allow_necromancer_lieutenants) .. "]\n")
+      out_file:write ("     [ALLOW_NECROMANCER_GHOULS:" .. tostring (param.allow_necromancer_ghouls) .. "]\n")
+      out_file:write ("     [ALLOW_NECROMANCER_SUMMONS:" .. tostring (param.allow_necromancer_summons) .. "]\n")
+    end
     out_file:write ("     [GOOD_SQ_COUNTS:" .. tostring (param.good_sq_counts_0) .. ":" ..
                                                tostring (param.good_sq_counts_1) .. ":" ..
                                                tostring (param.good_sq_counts_2) .. "]\n")

@@ -195,8 +195,16 @@ function exportmap()
   file:write ("     [DEMON_NUMBER:" .. tostring (param.demon_number) .. "]\n")
   file:write ("     [NIGHT_TROLL_NUMBER:" .. tostring (param.night_troll_number) .. "]\n")
   file:write ("     [BOGEYMAN_NUMBER:" .. tostring (param.bogeyman_number) .. "]\n")
+  if dfhack.pcall (function () local dummy = param.nightmare_number end) then
+    file:write ("     [NIGHTMARE_NUMBER:" .. tostring (param.nightmare_number) .. "]\n")
+  end  
   file:write ("     [VAMPIRE_NUMBER:" .. tostring (param.vampire_number) .. "]\n")
   file:write ("     [WEREBEAST_NUMBER:" .. tostring (param.werebeast_number) .. "]\n")
+  if dfhack.pcall (function () local dummy = param.werebeast_attack_trigger [0] end) then
+    file:write ("     [WEREBEAST_ATTACK_TRIGGER:" .. tostring (param.werebeast_attack_trigger [0]) .. ":" .. 
+                                                     tostring (param.werebeast_attack_trigger [1]) .. ":" ..
+                                                     tostring (param.werebeast_attack_trigger [2]).. "]\n")
+  end
   file:write ("     [SECRET_NUMBER:" .. tostring (param.secret_number) .. "]\n")
   file:write ("     [REGIONAL_INTERACTION_NUMBER:".. tostring (param.regional_interaction_number).. "]\n")
   file:write ("     [DISTURBANCE_INTERACTION_NUMBER:" .. tostring(param.disturbance_interaction_number) .. "]\n")
@@ -207,6 +215,14 @@ function exportmap()
     generate_divine_materials = param.anon_1   --  Will probably be renamed soon.
   end
   file:write ("     [GENERATE_DIVINE_MATERIALS:" .. tostring (generate_divine_materials) .. "]\n")
+  if dfhack.pcall (function () local dummy = param.allow_divination end) then
+    file:write ("     [ALLOW_DIVINATION:" .. tostring (param.allow_divination) .. "]\n")
+    file:write ("     [ALLOW_DEMONIC_EXPERIMENTS:" .. tostring (param.allow_demonic_experiments) .. "]\n")
+    file:write ("     [ALLOW_NECROMANCER_EXPERIMENTS:" .. tostring (param.allow_necromancer_experiments) .. "]\n")
+    file:write ("     [ALLOW_NECROMANCER_LIEUTENANTS:" .. tostring (param.allow_necromancer_lieutenants) .. "]\n")
+    file:write ("     [ALLOW_NECROMANCER_GHOULS:" .. tostring (param.allow_necromancer_ghouls) .. "]\n")
+    file:write ("     [ALLOW_NECROMANCER_SUMMONS:" .. tostring (param.allow_necromancer_summons) .. "]\n")
+  end
   file:write ("     [GOOD_SQ_COUNTS:" .. tostring (param.good_sq_counts_0) .. ":" ..
                                          tostring (param.good_sq_counts_1) .. ":" ..
                                          tostring (param.good_sq_counts_2) .. "]\n")
