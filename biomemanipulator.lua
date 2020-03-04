@@ -523,6 +523,18 @@ function biomemanipulator ()
     region:delete ()
   end
   
+  local creature_raw_flags_renamed = false
+  if true then
+    local creature = df.creature_raw:new ()
+    for i, k in pairs (creature.flags) do
+      if i == "HAS_ANY_MEGABEAST" then
+        creature_raw_flags_renamed = true
+        break
+      end
+    end
+    creature:delete ()
+  end
+  
   --============================================================
 
   function Is_Animal (value)
@@ -3546,20 +3558,38 @@ function biomemanipulator ()
       end
             
       if not found then
-        if creature.flags.EQUIPMENT_WAGON or
-           creature.flags.CASTE_MEGABEAST or
-           creature.flags.CASTE_SEMIMEGABEAST or
---           creature.flags.GENERATED or  --  When is this flag set?
-           creature.flags.CASTE_TITAN or
-           creature.flags.CASTE_UNIQUE_DEMON or
-           creature.flags.CASTE_DEMON or
-           creature.flags.CASTE_NIGHT_CREATURE_ANY or
-           (creature.flags.GOOD and not Profile.GOOD) or
-           (creature.flags.EVIL and not Profile.EVIL) or
-           (creature.flags.SAVAGE and Profile.SAVAGE == 0) then
-          matching = false
-
-        else
+        local creature_raw_flags_passed = true
+        
+        if creature_raw_flags_renamed then
+          if creature.flags.EQUIPMENT_WAGON or
+             creature.flags.HAS_ANY_MEGABEAST or
+             creature.flags.HAS_ANY_SEMIMEGABEAST or
+             creature.flags.GENERATED or  --  When is this flag set?
+             creature.flags.HAS_ANY_TITAN or
+             creature.flags.HAS_ANY_UNIQUE_DEMON or
+             creature.flags.HAS_ANY_DEMON or
+             creature.flags.HAS_ANY_NIGHT_CREATURE or
+             (creature.flags.GOOD and not Profile.GOOD) or
+             (creature.flags.EVIL and not Profile.EVIL) or
+             (creature.flags.SAVAGE and Profile.SAVAGE == 0) then
+            creature_raw_flags_passed = false
+          end
+          
+        elseif creature.flags.EQUIPMENT_WAGON or
+               creature.flags.CASTE_MEGABEAST or
+               creature.flags.CASTE_SEMIMEGABEAST or
+               creature.flags.GENERATED or  --  When is this flag set?
+               creature.flags.CASTE_TITAN or
+               creature.flags.CASTE_UNIQUE_DEMON or
+               creature.flags.CASTE_DEMON or
+               creature.flags.CASTE_NIGHT_CREATURE_ANY or
+               (creature.flags.GOOD and not Profile.GOOD) or
+               (creature.flags.EVIL and not Profile.EVIL) or
+               (creature.flags.SAVAGE and Profile.SAVAGE == 0) then
+              creature_raw_flags_passed = false
+        end
+        
+        if creature_raw_flags_passed then
           for l, value in pairs (Profile) do
             if l == "GOOD" or
                l == "EVIL"  then
@@ -3684,21 +3714,43 @@ function biomemanipulator ()
       end
             
       if not found then
-        if creature.flags.EQUIPMENT_WAGON or
-           creature.flags.CASTE_MEGABEAST or
-           creature.flags.CASTE_SEMIMEGABEAST or
---           creature.flags.GENERATED or  --  When is this flag set?
-           creature.flags.CASTE_TITAN or
-           creature.flags.CASTE_UNIQUE_DEMON or
-           creature.flags.CASTE_DEMON or
-           creature.flags.CASTE_NIGHT_CREATURE_ANY then
-          matching = false
+        local creature_raw_flags_passed = true
+        
+        if creature_raw_flags_renamed then
+          if creature.flags.EQUIPMENT_WAGON or
+             creature.flags.HAS_ANY_MEGABEAST or
+             creature.flags.HAS_ANY_SEMIMEGABEAST or
+             creature.flags.GENERATED or  --  When is this flag set?
+             creature.flags.HAS_ANY_TITAN or
+             creature.flags.HAS_ANY_UNIQUE_DEMON or
+             creature.flags.HAS_ANY_DEMON or
+             creature.flags.HAS_ANY_NIGHT_CREATURE or
+             (creature.flags.GOOD and not Profile.GOOD) or
+             (creature.flags.EVIL and not Profile.EVIL) or
+             (creature.flags.SAVAGE and Profile.SAVAGE == 0) then
+            creature_raw_flags_passed = false
+          end
           
-        elseif creature.underground_layer_min <= layer_index and
-               creature.underground_layer_max >= layer_index and
-               ((creature.flags.BIOME_SUBTERRANEAN_WATER and Profile.BIOME_SUBTERRANEAN_WATER > 0) or
-                (creature.flags.BIOME_SUBTERRANEAN_CHASM and Profile.BIOME_SUBTERRANEAN_CHASM > 0) or
-                (creature.flags.BIOME_SUBTERRANEAN_LAVA and Profile.BIOME_SUBTERRANEAN_LAVA > 0)) then
+        elseif creature.flags.EQUIPMENT_WAGON or
+               creature.flags.CASTE_MEGABEAST or
+               creature.flags.CASTE_SEMIMEGABEAST or
+               creature.flags.GENERATED or  --  When is this flag set?
+               creature.flags.CASTE_TITAN or
+               creature.flags.CASTE_UNIQUE_DEMON or
+               creature.flags.CASTE_DEMON or
+               creature.flags.CASTE_NIGHT_CREATURE_ANY or
+               (creature.flags.GOOD and not Profile.GOOD) or
+               (creature.flags.EVIL and not Profile.EVIL) or
+               (creature.flags.SAVAGE and Profile.SAVAGE == 0) then
+              creature_raw_flags_passed = false
+        end
+        
+        if creature_raw_flags_passed and
+           creature.underground_layer_min <= layer_index and
+           creature.underground_layer_max >= layer_index and
+           ((creature.flags.BIOME_SUBTERRANEAN_WATER and Profile.BIOME_SUBTERRANEAN_WATER > 0) or
+            (creature.flags.BIOME_SUBTERRANEAN_CHASM and Profile.BIOME_SUBTERRANEAN_CHASM > 0) or
+            (creature.flags.BIOME_SUBTERRANEAN_LAVA and Profile.BIOME_SUBTERRANEAN_LAVA > 0)) then
           matching = true          
         end
         
@@ -4392,7 +4444,7 @@ function biomemanipulator ()
 --       "% = Temperate Brackish River   & = Tropical Brackish River", NEWLINE,
 --       "( = Temperate Saltwater River  ) = Tropical Saltwater River", NEWLINE,
        NEWLINE,       
-       "Version 0.39, 2020-01-13", NEWLINE,
+       "Version 0.40, 2020-03-04", NEWLINE,
        "Caveats: Only tested to a limited degree.", NEWLINE,
        "Making silly changes are likely to lead to either silly results or nothing at all.", NEWLINE,
        "This script makes use of some unnamed DFHack data structure fields and will cease to work when/if those", NEWLINE,
@@ -6356,7 +6408,8 @@ function biomemanipulator ()
           if creature.flags.VERMIN_SOIL_COLONY then
             new_creature.type = df.world_population_type.ColonyInsect
           
-          elseif creature.flags.any_vermin then
+          elseif (creature_raw_flags_renamed and creature.flags.HAS_ANY_VERMIN_MICRO) or
+                 (not creature_raw_flags_renamed and creature.flags.any_vermin) then
             if creature.flags.UBIQUITOUS then
               new_creature.type = df.world_population_type.VerminInnumerable
               
@@ -6404,7 +6457,8 @@ function biomemanipulator ()
           if creature.flags.VERMIN_SOIL_COLONY then
             new_creature.type = df.world_population_type.ColonyInsect
           
-          elseif creature.flags.any_vermin then
+          elseif (creature_raw_flags_renamed and creature.flags.HAS_ANY_VERMIN_MICRO) or
+                 (not creature_raw_flags_renamed and creature.flags.any_vermin) then
             if creature.flags.UBIQUITOUS then
               new_creature.type = df.world_population_type.VerminInnumerable
               
@@ -6467,7 +6521,8 @@ function biomemanipulator ()
       if creature.flags.VERMIN_SOIL_COLONY then
         new_creature.type = df.world_population_type.ColonyInsect
           
-      elseif creature.flags.any_vermin then
+      elseif (creature_raw_flags_renamed and creature.flags.HAS_ANY_VERMIN_MICRO) or
+             (not creature_raw_flags_renamed and creature.flags.any_vermin) then
         if creature.flags.UBIQUITOUS then
           new_creature.type = df.world_population_type.VerminInnumerable
               
