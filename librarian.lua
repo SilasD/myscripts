@@ -853,13 +853,13 @@ function Librarian ()
       
       for k, ref in ipairs (content.refs) do
         if ref._type == df.general_ref_knowledge_scholar_flagst then 
-          for l, flag in ipairs (ref.knowledge.flags.flags_0) do  --  Don't care which one, as they'll iterate of all bits regardless
+          for l, flag in ipairs (ref.knowledge.flag_data.flags_0) do  --  Don't care which one, as they'll iterate of all bits regardless
             if flag then
-              if not Result [ref.knowledge.category] [l] then
-                Result [ref.knowledge.category] [l] = {}
+              if not Result [ref.knowledge.flag_type] [l] then
+                Result [ref.knowledge.flag_type] [l] = {}
               end
                 
-              table.insert (Result [ref.knowledge.category] [l], element)
+              table.insert (Result [ref.knowledge.flag_type] [l], element)
             end
           end
         end
@@ -962,12 +962,12 @@ function Librarian ()
     for i, content in ipairs (df.global.world.written_contents.all) do
       for k, ref in ipairs (content.refs) do
         if ref._type == df.general_ref_knowledge_scholar_flagst then 
-          for l, flag in ipairs (ref.knowledge.flags.flags_0) do  --  Don't care which one, as they'll iterate of all bits regardless
+          for l, flag in ipairs (ref.knowledge.flag_data.flags_0) do  --  Don't care which one, as they'll iterate of all bits regardless
             if flag then
               local found = false
              
-              if Science_Page.Data_Matrix [ref.knowledge.category] [l] then
-                for m, element in ipairs (Science_Page.Data_Matrix [ref.knowledge.category] [l]) do
+              if Science_Page.Data_Matrix [ref.knowledge.flag_type] [l] then
+                for m, element in ipairs (Science_Page.Data_Matrix [ref.knowledge.flag_type] [l]) do
                   if element [1] == content.id then
                     found = true
                     break
@@ -976,11 +976,11 @@ function Librarian ()
               end
               
               if not found then
-                if not Science_Result [ref.knowledge.category] [l] then
-                  Science_Result [ref.knowledge.category] [l] = {}
+                if not Science_Result [ref.knowledge.flag_type] [l] then
+                  Science_Result [ref.knowledge.flag_type] [l] = {}
                 end
                 
-                table.insert (Science_Result [ref.knowledge.category] [l], content)
+                table.insert (Science_Result [ref.knowledge.flag_type] [l], content)
               end
             end
           end
@@ -1493,9 +1493,9 @@ function Librarian ()
         end
           
       elseif ref._type == df.general_ref_knowledge_scholar_flagst then
-        for k, flag in ipairs (ref.knowledge.flags.flags_0) do  --  Iterates over all 32 bits regardless of enum value existence, so which "enum" we use doesn't matter
+        for k, flag in ipairs (ref.knowledge.flag_data.flags_0) do  --  Iterates over all 32 bits regardless of enum value existence, so which "enum" we use doesn't matter
           if flag then
-            table.insert (text, "Reference: " .. knowledge [ref.knowledge.category] [k] .. " knowledge\n")
+            table.insert (text, "Reference: " .. knowledge [ref.knowledge.flag_type] [k] .. " knowledge\n")
           end
         end
         
@@ -1870,7 +1870,7 @@ function Librarian ()
        "- The Science and Values pages also have a Remote Works list containing all works existing in the DF", NEWLINE,
        "  world outside of your fortress, allowing you to find out which works you might want to 'acquire' via", NEWLINE,
        "  raids...", NEWLINE,
-       "Version 0.14 2018-07-14", NEWLINE,
+       "Version 0.16 2020-05-23", NEWLINE,
        "Comments:", NEWLINE,
        "- The term 'work' is used above for a reason. A 'work' is a unique piece of written information. Currently", NEWLINE,
        "  it seems DF is restricted to a single 'work' per book/codex/scroll/quire, but the data structures allow", NEWLINE,
