@@ -613,6 +613,7 @@ function Librarian ()
   local Science_Page = {}
   local Values_Page = {}
   local Authors_Page = {}
+  local Interactions_Page = {}
   local Hidden_Page = {}
   local Help_Page = {}
   local persist_screen
@@ -631,6 +632,8 @@ function Librarian ()
               desc = "Shift to the Values page"},
     authors = {key = "CUSTOM_A",
                desc = "Shift to the Authors page"},
+    interactions = {key = "CUSTOM_I",
+                    desc = "Shift to the Interactions page"},
     forbid_book = {key = "CUSTOM_F",
                    desc = "Toggle 'f'orbidden flag on selected book"},
     dump_book = {key = "CUSTOM_D",
@@ -945,6 +948,36 @@ function Librarian ()
     return Result
   end
   
+  --============================================================
+
+  function Take_Interactions_Stock (Stock)
+    local Result = {}
+    
+    for i, element in ipairs (Stock) do
+      local content = df.written_content.find (element [1])
+      
+      for k, ref in ipairs (content.refs) do
+        if ref._type == df.general_ref_interactionst then 
+          local resolved = false
+        
+          for i, str in ipairs (df.global.world.raws.interactions [ref.interaction_id].str) do
+            if str.value:find ("IS_NAME:", 1) ~= nil then
+              table.insert (Result, {str.value:sub (str.value:find (":", 1) + 1, str.value:len () - 1), element})
+              resolved = true
+              break
+            end
+          end
+        
+          if not resolved then
+            table.insert (Result, {"unresolved Interaction information", element})
+          end
+        end
+      end
+    end
+   
+    return Result
+  end
+
   --============================================================
 
   function Take_Remote_Stock ()
@@ -1843,6 +1876,36 @@ function Librarian ()
   
   --============================================================
 
+  function Populate_Interactions_Works ()
+    local selected = 1
+    
+    if Interactions_Page.Interactions_List then
+      selected = Interactions_Page.Interactions_List.selected
+    end
+    
+    local list = {}
+    local list_map = {}
+    
+    for i, element in ipairs (Interactions_Page.Interactions) do
+      local content = df.written_content.find (element [1])
+      local title = content.title
+    
+      if title == "" then
+        title = "<Untitled>"
+      end
+          
+      table.insert (list, title .. ": " .. element [1])
+      table.insert (list_map, i)
+    end
+    
+    Sort_Remote (list, list_map)
+
+    Interactions_Page.Works_List:setChoices (list, 1)
+    Interactions_Page.Works_List_Map = list_map
+  end
+  
+  --============================================================
+
   function Book_Location_And_Access_Key (item)
     local pos = {["x"] = item.pos.x,
                  ["y"] = item.pos.y,
@@ -1951,6 +2014,7 @@ function Librarian ()
        "  down to the values in combination with the strength level target of the works. There is also a further", NEWLINE,
        "  breakdown to the actual works", NEWLINE,
        "- The Authors page contains the authors you have in your fortress and the works they have produced.", NEWLINE,
+       "- The Interactions page contains the works containing interactions (Vanilla: The Secret of Life and Death)", NEWLINE,
        NEWLINE,
        "- You switch between the different pages using the appropriate command keys, listed at each page.", NEWLINE,
        "- You shift between the lists on each page using the DF left/right movement keys.", NEWLINE,
@@ -1966,7 +2030,7 @@ function Librarian ()
        "- The Science and Values pages also have a Remote Works list containing all works existing in the DF", NEWLINE,
        "  world outside of your fortress, allowing you to find out which works you might want to 'acquire' via", NEWLINE,
        "  raids...", NEWLINE,
-       "Version 0.17 2020-05-24", NEWLINE,
+       "Version 0.18 2020-07-17", NEWLINE,
        "Comments:", NEWLINE,
        "- The term 'work' is used above for a reason. A 'work' is a unique piece of written information. Currently", NEWLINE,
        "  it seems DF is restricted to a single 'work' per book/codex/scroll/quire, but the data structures allow", NEWLINE,
@@ -2018,7 +2082,7 @@ function Librarian ()
       widgets.Label {text = {{text = "Help/Info",
                                       key = keybindings.help.key,
                                       key_sep = '()'},
-                             {text = "      Works total:        Works listed:"},NEWLINE,
+                             {text = "      Works total:        Works listed:       Interactions:"},NEWLINE,
                              {text = "",
                                      key = keybindings.science.key,
                                      key_sep = '()'},
@@ -2033,6 +2097,11 @@ function Librarian ()
                                      key = keybindings.authors.key,
                                      key_sep = '()'},
                              {text = " Authors Page ",
+                              pen = COLOR_LIGHTBLUE}, 
+                             {text = "",
+                                     key = keybindings.interactions.key,
+                                     key_sep = '()'},
+                             {text = " Interactions Page ",
                               pen = COLOR_LIGHTBLUE}, NEWLINE,
                              {text = "",
                                      key = keybindings.content_type.key,
@@ -2054,6 +2123,11 @@ function Librarian ()
     Main_Page.Works_Listed =
       widgets.Label {text = "0",
                      frame = {l = 53, t = 1, y_align = 0},
+                     text_pen = COLOR_WHITE}
+    
+    Main_Page.Interaction_Works =
+      widgets.Label {text = "0",
+                     frame = {l = 73, t = 1, y_align = 0},
                      text_pen = COLOR_WHITE}
     
     Main_Page.Stock = Take_Stock ()
@@ -2151,7 +2225,8 @@ function Librarian ()
                   Main_Page.Details,
                   Main_Page.Book_Order_Label,
                   Main_Page.Book_Label,
-                  Main_Page.Book_List}}
+                  Main_Page.Book_List,
+                  Main_Page.Interaction_Works}}
                 
     local sciencePage = widgets.Panel {
       subviews = {}}
@@ -2174,6 +2249,11 @@ function Librarian ()
                                      key = keybindings.authors.key,
                                      key_sep = '()'},
                              {text = " Authors Page ",
+                              pen = COLOR_LIGHTBLUE}, 
+                             {text = "",
+                                     key = keybindings.interactions.key,
+                                     key_sep = '()'},
+                             {text = " Interactions Page ",
                               pen = COLOR_LIGHTBLUE}, NEWLINE, NEWLINE, NEWLINE,
                              "Philosophy (0)", NEWLINE,
                              "Philosophy (1)", NEWLINE,
@@ -2357,6 +2437,11 @@ function Librarian ()
                                      key = keybindings.authors.key,
                                      key_sep = '()'},
                              {text = " Authors Page ",
+                              pen = COLOR_LIGHTBLUE}, 
+                             {text = "",
+                                     key = keybindings.interactions.key,
+                                     key_sep = '()'},
+                             {text = " Interactions Page ",
                               pen = COLOR_LIGHTBLUE}, NEWLINE, NEWLINE,
                              {text = "Value           "},
                              {text = "3 2 1 ",
@@ -2378,16 +2463,18 @@ function Librarian ()
     
     local values_background = {}
     
-    for i, value in ipairs (df.value_type) do    
-      Values_Page.Matrix [i] = {}
-      table.insert (values_background, df.value_type [i])
+    for i, value in ipairs (df.value_type) do
+      if i ~= df.value_type.NONE then
+        Values_Page.Matrix [i] = {}
+        table.insert (values_background, df.value_type [i])
       
-      for k = -3, 3 do
-        Values_Page.Matrix [i] [k] =
-          widgets.Label {text = Science_Character_Of (Values_Page.Data_Matrix, i, k),
-                         frame = {l = 22 + k * 2, w = 1, t = 6 + i, y_align = 0},
-                         text_pen = Science_Color_Of (Values_Page.Data_Matrix, i, k)}
-        table.insert (valuesPage.subviews, Values_Page.Matrix [i] [k])
+        for k = -3, 3 do
+          Values_Page.Matrix [i] [k] =
+            widgets.Label {text = Science_Character_Of (Values_Page.Data_Matrix, i, k),
+                           frame = {l = 22 + k * 2, w = 1, t = 6 + i, y_align = 0},
+                           text_pen = Science_Color_Of (Values_Page.Data_Matrix, i, k)}
+          table.insert (valuesPage.subviews, Values_Page.Matrix [i] [k])
+        end
       end
     end
     
@@ -2528,6 +2615,11 @@ function Librarian ()
                                      key = keybindings.values.key,
                                      key_sep = '()'},
                              {text = " Values Page ",
+                              pen = COLOR_LIGHTBLUE}, 
+                             {text = "",
+                                     key = keybindings.interactions.key,
+                                     key_sep = '()'},
+                             {text = " Interactions Page ",
                               pen = COLOR_LIGHTBLUE}, NEWLINE, NEWLINE,
                              {text = "Authors"}},
                      frame = {l = 0, t = 1, y_align = 0}}
@@ -2630,6 +2722,122 @@ function Librarian ()
     table.insert (Authors_Page.Active_List, Authors_Page.Works_List)
     table.insert (Authors_Page.Active_List, Authors_Page.Book_List)
 
+    local interactionsPage = widgets.Panel {
+      subviews = {}}
+      
+    Interactions_Page.Background =
+      widgets.Label {text = {{text = "Help/Info",
+                                      key = keybindings.help.key,
+                                      key_sep = '()'},NEWLINE,
+                             {text = "",
+                                     key = keybindings.main.key,
+                                     key_sep = '()'},
+                             {text = " Main Page",
+                              pen = COLOR_LIGHTBLUE},
+                              {text = "",
+                                     key = keybindings.science.key,
+                                     key_sep = '()'},
+                             {text = " Science Page",
+                              pen = COLOR_LIGHTBLUE}, 
+                             {text = "",
+                                     key = keybindings.values.key,
+                                     key_sep = '()'},
+                             {text = " Values Page ",
+                              pen = COLOR_LIGHTBLUE}, 
+                             {text = "",
+                                     key = keybindings.authors.key,
+                                     key_sep = '()'},
+                             {text = " Authors Page ",
+                              pen = COLOR_LIGHTBLUE}, NEWLINE, NEWLINE,
+                             {text = "Interaction Works"}},
+                     frame = {l = 0, t = 1, y_align = 0}}
+    
+    table.insert (interactionsPage.subviews, Interactions_Page.Background)
+    
+    Interactions_Page.Interactions = Take_Interactions_Stock (Main_Page.Stock)
+    
+    local interactions_list = {}
+    
+    for i, element in ipairs (Interactions_Page.Interactions) do
+      local content = df.written_content.find (element [2] [1])
+      local title = ""
+    
+      if content then
+        title = content.title
+      end
+    
+      if title == "" then
+        title = "<Untitled>"
+      end
+
+      table.insert (interactions_list, title .. ": " .. element [1])
+    end
+    
+    Interactions_Page.Works_List =
+      widgets.List {view_id = "Works",
+                    choices = interactions_list,
+                    frame = {l = 1, t = 6, h = 15, yalign = 0},
+                    text_pen = COLOR_DARKGREY,
+                    cursor_pen = COLOR_YELLOW,
+                    inactive_pen = COLOR_GREY,
+                    active = true,
+                    on_select = self:callback ("show_interactions_details")}
+    
+    Interactions_Page.Details =
+      widgets.Label {text = Produce_Details (Interactions_Page.Interactions [Interactions_Page.Works_List.selected] [2]),
+                     frame = {l = 65, t = 24, h = 20, y_align = 0},
+                     auto_height = false,
+                     text_pen = COLOR_WHITE}
+                         
+    table.insert (interactionsPage.subviews, Interactions_Page.Works_List)    
+    table.insert (interactionsPage.subviews, Interactions_Page.Details)
+    
+    Interactions_Page.Background_2 =
+      widgets.Label {text = {{text = "                                                                 Details"}},
+                     frame = {l = 0, t = 22, y_align = 0}}
+    
+    table.insert (interactionsPage.subviews, Interactions_Page.Background_2)
+    
+    Interactions_Page.Book_Order_Label =
+      widgets.Label {text = {{text = "",
+                                     key = keybindings.forbid_book.key,
+                                     key_sep = '()'},
+                             {text = " Toggle Forbid Flag ",
+                              pen = COLOR_LIGHTBLUE},
+                             {text = "",
+                                     key = keybindings.dump_book.key,
+                                     key_sep = '()'},
+                             {text = " Toggle Dump Flag",
+                              pen = COLOR_LIGHTBLUE},
+                             NEWLINE,
+                             {text = "",
+                                     key = keybindings.trader_book.key,
+                                     key_sep = '()'},
+                             {text = " Toggle Trader Flag ",
+                              pen = COLOR_LIGHTBLUE},
+                             {text = "",
+                                     key = keybindings.zoom.key,
+                                     key_sep = '()'},
+                             {text = " Zoom to book (return with 'O')",
+                              pen = COLOR_LIGHTBLUE}},
+                     frame = {l = 65, t = 46, y_align = 0},
+                     visible = false}
+                     
+    table.insert (interactionsPage.subviews, Interactions_Page.Book_Order_Label)
+    
+    Interactions_Page.Book_Label =
+      widgets.Label {text = "Books: O/C = Original/Copy, F = Forbidden, D = Dump, T = Trader, I = In Inventory",
+                     frame = {l = 65, t = 48, y_align = 0},
+                     text_pen = COLOR_WHITE}
+    
+    table.insert (interactionsPage.subviews, Interactions_Page.Book_Label)
+
+    Interactions_Page.Active_List = {}
+    
+    table.insert (Interactions_Page.Active_List, Interactions_Page.Works_List)
+
+    Main_Page.Interaction_Works:setText (tostring (#Interactions_Page.Works_List.choices))
+
     local hiddenPage = widgets.Panel {
       subviews = {}}
            
@@ -2647,6 +2855,7 @@ function Librarian ()
                    sciencePage,
                    valuesPage,
                    authorsPage,
+                   interactionsPage,
                    hiddenPage,
                    helpPage},view_id = "pages",
                    }
@@ -2785,6 +2994,16 @@ function Librarian ()
   
   --==============================================================
 
+  function Ui:show_interactions_details (index, choice)
+    if Interactions_Page.Works_List then  --  Else initiation
+      if Interactions_Page.Works_List.active then
+        Interactions_Page.Details:setText (Produce_Details (Interactions_Page.Interactions [Interactions_Page.Works_List.selected] [2]))
+      end
+    end
+  end
+  
+  --==============================================================
+
   function Ui:onInput (keys)
     if keys.LEAVESCREEN_ALL then
         self:dismiss ()
@@ -2806,6 +3025,9 @@ function Librarian ()
           
         elseif Pre_Help_Focus == "Authors" then
           self.subviews.pages:setSelected (4)
+          
+        elseif Pre_Help_Focus == "Interactions" then
+          self.subviews.pages:setSelected (5)
         end
         
         Focus = Pre_Help_Focus
@@ -2840,14 +3062,16 @@ function Librarian ()
     elseif keys [keybindings.main.key] and 
            (Focus == "Science" or
             Focus == "Values" or
-            Focus == "Authors") then
+            Focus == "Authors" or
+            Focus == "Interactions") then
       Focus = "Main"
       self.subviews.pages:setSelected (1)
             
     elseif keys [keybindings.science.key] and 
            (Focus == "Main" or
             Focus == "Values" or
-            Focus == "Authors") then
+            Focus == "Authors" or
+            Focus == "Interactions") then
       Focus = "Science"
       Populate_Own_Remote_Science ()
       self.subviews.pages:setSelected (2)
@@ -2855,7 +3079,8 @@ function Librarian ()
     elseif keys [keybindings.values.key] and 
            (Focus == "Main" or
             Focus == "Science" or
-            Focus == "Authors") then
+            Focus == "Authors" or
+            Focus == "Interactions") then
       Focus = "Values"
       Populate_Own_Remote_Values ()
       self.subviews.pages:setSelected (3)
@@ -2863,9 +3088,18 @@ function Librarian ()
     elseif keys [keybindings.authors.key] and 
            (Focus == "Main" or
             Focus == "Science" or
-            Focus == "Values") then
+            Focus == "Values" or
+            Focus == "Interactions") then
       Focus = "Authors"
       self.subviews.pages:setSelected (4)
+            
+    elseif keys [keybindings.interactions.key] and 
+           (Focus == "Main" or
+            Focus == "Science" or
+            Focus == "Values" or
+            Focus == "Authors") then
+      Focus = "Interactions"
+      self.subviews.pages:setSelected (5)
             
     elseif keys [keybindings.ook.key] and
            Focus == "Hidden" then
@@ -2880,6 +3114,9 @@ function Librarian ()
       
       elseif Pre_Hiding_Focus == "Authors" then
         self.subviews.pages:setSelected (4)
+      
+      elseif Pre_Hiding_Focus == "Interactions" then
+        self.subviews.pages:setSelected (5)
       end
       
       Focus = Pre_Hiding_Focus
