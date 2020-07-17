@@ -3503,9 +3503,9 @@ function Librarian ()
       if item.pos.x ~= -30000 and
          item.pos.y ~= -30000 and
          item.pos.z ~= -30000 then
-         local pos, key = Book_Location_And_Access_Key (item)
+        local pos, key = Book_Location_And_Access_Key (item)
 
-         persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.OPTIONS]] = true,
+        persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.OPTIONS]] = true,
                                            [df.interface_key [df.interface_key.LEAVESCREEN]] = true})  --  To exit any competing view mode.
         persist_screen:sendInputToParent (key)
         df.global.cursor.x = pos.x
@@ -3518,7 +3518,7 @@ function Librarian ()
         
         Pre_Hiding_Focus = Focus
         Focus = "Hidden"      
-        self.subviews.pages:setSelected (5)
+        self.subviews.pages:setSelected (6)
         self.transparent = true
       end
       
