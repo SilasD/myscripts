@@ -2030,7 +2030,7 @@ function Librarian ()
        "- The Science and Values pages also have a Remote Works list containing all works existing in the DF", NEWLINE,
        "  world outside of your fortress, allowing you to find out which works you might want to 'acquire' via", NEWLINE,
        "  raids...", NEWLINE,
-       "Version 0.18 2020-07-17", NEWLINE,
+       "Version 0.19 2020-08-03", NEWLINE,
        "Comments:", NEWLINE,
        "- The term 'work' is used above for a reason. A 'work' is a unique piece of written information. Currently", NEWLINE,
        "  it seems DF is restricted to a single 'work' per book/codex/scroll/quire, but the data structures allow", NEWLINE,
@@ -2783,12 +2783,20 @@ function Librarian ()
                     active = true,
                     on_select = self:callback ("show_interactions_details")}
     
-    Interactions_Page.Details =
-      widgets.Label {text = Produce_Details (Interactions_Page.Interactions [Interactions_Page.Works_List.selected] [2]),
-                     frame = {l = 65, t = 24, h = 20, y_align = 0},
-                     auto_height = false,
-                     text_pen = COLOR_WHITE}
-                         
+    if #Interactions_Page.Interactions == 0 then
+      Interactions_Page.Details =
+        widgets.Label {text = " ",
+                       frame = {l = 65, t = 24, h = 20, y_align = 0},
+                       auto_height = false,
+                       text_pen = COLOR_WHITE}
+    else
+      Interactions_Page.Details =
+        widgets.Label {text = Produce_Details (Interactions_Page.Interactions [Interactions_Page.Works_List.selected] [2]),
+                       frame = {l = 65, t = 24, h = 20, y_align = 0},
+                       auto_height = false,
+                       text_pen = COLOR_WHITE}
+    end
+    
     table.insert (interactionsPage.subviews, Interactions_Page.Works_List)    
     table.insert (interactionsPage.subviews, Interactions_Page.Details)
     
