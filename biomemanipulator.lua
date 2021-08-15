@@ -535,6 +535,18 @@ function biomemanipulator ()
     creature:delete ()
   end
   
+  local plant_index_named = false
+  if true then
+    local plant_raw = df.plant_raw:new ()
+    for i, k in pairs (plant_raw) do
+      if i == "index" then
+        plant_index_named = true
+        break
+      end
+    end
+    plant_raw:delete ()
+  end
+    
   --============================================================
 
   function Is_Animal (value)
@@ -550,6 +562,18 @@ function biomemanipulator ()
     return value == df.world_population_type.Tree or
            value == df.world_population_type.Grass or
            value == df.world_population_type.Bush
+  end
+  
+  --============================================================
+
+  function Is_Vermin (creature)
+    return creature.flags.VERMIN_EATER or
+           creature.flags.VERMIN_GROUNDER or
+           creature.flags.VERMIN_ROTTER or
+           creature.flags.VERMIN_SOIL or
+           creature.flags.VERMIN_SOIL_COLONY or
+           creature.flags.VERMIN_FISH  or
+           creature.flags.UBIQUITOUS
   end
   
   --============================================================
@@ -4444,7 +4468,7 @@ function biomemanipulator ()
 --       "% = Temperate Brackish River   & = Tropical Brackish River", NEWLINE,
 --       "( = Temperate Saltwater River  ) = Tropical Saltwater River", NEWLINE,
        NEWLINE,       
-       "Version 0.40, 2020-03-04", NEWLINE,
+       "Version 0.42, 2021-08-15", NEWLINE,
        "Caveats: Only tested to a limited degree.", NEWLINE,
        "Making silly changes are likely to lead to either silly results or nothing at all.", NEWLINE,
        "This script makes use of some unnamed DFHack data structure fields and will cease to work when/if those", NEWLINE,
@@ -6408,7 +6432,8 @@ function biomemanipulator ()
           if creature.flags.VERMIN_SOIL_COLONY then
             new_creature.type = df.world_population_type.ColonyInsect
           
-          elseif (creature_raw_flags_renamed and creature.flags.HAS_ANY_VERMIN_MICRO) or
+          elseif (creature_raw_flags_renamed and
+                  Is_Vermin (creature)) or
                  (not creature_raw_flags_renamed and creature.flags.any_vermin) then
             if creature.flags.UBIQUITOUS then
               new_creature.type = df.world_population_type.VerminInnumerable
@@ -6457,7 +6482,8 @@ function biomemanipulator ()
           if creature.flags.VERMIN_SOIL_COLONY then
             new_creature.type = df.world_population_type.ColonyInsect
           
-          elseif (creature_raw_flags_renamed and creature.flags.HAS_ANY_VERMIN_MICRO) or
+          elseif (creature_raw_flags_renamed and 
+                  Is_Vermin (creature)) or
                  (not creature_raw_flags_renamed and creature.flags.any_vermin) then
             if creature.flags.UBIQUITOUS then
               new_creature.type = df.world_population_type.VerminInnumerable
@@ -6521,8 +6547,9 @@ function biomemanipulator ()
       if creature.flags.VERMIN_SOIL_COLONY then
         new_creature.type = df.world_population_type.ColonyInsect
           
-      elseif (creature_raw_flags_renamed and creature.flags.HAS_ANY_VERMIN_MICRO) or
-             (not creature_raw_flags_renamed and creature.flags.any_vermin) then
+      elseif (creature_raw_flags_renamed and
+              (Is_Vermin (creature)) or
+             (not creature_raw_flags_renamed and creature.flags.any_vermin)) then
         if creature.flags.UBIQUITOUS then
           new_creature.type = df.world_population_type.VerminInnumerable
               
@@ -7861,7 +7888,11 @@ function biomemanipulator ()
           if tree.flags ["BIOME_" .. df.biome_type [biome]] then
             if count == 0 then
               if region_trees_named then
-                region.tree_tiles_1:insert ('#', tree.anon_1)  --  assuming this is the index
+                if plant_index_named then
+                  region.tree_tiles_1:insert ('#', tree.index)
+                else
+                  region.tree_tiles_1:insert ('#', tree.anon_1)  --  assuming this is the index
+                end
                 
               else
                 region.unk_194:insert ("#", tree.anon_1)
@@ -7871,7 +7902,11 @@ function biomemanipulator ()
               
             elseif count == 1 then
               if region_trees_named then
-                region.tree_tiles_2:insert ('#', tree.anon_1)  --  assuming this is the index
+                if plant_index_named then
+                  region.tree_tiles_2:insert ('#', tree.index)
+                else
+                  region.tree_tiles_2:insert ('#', tree.anon_1)  --  assuming this is the index
+                end
                 
               else
                 region.unk_1a4:insert ("#", tree.anon_1)
@@ -7898,8 +7933,12 @@ function biomemanipulator ()
           if tree.flags ["BIOME_" .. df.biome_type [biome]] and
              tree.flags.GOOD then
             if region_trees_named then
-              region.tree_tiles_good:insert ('#', tree.anon_1)  --  assuming this is the index
-            
+              if plant_index_named then
+                region.tree_tiles_good:insert ('#', tree.index)
+              else
+                region.tree_tiles_good:insert ('#', tree.anon_1)  --  assuming this is the index
+              end
+              
             else
               region.unk_1b4:insert ("#", tree.anon_1)
             end
@@ -7924,8 +7963,12 @@ function biomemanipulator ()
           if tree.flags ["BIOME_" .. df.biome_type [biome]] and
              tree.flags.EVIL then
             if region_trees_named then
-              region.tree_tiles_evil:insert ('#', tree.anon_1)  --  assuming this is the index
-            
+              if plant_index_named then
+                region.tree_tiles_evil:insert ('#', tree.index)
+              else
+                region.tree_tiles_evil:insert ('#', tree.anon_1)  --  assuming this is the index
+              end
+              
             else
               region.unk_1c4:insert ("#", tree.anon_1)
             end
@@ -7950,8 +7993,12 @@ function biomemanipulator ()
           if tree.flags ["BIOME_" .. df.biome_type [biome]] and
              tree.flags.SAVAGE then
             if region_trees_named then
-              region.tree_tiles_savage:insert ('#', tree.anon_1)  --  assuming this is the index
-            
+              if plant_index_named then
+                region.tree_tiles_savage:insert ('#', tree.index)
+              else
+                region.tree_tiles_savage:insert ('#', tree.anon_1)  --  assuming this is the index
+              end
+              
             else
               region.unk_1d4:insert ("#", tree.anon_1)
             end
