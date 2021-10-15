@@ -3946,7 +3946,7 @@ function biomemanipulator ()
     
     for i, vein in ipairs (geo_biome.layers [0].vein_mat) do
       table.insert (Geo_Page.Vein_List, {name = Vein_Image (geo_biome.layers [0], i),
-                                         index = vein_mat [i]})
+                                         index = vein})
     end
   end
   
@@ -4468,7 +4468,7 @@ function biomemanipulator ()
 --       "% = Temperate Brackish River   & = Tropical Brackish River", NEWLINE,
 --       "( = Temperate Saltwater River  ) = Tropical Saltwater River", NEWLINE,
        NEWLINE,       
-       "Version 0.42, 2021-08-15", NEWLINE,
+       "Version 0.43, 2021-10-15", NEWLINE,
        "Caveats: Only tested to a limited degree.", NEWLINE,
        "Making silly changes are likely to lead to either silly results or nothing at all.", NEWLINE,
        "This script makes use of some unnamed DFHack data structure fields and will cease to work when/if those", NEWLINE,
