@@ -4468,7 +4468,7 @@ function biomemanipulator ()
 --       "% = Temperate Brackish River   & = Tropical Brackish River", NEWLINE,
 --       "( = Temperate Saltwater River  ) = Tropical Saltwater River", NEWLINE,
        NEWLINE,       
-       "Version 0.43, 2021-10-15", NEWLINE,
+       "Version 0.44, 2022-01-23", NEWLINE,
        "Caveats: Only tested to a limited degree.", NEWLINE,
        "Making silly changes are likely to lead to either silly results or nothing at all.", NEWLINE,
        "This script makes use of some unnamed DFHack data structure fields and will cease to work when/if those", NEWLINE,
@@ -6957,9 +6957,16 @@ function biomemanipulator ()
               table.insert (Info, "  Syndrome name: " ..syndrome.syn_name .. "\n")
                   
               for m, effect in ipairs (syndrome.ce) do
-                table.insert (Info, "  " .. df.creature_interaction_effect_type [effect:getType ()] .. 
+                
+                effect_type = df.creature_interaction_effect_type [effect:getType ()]
+                
+                if not effect_type then
+                  effect_type = "Unmapped value of " .. tostring (effect:getType ())
+                end
+                
+                table.insert (Info, "  " .. effect_type .. 
                                        string.rep (' ', string.len ("MATERIAL_FORCE_MULTIPLIER") - -- Longest name
-                                                        string.len (df.creature_interaction_effect_type [effect:getType ()])))
+                                                        string.len (effect_type)))
                 if effect.prob ~= 100 then
                   table.insert (Info, " Probability: " .. tostring (effect.prob))
                 end
@@ -6967,9 +6974,9 @@ function biomemanipulator ()
                 if effect ["end"] == -1 then
                   table.insert (Info, " Permanent")
                 else
-                table.insert (Info, "  " .. Fit_Right (tostring (effect.start), 5) .. "/" ..
-                                             Fit_Right (tostring (effect.peak), 5) .. "/" .. 
-                                            Fit_Right (tostring (effect ["end"]), 5))
+                  table.insert (Info, "  " .. Fit_Right (tostring (effect.start), 5) .. "/" ..
+                                      Fit_Right (tostring (effect.peak), 5) .. "/" .. 
+                                      Fit_Right (tostring (effect ["end"]), 5))
                 end
                 
                 if effect._type == df.creature_interaction_effect_painst or
