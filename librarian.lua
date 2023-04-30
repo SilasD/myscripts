@@ -613,7 +613,6 @@ function Librarian ()
   local Science_Page = {}
   local Values_Page = {}
   local Authors_Page = {}
-  local Interactions_Page = {}
   local Hidden_Page = {}
   local Help_Page = {}
   local persist_screen
@@ -632,8 +631,6 @@ function Librarian ()
               desc = "Shift to the Values page"},
     authors = {key = "CUSTOM_A",
                desc = "Shift to the Authors page"},
-    interactions = {key = "CUSTOM_I",
-                    desc = "Shift to the Interactions page"},
     forbid_book = {key = "CUSTOM_F",
                    desc = "Toggle 'f'orbidden flag on selected book"},
     dump_book = {key = "CUSTOM_D",
@@ -648,7 +645,8 @@ function Librarian ()
             desc = "Rotates to the next list"},
     right = {key = "CURSOR_RIGHT",
              desc = "Rotates to the previous list"},
-    help = {key = "HELP",
+--###    help = {key = "HELP",  --  Restore when key has been restored
+    help = {key = "STRING_A063",  --###  Doesn't work, as the character isn't actually bound to the help functionality, but doesn't generate an error.
             desc= "Show this help/info"}}
             
   local Content_Type_Selected = 1
@@ -856,13 +854,13 @@ function Librarian ()
       
       for k, ref in ipairs (content.refs) do
         if ref._type == df.general_ref_knowledge_scholar_flagst then 
-          for l, flag in ipairs (ref.knowledge.flag_data.flags_0) do  --  Don't care which one, as they'll iterate of all bits regardless
+          for l, flag in ipairs (ref.knowledge.flags.flags_0) do  --  Don't care which one, as they'll iterate of all bits regardless
             if flag then
-              if not Result [ref.knowledge.flag_type] [l] then
-                Result [ref.knowledge.flag_type] [l] = {}
+              if not Result [ref.knowledge.category] [l] then
+                Result [ref.knowledge.category] [l] = {}
               end
                 
-              table.insert (Result [ref.knowledge.flag_type] [l], element)
+              table.insert (Result [ref.knowledge.category] [l], element)
             end
           end
         end
@@ -950,36 +948,6 @@ function Librarian ()
   
   --============================================================
 
-  function Take_Interactions_Stock (Stock)
-    local Result = {}
-    
-    for i, element in ipairs (Stock) do
-      local content = df.written_content.find (element [1])
-      
-      for k, ref in ipairs (content.refs) do
-        if ref._type == df.general_ref_interactionst then 
-          local resolved = false
-        
-          for i, str in ipairs (df.global.world.raws.interactions [ref.interaction_id].str) do
-            if str.value:find ("IS_NAME:", 1) ~= nil then
-              table.insert (Result, {str.value:sub (str.value:find (":", 1) + 1, str.value:len () - 1), element})
-              resolved = true
-              break
-            end
-          end
-        
-          if not resolved then
-            table.insert (Result, {"unresolved Interaction information", element})
-          end
-        end
-      end
-    end
-   
-    return Result
-  end
-
-  --============================================================
-
   function Take_Remote_Stock ()
     local Science_Result = {}
     local Values_Result = {}
@@ -995,12 +963,12 @@ function Librarian ()
     for i, content in ipairs (df.global.world.written_contents.all) do
       for k, ref in ipairs (content.refs) do
         if ref._type == df.general_ref_knowledge_scholar_flagst then 
-          for l, flag in ipairs (ref.knowledge.flag_data.flags_0) do  --  Don't care which one, as they'll iterate of all bits regardless
+          for l, flag in ipairs (ref.knowledge.flag_data) do
             if flag then
               local found = false
              
-              if Science_Page.Data_Matrix [ref.knowledge.flag_type] [l] then
-                for m, element in ipairs (Science_Page.Data_Matrix [ref.knowledge.flag_type] [l]) do
+              if Science_Page.Data_Matrix [ref.knowledge.category] [l] then
+                for m, element in ipairs (Science_Page.Data_Matrix [ref.knowledge.category] [l]) do
                   if element [1] == content.id then
                     found = true
                     break
@@ -1009,11 +977,11 @@ function Librarian ()
               end
               
               if not found then
-                if not Science_Result [ref.knowledge.flag_type] [l] then
-                  Science_Result [ref.knowledge.flag_type] [l] = {}
+                if not Science_Result [ref.knowledge.category] [l] then
+                  Science_Result [ref.knowledge.category] [l] = {}
                 end
                 
-                table.insert (Science_Result [ref.knowledge.flag_type] [l], content)
+                table.insert (Science_Result [ref.knowledge.category] [l], content)
               end
             end
           end
@@ -1179,43 +1147,6 @@ function Librarian ()
 
   --============================================================
 
-  function wrap (str)
-    local screen_width, screen_height = dfhack.screen.getWindowSize ()
-    local indent = 11
-    local length = screen_width - 54 - 1
-    local rem = str
-    local first = true
-    local result = ""
-    
-    while true do
-      if first then
-        if string.len (rem) <= length + 1 then  --  + 1 as the newline at the end doesn't count
-          result = rem
-          break
-          
-        else
-          result = string.sub (rem, 1, length) .. "\n"
-          rem = string.sub (rem, length + 1, string.len (rem))
-          first = false
-        end
-              
-      else
-        if string.len (rem) <= length - indent + 1 then  --  + 1 as the newline at the end doesn't count
-           result = result .. string.rep (" ", indent) .. rem
-           break
-           
-        else
-          result = result .. string.rep (" ", indent) .. string.sub (rem, 1, length - indent)
-          rem = string.sub (rem, length - indent + 1, string.len (rem))
-        end
-      end
-    end
-    
-    return result
-  end
-  
-  --============================================================
-
   function Produce_Details (element)
     if not element then
       return ""
@@ -1235,8 +1166,8 @@ function Librarian ()
       title = "<Untitled>"
     end
 
-    local text = {wrap ("Title    : " .. title .. "\n"),
-                  wrap ("Category : " .. df.written_content_type [content.type] .. "\n")}
+    local text = {"Title    : " .. title .. "\n",
+                  "Category : " .. df.written_content_type [content.type] .. "\n"}
                   
     
     for i, ref in ipairs (content.refs) do
@@ -1263,14 +1194,14 @@ function Librarian ()
          ref._type == df.general_ref_entity_popst or
          ref._type == df.general_ref_creaturest or
          --  ref._type == df.general_ref_knowledge_scholar_flagst or
-         ref._type == df.general_ref_activity_eventst then
+         ref._type == df.general_ref_activity_eventst or
          --  ref._type == df.general_ref_value_levelst or
          --  ref._type == df.general_ref_languagest or
-         --  ref._type == df.general_ref_written_contentst or
-         --  ref._type == df.general_ref_poetic_formst or
-         --  ref._type == df.general_ref_musical_formst or
-         --  ref._type == df.general_ref_dance_formst then
-        table.insert (text, wrap ("Reference: Unresolved " .. tostring (ref._type) .. " information\n"))
+         ref._type == df.general_ref_written_contentst or
+         ref._type == df.general_ref_poetic_formst or
+         ref._type == df.general_ref_musical_formst or
+         ref._type == df.general_ref_dance_formst then
+        table.insert (text, "Reference: Unresolved " .. tostring (ref._type) .. " information\n")
         
       elseif ref._type == df.general_ref_entity then
         local entity = df.historical_entity.find (ref.entity_id)
@@ -1292,11 +1223,11 @@ function Librarian ()
         end
         
         if entity then
-          table.insert (text, wrap ("Reference: The " ..  race .. " " ..
-                                    df.historical_entity_type [entity.type] .. " " .. name .. " information\n"))
+          table.insert (text, "Reference: The " ..  race .. " " ..
+                              df.historical_entity_type [entity.type] .. " " .. name .. " information\n")
             
         else
-          table.insert (text, wrap ("Reference: Unknown entity (culled?) information\n"))
+          table.insert (text, "Reference: Unknown entity (culled?) information\n")
         end
        
       elseif ref._type == df.general_ref_interactionst then       
@@ -1304,14 +1235,14 @@ function Librarian ()
         
         for i, str in ipairs (df.global.world.raws.interactions [ref.interaction_id].str) do
           if str.value:find ("IS_NAME:", 1) ~= nil then
-            table.insert (text, wrap ('Interaction reference: "' .. str.value:sub (str.value:find (":", 1) + 1, str.value:len () - 1) .. '"\n'))
+            table.insert (text, 'Interaction reference: "' .. str.value:sub (str.value:find (":", 1) + 1, str.value:len () - 1) .. '"\n')
             resolved = true
             break
           end
         end
         
         if not resolved then
-          table.insert (text, wrap ("Reference: unresolved Interaction information\n"))
+          table.insert (text, "Reference: unresolved Interaction information\n")
         end
         
       elseif ref._type == df.general_ref_historical_eventst then
@@ -1402,7 +1333,7 @@ function Librarian ()
              event._type == df.history_event_insurrection_endedst or            
              event._type == df.history_event_hf_attacked_sitest or            
              event._type == df.history_event_performancest or            
-             --  event._type == df.history_event_competitionst or            
+             event._type == df.history_event_competitionst or            
              event._type == df.history_event_processionst or            
              event._type == df.history_event_ceremonyst or            
              event._type == df.history_event_knowledge_discoveredst or            
@@ -1430,13 +1361,13 @@ function Librarian ()
              event._type == df.history_event_entity_fled_sitest or            
              event._type == df.history_event_tactical_situationst or            
              event._type == df.history_event_squad_vs_squadst then            
-            table.insert (text, wrap ("Reference: Unsupported " .. tostring (event._type) .. " historical event information\n"))
+            table.insert (text, "Reference: Unsupported " .. tostring (event._type) .. " historical event information\n")
 
           elseif event._type == df.history_event_created_sitest then
-            table.insert (text, wrap ("Reference: " .. Entity_Name_Of (event.civ) .. " local government " ..
-                                      Entity_Name_Of (event.site_civ) .. " founded " ..
-                                      Site_Name_Of (event.site) .. " led by " ..
-                                      HF_Name_Of (event.builder_hf) .. "\n"))
+            table.insert (text, "Reference: " .. Entity_Name_Of (event.civ) .. " local government " ..
+                                Entity_Name_Of (event.site_civ) .. " founded " ..
+                                Site_Name_Of (event.site) .. " led by " ..
+                                HF_Name_Of (event.builder_hf) .. "\n")
             
           elseif event._type == df.history_event_add_hf_entity_linkst then
             local position = ""
@@ -1448,37 +1379,37 @@ function Librarian ()
               position = " as " .. entity.positions.own [event.position_id].name [0]
             end
               
-            table.insert (text, wrap ("Reference: " .. HF_Name_Of (event.histfig) .. " " ..
-                                      df.histfig_entity_link_type [event.link_type] .. " " ..
-                                      Entity_Name_Of (event.civ) .. position .. "\n"))
+            table.insert (text, "Reference: " .. HF_Name_Of (event.histfig) .. " " ..
+                                 df.histfig_entity_link_type [event.link_type] .. " " ..
+                                 Entity_Name_Of (event.civ) .. position .. "\n")
             
           elseif event._type == df.history_event_created_buildingst then
-            table.insert (text, wrap ("Reference: " .. Entity_Name_Of (event.civ) .. " created " ..
-                                      df.abstract_building_type [event.structure] .. " in " ..  --### May be reference to buildings at site instead...
-                                      Site_Name_Of (event.site) .. " by " ..
-                                      HF_Name_Of (event.builder_hf) .. "\n"))
+            table.insert (text, "Reference: " .. Entity_Name_Of (event.civ) .. " created " ..
+                                df.abstract_building_type [event.structure] .. " in " ..  --### May be reference to buildings at site instead...
+                                Site_Name_Of (event.site) .. " by " ..
+                                HF_Name_Of (event.builder_hf) .. "\n")
             
           elseif event._type == df.history_event_war_peace_acceptedst then
-            table.insert (text, wrap ("Reference: " .. Entity_Name_Of (event.source) .. " " ..
-                                      df.meeting_topic [event.topic] .. " with " ..
-                                      Entity_Name_Of (event.destination) .. " at " ..
-                                      Site_Name_Of (event.site) .. " accepted\n"))
+            table.insert (text, "Reference: " .. Entity_Name_Of (event.source) .. " " ..
+                                df.meeting_topic [event.topic] .. " with " ..
+                                Entity_Name_Of (event.destination) .. " at " ..
+                                Site_Name_Of (event.site) .. " accepted\n")
           
           elseif event._type == df.history_event_war_peace_rejectedst then
-            table.insert (text, wrap ("Reference: " .. Entity_Name_Of (event.source) .. " " ..
-                                      df.meeting_topic [event.topic] .. " with " ..
-                                      Entity_Name_Of (event.destination) .. " at " ..
-                                      Site_Name_Of (event.site) .. " rejected\n"))
+            table.insert (text, "Reference: " .. Entity_Name_Of (event.source) .. " " ..
+                                df.meeting_topic [event.topic] .. " with " ..
+                                Entity_Name_Of (event.destination) .. " at " ..
+                                Site_Name_Of (event.site) .. " rejected\n")
             
           elseif event._type == df.history_event_hf_destroyed_sitest then
-            table.insert (text, wrap ("Reference: " .. HF_Name_Of (event.attacker_hf) .. " destroyed " ..
-                                      Site_Name_Of (event.site) .. " governed by\n           " ..
-                                      Entity_Name_Of (event.site_civ) .. " belonging to " ..
-                                      Entity_Name_Of (event.defender_civ) .. "\n"))
+            table.insert (text, "Reference: " .. HF_Name_Of (event.attacker_hf) .. " destroyed " ..
+                                Site_Name_Of (event.site) .. " governed by\n           " ..
+                                Entity_Name_Of (event.site_civ) .. " belonging to " ..
+                                Entity_Name_Of (event.defender_civ) .. "\n")
           
           elseif event._type == df.history_event_add_hf_hf_linkst then
-            table.insert (text, wrap ("Reference: Added " .. HF_Name_Of (event.hf) .. " " .. df.histfig_hf_link_type [event.type] .. 
-                                      " vs " .. HF_Name_Of (event.hf_target) .. "\n"))
+            table.insert (text, "Reference: Added " .. HF_Name_Of (event.hf) .. " " .. df.histfig_hf_link_type [event.type] .. 
+                                " vs " .. HF_Name_Of (event.hf_target) .. "\n")
               
           elseif event._type == df.history_event_change_hf_statest then
             local state = " <Unknown state>"
@@ -1496,82 +1427,35 @@ function Librarian ()
               state = " visited"
             end
               
-            table.insert (text, wrap ("Reference: " .. HF_Name_Of (event.hfid) .. state .. " " ..
-                                      History_Location_Name_Of (event.site, event.region, event.layer) .. 
-                                      " because of " .. df.history_event_reason [event.reason] .. "\n"))
+            table.insert (text, "Reference: " .. HF_Name_Of (event.hfid) .. state .. " " ..
+                                History_Location_Name_Of (event.site, event.region, event.layer) .. 
+                                " because of " .. df.history_event_reason [event.reason] .. "\n")
               
           elseif event._type == df.history_event_change_hf_jobst then
-            table.insert (text, wrap ("Reference: " .. HF_Name_Of (event.hfid) .. " changed job from " .. df.profession [event.old_job] .. " to " .. 
-                                      df.profession [event.new_job] .. " in " .. History_Location_Name_Of (event.site, event.region, event.layer) .. "\n"))
+            table.insert (text, "Reference: " .. HF_Name_Of (event.hfid) .. " changed job from " .. df.profession [event.old_job] .. " to " .. 
+                                df.profession [event.new_job] .. " in " .. History_Location_Name_Of (event.site, event.region, event.layer) .. "\n")
               
           elseif event._type == df.history_event_war_plundered_sitest then
-            table.insert (text, wrap ("Reference: " .. Entity_Name_Of (event.attacker_civ) .. " attacked " ..
-                                      Entity_Name_Of (event.defender_civ) .. " and plundered " ..
-                                      Site_Name_Of (event.site) .. " under the control of " ..
-                                      Entity_Name_Of (event.site_civ) .. "\n"))
+            table.insert (text, "Reference: " .. Entity_Name_Of (event.attacker_civ) .. " attacked " ..
+                                Entity_Name_Of (event.defender_civ) .. " and plundered " ..
+                                Site_Name_Of (event.site) .. " under the control of " ..
+                                Entity_Name_Of (event.site_civ) .. "\n")
                                 
           elseif event._type == df.history_event_creature_devouredst then
             --### caste
-            table.insert (text, wrap ("Reference: The " .. df.global.world.raws.creatures.all [event.race].name [0] .. " " ..
-                                      HF_Name_Of (event.victim) .. " was devoured by " ..
-                                      HF_Name_Of (event.eater) .. " " ..
-                                      Entity_Name_Of (event.entity) .. " " ..
-                                      History_Location_Name_Of (event.site, event.region, event.layer) .. "\n"))
+            table.insert (text, "Reference; The " .. df.global.world.raws.creatures.all [event.race].name [0] .. " " ..
+                                HF_Name_Of (event.victim) .. " was devoured by " ..
+                                HF_Name_Of (event.eater) .. " " ..
+                                Entity_Name_Of (event.entity) .. " " ..
+                                History_Location_Name_Of (event.site, event.region, event.layer) .. "\n")
                                 
-          elseif event._type == df.history_event_competitionst then
-            local schedule = df.global.world.entities.all [event.entity].occasion_info.occasions [event.occasion].schedule [event.schedule]
-            local competition_text = ""
-            
-            if schedule.type == df.occasion_schedule_type.DANCE_COMPETITION then
-              if schedule.reference ~= -1 then
-                competition_text = "Dance Competition using the " .. dfhack.TranslateName (df.global.world.dance_forms.all [schedule.reference].name, true) .. " dance form"
-                
-              else
-                competition_text = "Dance Competition"
-              end
-              
-            elseif schedule.type == df.occasion_schedule_type.MUSICAL_COMPETITION then
-              if schedule.reference ~= -1 then
-                competition_text = "Musical Competition using the " .. dfhack.TranslateName (df.global.world.musical_forms.all [schedule.reference].name, true) .. " musical form"
-                
-              else
-                competition_text = "Musical Competition"
-              end
-              
-            elseif schedule.type == df.occasion_schedule_type.POETRY_COMPETITION then
-              if schedule.reference ~= -1 then
-                competition_text = "Poetry Competition using the " .. dfhack.TranslateName (df.global.world.poetical_forms.all [schedule.reference].name, true) .. " poetical form"
-                
-              else
-                competition_text = "Poetry Competition"
-              end
-              
-            elseif schedule.type == df.occasion_schedule_type.FOOT_RACE then
-              competition_text = "Foot Race"
-              
-            elseif schedule.type == df.occasion_schedule_type.WRESTLING_COMPETITION then
-              competition_text = "Wrestling Competition"
-              
-            elseif schedule.type == df.occasion_schedule_type.THROWING_COMPETITION then
-              competition_text = dfhack.items.getSubtypeDef (schedule.reference, schedule.reference2).name .. " Throwing Competition"
-              
-            elseif schedule.type == df.occasion_schedule_type.GLADIATORY_COMPETITION then
-              competition_text = "Gladiatorial Competition"
-              
-            else
-              competition_text = df.occasion_schedule_type [schedule.type]
-            end
-                        
-            table.insert (text, wrap ("Reference: " .. competition_text .. " at " .. History_Location_Name_Of (event.site, event.region, event.layer) .. "\n"))
-            --### competitor_hf and winner_hf vectors
-            
           elseif event._type == df.history_event_hf_relationship_deniedst then
-            table.insert (text, wrap ("Reference: " .. HF_Name_Of (event.seeker_hf) .. " was denied " ..
-                                      df.unit_relationship_type [event.type] .. " by " ..
-                                      HF_Name_Of (event.target_hf) .. " because\n           " ..
-                                      df.history_event_reason [event.reason] .. " of " ..
-                                      HF_Name_Of (event.reason_id) .. " at " ..
-                                      History_Location_Name_Of (event.site, event.region, event.layer) .. "\n"))
+            table.insert (text, "Reference: " .. HF_Name_Of (event.seeker_hf) .. " was denied " ..
+                                df.unit_relationship_type [event.type] .. " by " ..
+                                HF_Name_Of (event.target_hf) .. " because\n           " ..
+                                df.history_event_reason [event.reason] .. " of " ..
+--###                                HF_Name_Of (event.reason2) .. " at " ..  --### Changes to event.reason_id
+                                History_Location_Name_Of (event.site, event.region, event.layer) .. "\n")
               
           elseif event._type == df.history_event_written_content_composedst then
             local content = df.written_content.find (event.content)
@@ -1584,60 +1468,48 @@ function Librarian ()
             --### Circumstances
             --### Reason
             
-            table.insert (text, wrap ("Reference: " .. HF_Name_Of (event.histfig) .. " wrote " .. title ..
-                                      " at " .. History_Location_Name_Of (event.site, event.region, event.layer) .. "\n"))
+            table.insert (text, "Reference: " .. HF_Name_Of (event.histfig) .. " wrote " .. title ..
+                                " at " .. History_Location_Name_Of (event.site, event.region, event.layer) .. "\n")
                                 
           else
-            table.insert (text, wrap ("Reference: *UNKNOWN* " .. tostring (event._type) .. " historical event information\n"))
+            table.insert (text, "Reference: *UNKNOWN* " .. tostring (event._type) .. " historical event information\n")
           end
             
         else
-          table.insert (text, wrap ("Reference: Unknown historical event information (culled?)\n"))
+          table.insert (text, "Reference: Unknown historical event information (culled?)\n")
         end
           
       elseif ref._type == df.general_ref_sitest then
-        table.insert (text, wrap ("Reference: Information about the " .. Site_Info_Of (ref.site_id) .. "\n"))
+        table.insert (text, "Reference: Information about the " .. Site_Info_Of (ref.site_id) .. "\n")
           
       elseif ref._type == df.general_ref_historical_figurest then
         local hf = df.historical_figure.find (ref.hist_figure_id)
           
         if hf then
-          table.insert (text, wrap ("Reference: Biography of the " .. df.global.world.raws.creatures.all [hf.race].name [0] ..
-                                    " " .. HF_Name_Of (ref.hist_figure_id) .. "\n"))
+          table.insert (text, "Reference: Biography of the " .. df.global.world.raws.creatures.all [hf.race].name [0] ..
+                              " " .. HF_Name_Of (ref.hist_figure_id) .. "\n")
           
         else
-          table.insert (text, wrap ("Reference: Biography of unknown historical figure (culled?)\n"))
+          table.insert (text, "Reference: Biography of unknown historical figure (culled?)\n")
         end
           
       elseif ref._type == df.general_ref_knowledge_scholar_flagst then
-        for k, flag in ipairs (ref.knowledge.flag_data.flags_0) do  --  Iterates over all 32 bits regardless of enum value existence, so which "enum" we use doesn't matter
+        for k, flag in ipairs (ref.knowledge.flags.flags_0) do  --  Iterates over all 32 bits regardless of enum value existence, so which "enum" we use doesn't matter
           if flag then
-            table.insert (text, wrap ("Reference: " .. knowledge [ref.knowledge.flag_type] [k] .. " knowledge\n"))
+            table.insert (text, "Reference: " .. knowledge [ref.knowledge.category] [k] .. " knowledge\n")
           end
         end
         
       elseif ref._type == df.general_ref_value_levelst then
         local strength, level = value_strengh_of (ref.level)
           
-        table.insert (text, wrap ('Reference: Moves values towards "' .. values [ref.value] [strength] .. '" = ' .. level .. "\n"))
+        table.insert (text, 'Reference: Moves values towards "' .. values [ref.value] [strength] .. '" = ' .. level .. "\n")
         
       elseif ref._type == df.general_ref_languagest then
-        table.insert (text, wrap ("Reference: Dictionary of the " .. df.global.world.raws.language.translations [ref.anon_1].name .. " language\n")) --###
+        table.insert (text, "Reference: Dictionary of the " .. df.global.world.raws.language.translations [ref.anon_1].name .. " language\n") --###
           
-      elseif ref._type == df.general_ref_written_contentst then
-        table.insert (text, wrap ("Reference: Written Contents Titled " .. df.global.world.written_contents.all [ref.written_content_id].title .. "\n"))
-         
-      elseif ref._type == df.general_ref_poetic_formst then
-        table.insert (text, wrap ("Reference: Poetic Form " .. dfhack.TranslateName (df.global.world.poetic_forms.all [ref.poetic_form_id].name, true) .. "\n"))
-      
-      elseif ref._type == df.general_ref_musical_formst then
-        table.insert (text, wrap ("Reference: Musical Form " .. dfhack.TranslateName (df.global.world.musical_forms.all [ref.musical_form_id].name, true) .. "\n"))
-      
-      elseif ref._type == df.general_ref_dance_formst then
-        table.insert (text, wrap ("Reference: Dance Form " .. dfhack.TranslateName (df.global.world.dance_forms.all [ref.dance_form_id].name, true) .. "\n"))
-      
       else
-        table.insert (text, wrap ("Reference: *UNKNOWN* " .. tostring (ref._type) .. " information\n"))
+        table.insert (text, "Reference: *UNKNOWN* " .. tostring (ref._type) .. " information\n")
       end
     end
     
@@ -1651,8 +1523,8 @@ function Librarian ()
         end
       end
     
-      table.insert (text, wrap ("Original : " .. tostring (Bool_To_Yes_No (original) .. "\n")))
-      table.insert (text, wrap ("Copies   : " .. tostring (copies) .. "\n"))
+      table.insert (text, "Original : " .. tostring (Bool_To_Yes_No (original) .. "\n"))
+      table.insert (text, "Copies   : " .. tostring (copies) .. "\n")
     end
     
     local hf = df.historical_figure.find (content.author)
@@ -1670,8 +1542,8 @@ function Librarian ()
       end
     end
     
-    table.insert (text, wrap ("Author   : " .. HF_Name_Of (content.author) .. "\n"))
-    table.insert (text, wrap ("Local    : " .. tostring (Bool_To_Yes_No (Local) .. "\n")))
+    table.insert (text, "Author   : " .. HF_Name_Of (content.author) .. "\n")
+    table.insert (text, "Local    : " .. tostring (Bool_To_Yes_No (Local) .. "\n"))
 
     return text
   end
@@ -1876,36 +1748,6 @@ function Librarian ()
   
   --============================================================
 
-  function Populate_Interactions_Works ()
-    local selected = 1
-    
-    if Interactions_Page.Interactions_List then
-      selected = Interactions_Page.Interactions_List.selected
-    end
-    
-    local list = {}
-    local list_map = {}
-    
-    for i, element in ipairs (Interactions_Page.Interactions) do
-      local content = df.written_content.find (element [1])
-      local title = content.title
-    
-      if title == "" then
-        title = "<Untitled>"
-      end
-          
-      table.insert (list, title .. ": " .. element [1])
-      table.insert (list_map, i)
-    end
-    
-    Sort_Remote (list, list_map)
-
-    Interactions_Page.Works_List:setChoices (list, 1)
-    Interactions_Page.Works_List_Map = list_map
-  end
-  
-  --============================================================
-
   function Book_Location_And_Access_Key (item)
     local pos = {["x"] = item.pos.x,
                  ["y"] = item.pos.y,
@@ -1959,16 +1801,14 @@ function Librarian ()
   --============================================================
  
   function Ui:onRenderFrame (dc, rect)
-    local x1, y1, x2, y2 = rect.x1, rect.y1, rect.x2, rect.y2
-
     if self.transparent then
       self:renderParent ()
-      dfhack.screen.paintString (COLOR_LIGHTRED, ook_start_x, y2, ook_key_string)
+      dfhack.screen.paintString (COLOR_LIGHTRED, ook_start_x, rect.y2, ook_key_string)
       
       if dont_be_silly then
-        dfhack.screen.paintString (COLOR_WHITE, ook_start_x + ook_key_string:len (), y2, ": Return to The Librarian")
+        dfhack.screen.paintString (COLOR_WHITE, ook_start_x + ook_key_string:len (), rect.y2, ": Return to The Librarian")
       else
-        dfhack.screen.paintString (COLOR_WHITE, ook_start_x + ook_key_string:len (), y2, ": Ook! Return to The Librarian")
+        dfhack.screen.paintString (COLOR_WHITE, ook_start_x + ook_key_string:len (), rect.y2, ": Ook! Return to The Librarian")
       end
   
     else
@@ -1979,7 +1819,7 @@ function Librarian ()
         dc:fill (rect, self.frame_background)
       end
 
-      gui.paint_frame (x1, y1, x2, y2, self.frame_style, self.frame_title)
+      gui.paint_frame (dc, rect, self.frame_style, self.frame_title)
     end
   end
 
@@ -2014,7 +1854,6 @@ function Librarian ()
        "  down to the values in combination with the strength level target of the works. There is also a further", NEWLINE,
        "  breakdown to the actual works", NEWLINE,
        "- The Authors page contains the authors you have in your fortress and the works they have produced.", NEWLINE,
-       "- The Interactions page contains the works containing interactions (Vanilla: The Secret of Life and Death)", NEWLINE,
        NEWLINE,
        "- You switch between the different pages using the appropriate command keys, listed at each page.", NEWLINE,
        "- You shift between the lists on each page using the DF left/right movement keys.", NEWLINE,
@@ -2030,7 +1869,7 @@ function Librarian ()
        "- The Science and Values pages also have a Remote Works list containing all works existing in the DF", NEWLINE,
        "  world outside of your fortress, allowing you to find out which works you might want to 'acquire' via", NEWLINE,
        "  raids...", NEWLINE,
-       "Version 0.19 2020-08-03", NEWLINE,
+       "Version 0.14 2018-07-14", NEWLINE,
        "Comments:", NEWLINE,
        "- The term 'work' is used above for a reason. A 'work' is a unique piece of written information. Currently", NEWLINE,
        "  it seems DF is restricted to a single 'work' per book/codex/scroll/quire, but the data structures allow", NEWLINE,
@@ -2082,7 +1921,7 @@ function Librarian ()
       widgets.Label {text = {{text = "Help/Info",
                                       key = keybindings.help.key,
                                       key_sep = '()'},
-                             {text = "      Works total:        Works listed:       Interactions:"},NEWLINE,
+                             {text = "      Works total:        Works listed:"},NEWLINE,
                              {text = "",
                                      key = keybindings.science.key,
                                      key_sep = '()'},
@@ -2097,11 +1936,6 @@ function Librarian ()
                                      key = keybindings.authors.key,
                                      key_sep = '()'},
                              {text = " Authors Page ",
-                              pen = COLOR_LIGHTBLUE}, 
-                             {text = "",
-                                     key = keybindings.interactions.key,
-                                     key_sep = '()'},
-                             {text = " Interactions Page ",
                               pen = COLOR_LIGHTBLUE}, NEWLINE,
                              {text = "",
                                      key = keybindings.content_type.key,
@@ -2123,11 +1957,6 @@ function Librarian ()
     Main_Page.Works_Listed =
       widgets.Label {text = "0",
                      frame = {l = 53, t = 1, y_align = 0},
-                     text_pen = COLOR_WHITE}
-    
-    Main_Page.Interaction_Works =
-      widgets.Label {text = "0",
-                     frame = {l = 73, t = 1, y_align = 0},
                      text_pen = COLOR_WHITE}
     
     Main_Page.Stock = Take_Stock ()
@@ -2225,8 +2054,7 @@ function Librarian ()
                   Main_Page.Details,
                   Main_Page.Book_Order_Label,
                   Main_Page.Book_Label,
-                  Main_Page.Book_List,
-                  Main_Page.Interaction_Works}}
+                  Main_Page.Book_List}}
                 
     local sciencePage = widgets.Panel {
       subviews = {}}
@@ -2249,11 +2077,6 @@ function Librarian ()
                                      key = keybindings.authors.key,
                                      key_sep = '()'},
                              {text = " Authors Page ",
-                              pen = COLOR_LIGHTBLUE}, 
-                             {text = "",
-                                     key = keybindings.interactions.key,
-                                     key_sep = '()'},
-                             {text = " Interactions Page ",
                               pen = COLOR_LIGHTBLUE}, NEWLINE, NEWLINE, NEWLINE,
                              "Philosophy (0)", NEWLINE,
                              "Philosophy (1)", NEWLINE,
@@ -2437,11 +2260,6 @@ function Librarian ()
                                      key = keybindings.authors.key,
                                      key_sep = '()'},
                              {text = " Authors Page ",
-                              pen = COLOR_LIGHTBLUE}, 
-                             {text = "",
-                                     key = keybindings.interactions.key,
-                                     key_sep = '()'},
-                             {text = " Interactions Page ",
                               pen = COLOR_LIGHTBLUE}, NEWLINE, NEWLINE,
                              {text = "Value           "},
                              {text = "3 2 1 ",
@@ -2463,9 +2281,10 @@ function Librarian ()
     
     local values_background = {}
     
-    for i, value in ipairs (df.value_type) do
+    for i, value in ipairs (df.value_type) do    
+      Values_Page.Matrix [i] = {}
+
       if i ~= df.value_type.NONE then
-        Values_Page.Matrix [i] = {}
         table.insert (values_background, df.value_type [i])
       
         for k = -3, 3 do
@@ -2615,11 +2434,6 @@ function Librarian ()
                                      key = keybindings.values.key,
                                      key_sep = '()'},
                              {text = " Values Page ",
-                              pen = COLOR_LIGHTBLUE}, 
-                             {text = "",
-                                     key = keybindings.interactions.key,
-                                     key_sep = '()'},
-                             {text = " Interactions Page ",
                               pen = COLOR_LIGHTBLUE}, NEWLINE, NEWLINE,
                              {text = "Authors"}},
                      frame = {l = 0, t = 1, y_align = 0}}
@@ -2722,130 +2536,6 @@ function Librarian ()
     table.insert (Authors_Page.Active_List, Authors_Page.Works_List)
     table.insert (Authors_Page.Active_List, Authors_Page.Book_List)
 
-    local interactionsPage = widgets.Panel {
-      subviews = {}}
-      
-    Interactions_Page.Background =
-      widgets.Label {text = {{text = "Help/Info",
-                                      key = keybindings.help.key,
-                                      key_sep = '()'},NEWLINE,
-                             {text = "",
-                                     key = keybindings.main.key,
-                                     key_sep = '()'},
-                             {text = " Main Page",
-                              pen = COLOR_LIGHTBLUE},
-                              {text = "",
-                                     key = keybindings.science.key,
-                                     key_sep = '()'},
-                             {text = " Science Page",
-                              pen = COLOR_LIGHTBLUE}, 
-                             {text = "",
-                                     key = keybindings.values.key,
-                                     key_sep = '()'},
-                             {text = " Values Page ",
-                              pen = COLOR_LIGHTBLUE}, 
-                             {text = "",
-                                     key = keybindings.authors.key,
-                                     key_sep = '()'},
-                             {text = " Authors Page ",
-                              pen = COLOR_LIGHTBLUE}, NEWLINE, NEWLINE,
-                             {text = "Interaction Works"}},
-                     frame = {l = 0, t = 1, y_align = 0}}
-    
-    table.insert (interactionsPage.subviews, Interactions_Page.Background)
-    
-    Interactions_Page.Interactions = Take_Interactions_Stock (Main_Page.Stock)
-    
-    local interactions_list = {}
-    
-    for i, element in ipairs (Interactions_Page.Interactions) do
-      local content = df.written_content.find (element [2] [1])
-      local title = ""
-    
-      if content then
-        title = content.title
-      end
-    
-      if title == "" then
-        title = "<Untitled>"
-      end
-
-      table.insert (interactions_list, title .. ": " .. element [1])
-    end
-    
-    Interactions_Page.Works_List =
-      widgets.List {view_id = "Works",
-                    choices = interactions_list,
-                    frame = {l = 1, t = 6, h = 15, yalign = 0},
-                    text_pen = COLOR_DARKGREY,
-                    cursor_pen = COLOR_YELLOW,
-                    inactive_pen = COLOR_GREY,
-                    active = true,
-                    on_select = self:callback ("show_interactions_details")}
-    
-    if #Interactions_Page.Interactions == 0 then
-      Interactions_Page.Details =
-        widgets.Label {text = " ",
-                       frame = {l = 65, t = 24, h = 20, y_align = 0},
-                       auto_height = false,
-                       text_pen = COLOR_WHITE}
-    else
-      Interactions_Page.Details =
-        widgets.Label {text = Produce_Details (Interactions_Page.Interactions [Interactions_Page.Works_List.selected] [2]),
-                       frame = {l = 65, t = 24, h = 20, y_align = 0},
-                       auto_height = false,
-                       text_pen = COLOR_WHITE}
-    end
-    
-    table.insert (interactionsPage.subviews, Interactions_Page.Works_List)    
-    table.insert (interactionsPage.subviews, Interactions_Page.Details)
-    
-    Interactions_Page.Background_2 =
-      widgets.Label {text = {{text = "                                                                 Details"}},
-                     frame = {l = 0, t = 22, y_align = 0}}
-    
-    table.insert (interactionsPage.subviews, Interactions_Page.Background_2)
-    
-    Interactions_Page.Book_Order_Label =
-      widgets.Label {text = {{text = "",
-                                     key = keybindings.forbid_book.key,
-                                     key_sep = '()'},
-                             {text = " Toggle Forbid Flag ",
-                              pen = COLOR_LIGHTBLUE},
-                             {text = "",
-                                     key = keybindings.dump_book.key,
-                                     key_sep = '()'},
-                             {text = " Toggle Dump Flag",
-                              pen = COLOR_LIGHTBLUE},
-                             NEWLINE,
-                             {text = "",
-                                     key = keybindings.trader_book.key,
-                                     key_sep = '()'},
-                             {text = " Toggle Trader Flag ",
-                              pen = COLOR_LIGHTBLUE},
-                             {text = "",
-                                     key = keybindings.zoom.key,
-                                     key_sep = '()'},
-                             {text = " Zoom to book (return with 'O')",
-                              pen = COLOR_LIGHTBLUE}},
-                     frame = {l = 65, t = 46, y_align = 0},
-                     visible = false}
-                     
-    table.insert (interactionsPage.subviews, Interactions_Page.Book_Order_Label)
-    
-    Interactions_Page.Book_Label =
-      widgets.Label {text = "Books: O/C = Original/Copy, F = Forbidden, D = Dump, T = Trader, I = In Inventory",
-                     frame = {l = 65, t = 48, y_align = 0},
-                     text_pen = COLOR_WHITE}
-    
-    table.insert (interactionsPage.subviews, Interactions_Page.Book_Label)
-
-    Interactions_Page.Active_List = {}
-    
-    table.insert (Interactions_Page.Active_List, Interactions_Page.Works_List)
-
-    Main_Page.Interaction_Works:setText (tostring (#Interactions_Page.Works_List.choices))
-
     local hiddenPage = widgets.Panel {
       subviews = {}}
            
@@ -2863,7 +2553,6 @@ function Librarian ()
                    sciencePage,
                    valuesPage,
                    authorsPage,
-                   interactionsPage,
                    hiddenPage,
                    helpPage},view_id = "pages",
                    }
@@ -3002,16 +2691,6 @@ function Librarian ()
   
   --==============================================================
 
-  function Ui:show_interactions_details (index, choice)
-    if Interactions_Page.Works_List then  --  Else initiation
-      if Interactions_Page.Works_List.active then
-        Interactions_Page.Details:setText (Produce_Details (Interactions_Page.Interactions [Interactions_Page.Works_List.selected] [2]))
-      end
-    end
-  end
-  
-  --==============================================================
-
   function Ui:onInput (keys)
     if keys.LEAVESCREEN_ALL then
         self:dismiss ()
@@ -3033,9 +2712,6 @@ function Librarian ()
           
         elseif Pre_Help_Focus == "Authors" then
           self.subviews.pages:setSelected (4)
-          
-        elseif Pre_Help_Focus == "Interactions" then
-          self.subviews.pages:setSelected (5)
         end
         
         Focus = Pre_Help_Focus
@@ -3070,16 +2746,14 @@ function Librarian ()
     elseif keys [keybindings.main.key] and 
            (Focus == "Science" or
             Focus == "Values" or
-            Focus == "Authors" or
-            Focus == "Interactions") then
+            Focus == "Authors") then
       Focus = "Main"
       self.subviews.pages:setSelected (1)
             
     elseif keys [keybindings.science.key] and 
            (Focus == "Main" or
             Focus == "Values" or
-            Focus == "Authors" or
-            Focus == "Interactions") then
+            Focus == "Authors") then
       Focus = "Science"
       Populate_Own_Remote_Science ()
       self.subviews.pages:setSelected (2)
@@ -3087,8 +2761,7 @@ function Librarian ()
     elseif keys [keybindings.values.key] and 
            (Focus == "Main" or
             Focus == "Science" or
-            Focus == "Authors" or
-            Focus == "Interactions") then
+            Focus == "Authors") then
       Focus = "Values"
       Populate_Own_Remote_Values ()
       self.subviews.pages:setSelected (3)
@@ -3096,18 +2769,9 @@ function Librarian ()
     elseif keys [keybindings.authors.key] and 
            (Focus == "Main" or
             Focus == "Science" or
-            Focus == "Values" or
-            Focus == "Interactions") then
+            Focus == "Values") then
       Focus = "Authors"
       self.subviews.pages:setSelected (4)
-            
-    elseif keys [keybindings.interactions.key] and 
-           (Focus == "Main" or
-            Focus == "Science" or
-            Focus == "Values" or
-            Focus == "Authors") then
-      Focus = "Interactions"
-      self.subviews.pages:setSelected (5)
             
     elseif keys [keybindings.ook.key] and
            Focus == "Hidden" then
@@ -3122,9 +2786,6 @@ function Librarian ()
       
       elseif Pre_Hiding_Focus == "Authors" then
         self.subviews.pages:setSelected (4)
-      
-      elseif Pre_Hiding_Focus == "Interactions" then
-        self.subviews.pages:setSelected (5)
       end
       
       Focus = Pre_Hiding_Focus
@@ -3511,9 +3172,9 @@ function Librarian ()
       if item.pos.x ~= -30000 and
          item.pos.y ~= -30000 and
          item.pos.z ~= -30000 then
-        local pos, key = Book_Location_And_Access_Key (item)
+         local pos, key = Book_Location_And_Access_Key (item)
 
-        persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.OPTIONS]] = true,
+         persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.OPTIONS]] = true,
                                            [df.interface_key [df.interface_key.LEAVESCREEN]] = true})  --  To exit any competing view mode.
         persist_screen:sendInputToParent (key)
         df.global.cursor.x = pos.x
@@ -3526,7 +3187,7 @@ function Librarian ()
         
         Pre_Hiding_Focus = Focus
         Focus = "Hidden"      
-        self.subviews.pages:setSelected (6)
+        self.subviews.pages:setSelected (5)
         self.transparent = true
       end
       
