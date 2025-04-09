@@ -653,6 +653,7 @@ function Librarian ()
              desc = "Rotates to the previous list"},
 --###    help = {key = "HELP",  --  Restore when key has been restored
     help = {key = "STRING_A063",  --###  Doesn't work, as the character isn't actually bound to the help functionality, but doesn't generate an error.
+                                  -- worked around that by manually triggering :onHelp()
             desc= "Show this help/info"}}
             
   local Content_Type_Selected = 1
@@ -1994,7 +1995,8 @@ function Librarian ()
   --============================================================
 
   function Ui:onHelp ()
-    self.subviews.pages:setSelected (6)
+--    self.subviews.pages:setSelected (6)
+    self.subviews.pages:setSelected (7) -- the help page is actually 7, what was going on here?
     Pre_Help_Focus = Focus
     Focus = "Help"
   end
@@ -3045,6 +3047,11 @@ function Librarian ()
       else  --###  Should add confirmation
         self:dismiss ()
       end
+    end
+
+    -- manually fire onHelp, because the API no longer works.
+    if keys [keybindings.help.key] then
+      self:onHelp()
     end
 
     if keys [keybindings.content_type.key] and
