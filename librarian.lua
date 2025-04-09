@@ -647,9 +647,9 @@ function Librarian ()
             desc = "Zoom to a book"},
     ook = {key = "CUSTOM_SHIFT_O",
            desc = "Bring the Librarian out of hiding"},
-    left = {key = "KEYBOARD_CURSOR_LEFT",
+    left = {key = "KEYBOARD_CURSOR_LEFT",        -- in 0.50+, CURSOR_LEFT and CURSOR_RIGHT are now bound to the a and d keys.
             desc = "Rotates to the next list"},
-    right = {key = "KEYBOARD_CURSOR_RIGHT",
+    right = {key = "KEYBOARD_CURSOR_RIGHT",      -- KEYBOARD_CURSOR_LEFT and KEYBOARD_CURSOR_RIGHT are the arrow keys.
              desc = "Rotates to the previous list"},
 --###    help = {key = "HELP",  --  Restore when key has been restored
     help = {key = "STRING_A063",  --###  Doesn't work, as the character isn't actually bound to the help functionality, but doesn't generate an error.
