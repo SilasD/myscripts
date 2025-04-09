@@ -647,9 +647,9 @@ function Librarian ()
             desc = "Zoom to a book"},
     ook = {key = "CUSTOM_SHIFT_O",
            desc = "Bring the Librarian out of hiding"},
-    left = {key = "CURSOR_LEFT",
+    left = {key = "KEYBOARD_CURSOR_LEFT",
             desc = "Rotates to the next list"},
-    right = {key = "CURSOR_RIGHT",
+    right = {key = "KEYBOARD_CURSOR_RIGHT",
              desc = "Rotates to the previous list"},
 --###    help = {key = "HELP",  --  Restore when key has been restored
     help = {key = "STRING_A063",  --###  Doesn't work, as the character isn't actually bound to the help functionality, but doesn't generate an error.
@@ -3521,9 +3521,9 @@ function Librarian ()
         df.global.cursor.x = pos.x
         df.global.cursor.y = pos.y
         df.global.cursor.z = pos.z
-        persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.CURSOR_LEFT]] = true})  --  Jiggle to get DF to update.
+        persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.KEYBOARD_CURSOR_LEFT]] = true})  --  Jiggle to get DF to update.
         if item.pos.x ~= 0 then
-          persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.CURSOR_RIGHT]] = true})
+          persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.KEYBOARD_CURSOR_RIGHT]] = true})
         end
         
         Pre_Hiding_Focus = Focus
@@ -3603,9 +3603,9 @@ function Librarian ()
         df.global.cursor.x = pos.x
         df.global.cursor.y = pos.y
         df.global.cursor.z = pos.z
-        persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.CURSOR_LEFT]] = true})  --  Jiggle to get DF to update.
+        persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.KEYBOARD_CURSOR_LEFT]] = true})  --  Jiggle to get DF to update.
         if item.pos.x ~= 0 then
-          persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.CURSOR_RIGHT]] = true})
+          persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.KEYBOARD_CURSOR_RIGHT]] = true})
         end
         
         Pre_Hiding_Focus = Focus
@@ -3685,9 +3685,9 @@ function Librarian ()
         df.global.cursor.x = pos.x
         df.global.cursor.y = pos.y
         df.global.cursor.z = pos.z
-        persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.CURSOR_LEFT]] = true})  --  Jiggle to get DF to update.
+        persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.KEYBOARD_CURSOR_LEFT]] = true})  --  Jiggle to get DF to update.
         if item.pos.x ~= 0 then
-          persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.CURSOR_RIGHT]] = true})
+          persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.KEYBOARD_CURSOR_RIGHT]] = true})
         end
         
         Pre_Hiding_Focus = Focus
@@ -3770,9 +3770,9 @@ function Librarian ()
         df.global.cursor.x = pos.x
         df.global.cursor.y = pos.y
         df.global.cursor.z = pos.z
-        persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.CURSOR_LEFT]] = true})  --  Jiggle to get DF to update.
+        persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.KEYBOARD_CURSOR_LEFT]] = true})  --  Jiggle to get DF to update.
         if item.pos.x ~= 0 then
-          persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.CURSOR_RIGHT]] = true})
+          persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.KEYBOARD_CURSOR_RIGHT]] = true})
         end
         
         Pre_Hiding_Focus = Focus
