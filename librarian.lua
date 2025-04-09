@@ -15,6 +15,9 @@ local guiScript = require 'gui.script'
 local utils = require 'utils'
 local Ui
 
+local translateName = ({dfhack.safecall(function() return dfhack.TranslateName; end)})[2]  -- voodoo to get a working API call,
+        or ({dfhack.safecall(function() return dfhack.translation.translateName; end)})[2] -- because it was renamed in DFHack v50.15-r2.
+
 --=====================================
 
 local values = {[df.value_type.LAW] =
@@ -916,7 +919,7 @@ function Librarian ()
         if unit and
            unit.civ_id == civ_id and
            not unit.flags2.visitor then
-          local author = dfhack.TranslateName (hf.name, true) .. "/" .. dfhack.TranslateName (hf.name, false)
+          local author = translateName (hf.name, true) .. "/" .. translateName (hf.name, false)
           local found = false
 
           for k, res in ipairs (Result) do
@@ -1084,7 +1087,7 @@ function Librarian ()
     local hf = df.historical_figure.find (Id)
     
     if hf then
-      return dfhack.TranslateName (hf.name, true) .. "/" .. dfhack.TranslateName (hf.name, false)
+      return translateName (hf.name, true) .. "/" .. translateName (hf.name, false)
       
     else
       return "<Unknown histfig>"
@@ -1097,8 +1100,8 @@ function Librarian ()
     local entity = df.historical_entity.find (Id)
       
     if entity then
-      return dfhack.TranslateName (entity.name, true)-- .. "/" ..
-             --dfhack.TranslateName (entity.name, false)
+      return translateName (entity.name, true)-- .. "/" ..
+             --translateName (entity.name, false)
              
     else
       return "<Unknown entity>"
@@ -1111,8 +1114,8 @@ function Librarian ()
     local site = df.world_site.find (Id)
       
     if site then
-      return dfhack.TranslateName (site.name, true) .. "/" ..
-             dfhack.TranslateName (site.name, false)
+      return translateName (site.name, true) .. "/" ..
+             translateName (site.name, false)
              
     else
       return "<Unknown site>"
@@ -1126,8 +1129,8 @@ function Librarian ()
     
     if site then
       return df.world_site_type [site.type] .. " " ..
-             dfhack.TranslateName (site.name, true) .. "/" ..
-             dfhack.TranslateName (site.name, false)
+             translateName (site.name, true) .. "/" ..
+             translateName (site.name, false)
              
     else
       return "<Unknown site>"
@@ -1140,8 +1143,8 @@ function Librarian ()
     local region = df.world_region.find (Id)
       
     if region then
-      return dfhack.TranslateName (region.name, true) .. "/" ..
-             dfhack.TranslateName (region.name, false)
+      return translateName (region.name, true) .. "/" ..
+             translateName (region.name, false)
              
     else
       return "<Unknown region>"
@@ -1154,8 +1157,8 @@ function Librarian ()
     local region = df.world_underground_region.find (Id)
       
     if region then
-      return dfhack.TranslateName (region.name, true) .. "/" ..
-             dfhack.TranslateName (region.name, false)
+      return translateName (region.name, true) .. "/" ..
+             translateName (region.name, false)
              
     else
       return "<Unknown underground region>"
@@ -1286,7 +1289,7 @@ function Librarian ()
         end
           
         if entity.name then
-          name = dfhack.TranslateName (entity.name, true) .. "/" .. dfhack.TranslateName (entity.name, false)
+          name = translateName (entity.name, true) .. "/" .. translateName (entity.name, false)
           
         else
           name "<unknown name>"
@@ -1525,7 +1528,7 @@ function Librarian ()
             
             if schedule.type == df.occasion_schedule_type.DANCE_COMPETITION then
               if schedule.reference ~= -1 then
-                competition_text = "Dance Competition using the " .. dfhack.TranslateName (df.global.world.dance_forms.all [schedule.reference].name, true) .. " dance form"
+                competition_text = "Dance Competition using the " .. translateName (df.global.world.dance_forms.all [schedule.reference].name, true) .. " dance form"
                 
               else
                 competition_text = "Dance Competition"
@@ -1533,7 +1536,7 @@ function Librarian ()
               
             elseif schedule.type == df.occasion_schedule_type.MUSICAL_COMPETITION then
               if schedule.reference ~= -1 then
-                competition_text = "Musical Competition using the " .. dfhack.TranslateName (df.global.world.musical_forms.all [schedule.reference].name, true) .. " musical form"
+                competition_text = "Musical Competition using the " .. translateName (df.global.world.musical_forms.all [schedule.reference].name, true) .. " musical form"
                 
               else
                 competition_text = "Musical Competition"
@@ -1541,7 +1544,7 @@ function Librarian ()
               
             elseif schedule.type == df.occasion_schedule_type.POETRY_COMPETITION then
               if schedule.reference ~= -1 then
-                competition_text = "Poetry Competition using the " .. dfhack.TranslateName (df.global.world.poetical_forms.all [schedule.reference].name, true) .. " poetical form"
+                competition_text = "Poetry Competition using the " .. translateName (df.global.world.poetical_forms.all [schedule.reference].name, true) .. " poetical form"
                 
               else
                 competition_text = "Poetry Competition"
@@ -1629,13 +1632,13 @@ function Librarian ()
         table.insert (text, wrap ("Reference: Written Contents Titled " .. df.global.world.written_contents.all [ref.written_content_id].title .. "\n"))
          
       elseif ref._type == df.general_ref_poetic_formst then
-        table.insert (text, wrap ("Reference: Poetic Form " .. dfhack.TranslateName (df.global.world.poetic_forms.all [ref.poetic_form_id].name, true) .. "\n"))
+        table.insert (text, wrap ("Reference: Poetic Form " .. translateName (df.global.world.poetic_forms.all [ref.poetic_form_id].name, true) .. "\n"))
       
       elseif ref._type == df.general_ref_musical_formst then
-        table.insert (text, wrap ("Reference: Musical Form " .. dfhack.TranslateName (df.global.world.musical_forms.all [ref.musical_form_id].name, true) .. "\n"))
+        table.insert (text, wrap ("Reference: Musical Form " .. translateName (df.global.world.musical_forms.all [ref.musical_form_id].name, true) .. "\n"))
       
       elseif ref._type == df.general_ref_dance_formst then
-        table.insert (text, wrap ("Reference: Dance Form " .. dfhack.TranslateName (df.global.world.dance_forms.all [ref.dance_form_id].name, true) .. "\n"))
+        table.insert (text, wrap ("Reference: Dance Form " .. translateName (df.global.world.dance_forms.all [ref.dance_form_id].name, true) .. "\n"))
       
       else
         table.insert (text, wrap ("Reference: *UNKNOWN* " .. tostring (ref._type) .. " information\n"))
@@ -1661,7 +1664,7 @@ function Librarian ()
     local Local = false
     
     if hf then
---      author = dfhack.TranslateName (hf.name, true) .. "/" .. dfhack.TranslateName (hf.name, false)
+--      author = translateName (hf.name, true) .. "/" .. translateName (hf.name, false)
       local unit = df.unit.find (hf.unit_id)
       
       if unit and
