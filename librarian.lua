@@ -15,8 +15,17 @@ local guiScript = require 'gui.script'
 local utils = require 'utils'
 local Ui
 
+-- Compatibility
+
 local translateName = ({dfhack.safecall(function() return dfhack.TranslateName; end)})[2]  -- voodoo to get a working API call,
         or ({dfhack.safecall(function() return dfhack.translation.translateName; end)})[2] -- because it was renamed in DFHack v50.15-r2.
+
+local DF_pre_50 = (tonumber(({string.find(dfhack.getDFVersion(), "^v?(%d+%.%d+)")})[3]) < 0.50)
+
+-- in 0.50+, CURSOR_LEFT and CURSOR_RIGHT are now bound to the a and d keys.
+--   KEYBOARD_CURSOR_LEFT and KEYBOARD_CURSOR_RIGHT are the arrow keys.
+local Cursor_Left =  (DF_pre_50) and "CURSOR_LEFT"  or "KEYBOARD_CURSOR_LEFT"
+local Cursor_Right = (DF_pre_50) and "CURSOR_RIGHT" or "KEYBOARD_CURSOR_RIGHT"
 
 --=====================================
 
@@ -605,8 +614,7 @@ local knowledge =
 
 function Librarian ()
   if not dfhack.isMapLoaded () then
-    dfhack.printerr ("Error: This script requires a Fortress Mode embark to be loaded.")
-    return
+    qerror("Error: This script requires a Fortress Mode embark to be loaded.")
   end
   
   local Focus = "Main"
@@ -647,13 +655,11 @@ function Librarian ()
             desc = "Zoom to a book"},
     ook = {key = "CUSTOM_SHIFT_O",
            desc = "Bring the Librarian out of hiding"},
-    left = {key = "KEYBOARD_CURSOR_LEFT",        -- in 0.50+, CURSOR_LEFT and CURSOR_RIGHT are now bound to the a and d keys.
+    left = {key = Cursor_Left,
             desc = "Rotates to the next list"},
-    right = {key = "KEYBOARD_CURSOR_RIGHT",      -- KEYBOARD_CURSOR_LEFT and KEYBOARD_CURSOR_RIGHT are the arrow keys.
+    right = {key = Cursor_Right,
              desc = "Rotates to the previous list"},
---###    help = {key = "HELP",  --  Restore when key has been restored
-    help = {key = "STRING_A063",  --###  Doesn't work, as the character isn't actually bound to the help functionality, but doesn't generate an error.
-                                  -- worked around that by manually triggering :onHelp()
+    help = {key = (DF_pre_50) and "HELP" or "STRING_A063",
             desc= "Show this help/info"}}
             
   local Content_Type_Selected = 1
@@ -666,6 +672,7 @@ function Librarian ()
   function Sort (list)
     local temp
     
+    -- holy shit, is this a bubble sort?
     for i, dummy in ipairs (list) do
       for k = i + 1, #list do
         if df.written_content.find (list [k] [1]).title < df.written_content.find (list [i] [1]).title then
@@ -1964,6 +1971,7 @@ function Librarian ()
   --============================================================
  
   function Ui:onRenderFrame (dc, rect)
+
     if self.transparent then
       self:renderParent ()
       dfhack.screen.paintString (COLOR_LIGHTRED, ook_start_x, rect.y2, ook_key_string)
@@ -1982,7 +1990,11 @@ function Librarian ()
         dc:fill (rect, self.frame_background)
       end
 
-      gui.paint_frame (dc, rect, self.frame_style, self.frame_title)
+      if DF_pre_50 then
+        gui.paint_frame (rect.x1, rect.y1, rect.x2, rect.y2, self.frame_style, self.frame_title)
+      else
+        gui.paint_frame (dc, rect, self.frame_style, self.frame_title)
+      end
     end
   end
 
@@ -3049,8 +3061,8 @@ function Librarian ()
       end
     end
 
-    -- manually fire onHelp, because the API no longer works.
-    if keys [keybindings.help.key] then
+    -- manually fire onHelp, because the API no longer works in DF 0.50+ .
+    if not DF_pre_50 and keys [keybindings.help.key] then
       self:onHelp()
     end
 
@@ -3528,9 +3540,9 @@ function Librarian ()
         df.global.cursor.x = pos.x
         df.global.cursor.y = pos.y
         df.global.cursor.z = pos.z
-        persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.KEYBOARD_CURSOR_LEFT]] = true})  --  Jiggle to get DF to update.
+        persist_screen:sendInputToParent ({[df.interface_key [df.interface_key[Cursor_Left]]] = true})  --  Jiggle to get DF to update.
         if item.pos.x ~= 0 then
-          persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.KEYBOARD_CURSOR_RIGHT]] = true})
+          persist_screen:sendInputToParent ({[df.interface_key [df.interface_key[Cursor_Right]]] = true})
         end
         
         Pre_Hiding_Focus = Focus
@@ -3610,9 +3622,9 @@ function Librarian ()
         df.global.cursor.x = pos.x
         df.global.cursor.y = pos.y
         df.global.cursor.z = pos.z
-        persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.KEYBOARD_CURSOR_LEFT]] = true})  --  Jiggle to get DF to update.
+        persist_screen:sendInputToParent ({[df.interface_key [df.interface_key[Cursor_Left]]] = true})  --  Jiggle to get DF to update.
         if item.pos.x ~= 0 then
-          persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.KEYBOARD_CURSOR_RIGHT]] = true})
+          persist_screen:sendInputToParent ({[df.interface_key [df.interface_key[Cursor_Right]]] = true})
         end
         
         Pre_Hiding_Focus = Focus
@@ -3692,9 +3704,9 @@ function Librarian ()
         df.global.cursor.x = pos.x
         df.global.cursor.y = pos.y
         df.global.cursor.z = pos.z
-        persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.KEYBOARD_CURSOR_LEFT]] = true})  --  Jiggle to get DF to update.
+        persist_screen:sendInputToParent ({[df.interface_key [df.interface_key[Cursor_Left]]] = true})  --  Jiggle to get DF to update.
         if item.pos.x ~= 0 then
-          persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.KEYBOARD_CURSOR_RIGHT]] = true})
+          persist_screen:sendInputToParent ({[df.interface_key [df.interface_key[Cursor_Right]]] = true})
         end
         
         Pre_Hiding_Focus = Focus
@@ -3777,9 +3789,9 @@ function Librarian ()
         df.global.cursor.x = pos.x
         df.global.cursor.y = pos.y
         df.global.cursor.z = pos.z
-        persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.KEYBOARD_CURSOR_LEFT]] = true})  --  Jiggle to get DF to update.
+        persist_screen:sendInputToParent ({[df.interface_key [df.interface_key[Cursor_Left]]] = true})  --  Jiggle to get DF to update.
         if item.pos.x ~= 0 then
-          persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.KEYBOARD_CURSOR_RIGHT]] = true})
+          persist_screen:sendInputToParent ({[df.interface_key [df.interface_key[Cursor_Right]]] = true})
         end
         
         Pre_Hiding_Focus = Focus
