@@ -20,7 +20,7 @@ local Ui
 local translateName = ({dfhack.safecall(function() return dfhack.TranslateName; end)})[2]  -- voodoo to get a working API call,
         or ({dfhack.safecall(function() return dfhack.translation.translateName; end)})[2] -- because it was renamed in DFHack v50.15-r2.
 
-local DF_pre_50 = (tonumber(({string.find(dfhack.getDFVersion(), "^v?(%d+%.%d+)")})[3]) < 0.50)
+local DF_pre_50 = (tonumber(string.match(dfhack.getDFVersion(), "^v?(%d+%.%d+)")) < 0.50)
 
 -- in 0.50+, CURSOR_LEFT and CURSOR_RIGHT are now bound to the a and d keys.
 --   KEYBOARD_CURSOR_LEFT and KEYBOARD_CURSOR_RIGHT are the arrow keys.
