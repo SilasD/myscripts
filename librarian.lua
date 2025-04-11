@@ -612,6 +612,274 @@ local knowledge =
    
 --=====================================
 
+
+-- TODO note these are not populated or used (yet).
+
+---type string?[]  # in CP437
+Zmap_itemid_to_writing_title = {}		-- GLOBAL, PERSISTANT
+
+---type string?[]  # in CP437
+Zmap_itemid_to_writing_author_name = {}		-- GLOBAL, PERSISTANT
+
+---type (df.historical_figure.id|integer)?[]
+--	nil or -1 or index into df.historical_figure:get_vector()
+Zmap_itemid_to_writing_author_hfid = {}		-- GLOBAL, PERSISTANT
+
+-- probably I don't want to get into the weeds.
+---type (df.historical_figure.id|integer)?[]
+--	nil or -1 or index into df.historical_figure:get_vector()
+--Zmap_itemid_to_writing_subject_hfid = {} 	-- GLOBAL, PERSISTANT
+
+---type (df.written_content.id|integer)?[]
+--	nil or -1 or index into df.written_content:get_vector()
+Zmap_itemid_to_written_content_id = {}		-- GLOBAL, PERSISTANT
+
+---type (df.artifact_record.id|integer)?[]
+--	nil or -1 or index into df.artifact_record:get_vector()
+Zmap_itemid_to_artifact_id = {}			-- GLOBAL, PERSISTANT
+
+-- probably I don't want to get into the weeds.
+---type (df.world_site.id|integer)?[]
+--	nil or -1 or index into df.world_site:get_vector()
+--Zmap_itemid_to_world_site_id = {}		-- GLOBAL, PERSISTANT
+
+
+
+-- This function parses an item, filling in the title and author cache-maps, and returns the item title.
+--	TODO should it fill in all relevant cache-maps?
+--
+-- It expects to deal with a slab, a book, or a scroll.
+--
+---param item df.item_slabst|df.item_bookst|df.item_toolst|df.item.id|integer
+--			# an item or item.id that potentially has a written contents
+---return string	# a (possibly blank) writing title, in CP437.
+local function Zget_title( item )
+
+    if type(item) == "number" then
+	item = df.item.find(item)
+    end
+
+    -- note that in the case of a destroyed item, we cannot clean up the caches.
+    --    (unless we were passed an item id, but we've already destroyed that info.)
+    if item == nil then return ""; end
+
+    local title = map_itemid_to_writing_title[item.id]
+    if title ~= nil then 
+	return title
+    end
+
+    title = ""
+
+    if item.flags.artifact then
+	local aid = -1
+	for _,gref in ipairs(item.general_refs) do
+	    if df.general_ref_is_artifactst:is_instance(gref) then
+		aid = gref.artifact_id
+	    end
+	end
+	map_itemid_to_artifact_id[item.id] = aid
+    end
+
+    if df.item_slabst:is_instance(item) then
+
+	-- TODO should we only process artifacts?  should we only process secrets?
+	title = item.description
+	map_itemid_to_writing_title[item.id] = title
+
+-- getting into the weeds.
+--	if item.topic > 0 then
+--	    map_itemid_to_writing_subject_hfid[item.id] = item.topic
+--	end
+
+    elseif df.item_bookst:is_instance(item) then
+
+	title = item.title
+	map_itemid_to_writing_title[item.id] = item.title
+
+	local author_hfid = -1
+	for _, improvement in ipairs(item.improvements) do
+
+	    -- we assume there's at most one df.itemimprovement_pagesst in the vector.  no duplicate check.
+	    if df.itemimprovement_pagesst:is_instance(improvement) then
+
+		---type df.written_content.id|number
+		local wcid = (#improvement.contents > 0) and improvement.contents[0] or -1
+		map_itemid_to_written_content_id[item.id] = wcid
+
+		if (#improvement.contents > 1) then
+		    dprintf("warning: book %d has multiple contents, count ", 
+			    item.id, #improvement.contents)
+		end
+
+		-- TODO move this out of the improvements loop.  and out of the item-types if.
+		---type df.written_content
+		local content = df.written_content.find(wcid)
+
+		if content then
+		    if wcid ~= content.id then  -- this can't happen.
+			dprintf("warning: book %d df.written_content.id mismatch %d, %d", 
+				item.id, wcid, content.id)
+		    end
+		    -- TODO should the content.title override the item_bookst.title ?
+		    -- title = content.title
+		    author_hfid = content.author
+
+--[[		    -- getting into the weeds.
+		    for _,gref in (content.refs) do
+
+			if false then
+			elseif df.general_ref_sitest.is_instance(gref) then
+			    map_itemid_to_world_site_id[item.id] = gref.site_id
+			end
+		    end
+]]
+		end
+
+	    end -- is a pages improvement
+	end -- foreach improvements
+	
+	map_itemid_to_writing_author_hfid[item.id] = author_hfid
+	local hf = df.historical_figure.find(author_hfid)
+
+	local author = (hf) and translateName(hf.name) or ""
+	map_itemid_to_writing_author_name[item.id] = author
+
+	-- okay, we've set title, author_hfid, and author.  anything else to do?
+
+    elseif df.item_toolst:is_instance(item) and item.subtype.id == "ITEM_TOOL_SCROLL" then
+
+	local author_hfid = -1
+	for _, improvement in ipairs(item.improvements) do
+	    if df.itemimprovement_writingst:is_instance(improvement) then
+
+		---type df.written_content.id|number
+		local wcid = (#improvement.contents > 0) and improvement.contents[0] or -1
+		map_itemid_to_written_content_id[item.id] = wcid
+
+		if (#improvement.contents > 1) then
+		    dprintf("warning: scroll %d has multiple contents, count ", 
+			    item.id, #improvement.contents)
+		end
+
+		-- TODO move this out of the improvements loop.  and out of the item-types if.
+		---type df.written_content
+		local content = df.written_content.find(wcid)
+
+		if content then
+		    if wcid ~= content.id then  -- this can't happen.
+			dprintf("warning: book %d df.written_content.id mismatch %d, %d", 
+				item.id, wcid, content.id)
+		    end
+		    title = content.title
+		    author_hfid = content.author
+
+		end
+
+	    end
+	end
+
+	map_itemid_to_writing_author_hfid[item.id] = author_hfid
+	local hf = df.historical_figure.find(author_hfid)
+
+	local author = (hf) and translateName(hf.name) or ""
+	map_itemid_to_writing_author_name[item.id] = author
+
+	-- okay, we've set title, author_hfid, and author.  anything else to do?
+
+    else
+	-- complain?
+    end
+
+    -- TODO complain if author_hf.info.books doesn't have the book or scroll?
+    -- TODO complain if artifact name ~= title ?
+    -- TODO complain if artifact maker ~= item.maker ?
+
+    return title
+end
+
+
+local function Zcompare_items(item1, item2)
+-- TODO error if not a book, scroll, or slab.
+    local title1 = get_title(item1)	-- always returns a string.
+    local title2 = get_title(item2)
+
+    if title1 == title2 then
+	local wcid1 = map_itemid_to_written_content_id[item1.id] or -1
+	local wcid2 = map_itemid_to_written_content_id[item2.id] or -1
+	if wcid1 == wcid2 then 
+	    return (item1.id < item2.id)
+	end
+	return(wcid1 < wcid2)
+    end
+    return (title1 < title2)
+end
+
+
+---type table<df.written_content.id, string>
+map_written_content_id_to_title = map_written_content_id_to_title or {}
+
+
+local function Process_Item2 (Result2, item)
+
+    -- Result2 is a sparse table keyed on content_id, value is an array of items.
+    --		123 = { item#456 }
+    --		234 = { item#567, item#678, item#789}
+    --	    there are no duplicated items.
+
+    if item.flags.trader then return; end	--  Filter visitor owned items.
+    -- TODO is this logical? is this desired?
+    if item.flags.in_inventory then return; end	--  Filter carried items.
+    
+--[[
+    local title = get_title(item)		-- side effects: populates tables
+						--	map_itemid_to_writing_title
+						--	map_itemid_to_writing_author_name
+						--	map_itemid_to_writing_author_hfid
+						--	map_itemid_to_written_content_id
+						--	map_itemid_to_artifact_id
+]]
+
+    for i, improvement in ipairs (item.improvements) do
+	if improvement._type == df.itemimprovement_pagesst or
+		improvement._type == df.itemimprovement_writingst 
+	then
+	    for k, content_id in ipairs (improvement.contents) do
+
+		Result2[content_id] = Result2[content_id] or {}
+		table.insert(Result2[content_id], item)
+
+	    end
+	end
+    end
+
+end
+  
+
+-- Result is an array, values are a 2-element array
+--	element1 is the written_content.id, element2 is an array of items.
+-- we want to sort on the written_content.title
+-- TODO we also want to populate the cache maps as return_title() does.
+local function compare_Result_entries(a,b)
+
+    local titlea = map_written_content_id_to_title[a[1]]
+    if not titlea then
+	titlea = df.written_content.find(a[1]).title
+	map_written_content_id_to_title[a[1]] = titlea
+    end
+
+    local titleb = map_written_content_id_to_title[b[1]]
+    if not titleb then
+	titleb = df.written_content.find(b[1]).title
+	map_written_content_id_to_title[b[1]] = titleb
+    end
+
+    if titlea == titleb then
+	return (a[1] < b[1]) -- use the written_content_id as a tie breaker
+    end
+    return (titlea < titleb)
+end
+
+
 function Librarian ()
   if not dfhack.isMapLoaded () then
     qerror("Error: This script requires a Fortress Mode embark to be loaded.")
@@ -670,9 +938,15 @@ function Librarian ()
  --============================================================
 
   function Sort (list)
-    local temp
+    -- list is a Result, as used by Take_Stock().
+    -- Result is an array, values are a 2-element array
+    --	element1 is the written_content.content_id, element2 is a df.item[] array.
+
+    -- this sorts by the written_content's title.
     
-    -- holy shit, is this a bubble sort?
+    local temp
+
+    -- holy shit, is this a bubble sort?  it is, it is!
     for i, dummy in ipairs (list) do
       for k = i + 1, #list do
         if df.written_content.find (list [k] [1]).title < df.written_content.find (list [i] [1]).title then
@@ -856,6 +1130,39 @@ function Librarian ()
   
   --============================================================
 
+
+  function Take_Stock2 ()
+    local Result2 = {}
+    -- Result2 is a sparse table keyed on content_id, value is an array of items.
+    --		123 = { item#456 }
+    --		234 = { item#567, item#678, item#789 }
+    --	    there are no duplicated items.
+
+    for i, item in ipairs (df.global.world.items.other.BOOK) do
+      Process_Item2(Result2, item)
+    end
+    
+    for i, item in ipairs (df.global.world.items.other.TOOL) do
+      Process_Item2(Result2, item)
+    end
+
+    local Result = {}
+    -- Result is an array, values are a 2-element array
+    --	    element1 is the written_content.content_id, element2 is an array of items.
+
+    -- collapse the Result2 sparse table into the Result array.
+    for k,v in pairs(Result2) do		-- random order
+	table.insert(Result, { k, v } )
+    end
+    Result2 = {}
+
+    table.sort(Result, compare_Result_entries)
+
+    return Result
+  end
+  
+  --============================================================
+
   function Take_Science_Stock (Stock)
     local Result = {}
     
@@ -947,6 +1254,7 @@ function Librarian ()
     
     local temp
     
+    -- TODO here we have another bubble sort
     for i, dummy in ipairs (Result) do
       for k = i + 1, #Result do
         if Result [k] [1] < Result [i] [1] then
@@ -2146,7 +2454,11 @@ function Librarian ()
                      frame = {l = 73, t = 1, y_align = 0},
                      text_pen = COLOR_WHITE}
     
-    Main_Page.Stock = Take_Stock ()
+    Main_Page.Stock = Take_Stock2 ()
+
+--print('Take_Stock');printall_recurse(Take_Stock()) --;; debug    WARNING these dump a whole lot of data.
+--print('Take_Stock2');printall_recurse(Take_Stock2()) --;; debug  Only run them on maps with 4 or less books.
+
     Main_Page.Filtered_Stock = Filter_Stock (Main_Page.Stock, Content_Type_Selected, Reference_Filter)
 
     table.insert (Content_Type_Map, {name = {[false] = "All (" .. tostring (#Main_Page.Stock) .. ")",
