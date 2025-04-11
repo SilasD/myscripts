@@ -4141,3 +4141,14 @@ function Librarian ()
 end
 
 Librarian ()
+
+-- I have discovered that annotations
+--	https://github.com/LuaLS/lua-language-server/wiki/Annotations
+--	https://luals.github.io/wiki/annotations/
+-- cannot be used in DFHack under 0.50, due to an overbroad regex for detecting the module flag.
+-- The regex, found in DFHack 0.47.05-r6 hack/lua/dfhack.lua line 661, is
+--	%-%-@([^\n]+)
+-- and it is gmatched against the entire file text, as a single chunk.  Because there is no anchor, 
+-- it matches any dash-dash-atsymbol anywhere in the entire script being analyzed.
+-- So annotations, beginning with dash-dash-dash-atsymbol, are wrongly parsed as module flags.
+-- (Well.  They are wrongly parsed as ARBITRARY LUA CODE, but that's neither here nor there.)
