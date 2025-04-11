@@ -815,10 +815,6 @@ local function Zcompare_items(item1, item2)
 end
 
 
----type table<df.written_content.id, string>
-map_written_content_id_to_title = map_written_content_id_to_title or {}
-
-
 local function Process_Item2 (Result2, item)
 
     -- Result2 is a sparse table keyed on content_id, value is an array of items.
@@ -855,21 +851,26 @@ local function Process_Item2 (Result2, item)
 end
   
 
+---type table<df.written_content.id, string>
+map_written_content_id_to_title = map_written_content_id_to_title or {}
+
+
+-- compare two values in the Result array, for sorting.
 -- Result is an array, values are a 2-element array
---	element1 is the written_content.id, element2 is an array of items.
+--	element1 is the written_content.id, element2 is an array of df.item .
 -- we want to sort on the written_content.title
 -- TODO we also want to populate the cache maps as return_title() does.
 local function compare_Result_entries(a,b)
 
     local titlea = map_written_content_id_to_title[a[1]]
     if not titlea then
-	titlea = df.written_content.find(a[1]).title
+	titlea = tostring(df.written_content.find(a[1]).title)
 	map_written_content_id_to_title[a[1]] = titlea
     end
 
     local titleb = map_written_content_id_to_title[b[1]]
     if not titleb then
-	titleb = df.written_content.find(b[1]).title
+	titleb = tostring(df.written_content.find(b[1]).title)
 	map_written_content_id_to_title[b[1]] = titleb
     end
 
