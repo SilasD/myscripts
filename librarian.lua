@@ -648,6 +648,7 @@ Zmap_itemid_to_artifact_id = {}			-- GLOBAL, PERSISTANT
 
 
 
+-- NOT FINISHED
 -- This function parses an item, filling in the title and author cache-maps, and returns the item title.
 --	TODO should it fill in all relevant cache-maps?
 --
@@ -801,6 +802,7 @@ local function Zget_title( item )
 end
 
 
+-- NOT FINISHED
 local function Zcompare_items(item1, item2)
 -- TODO error if not a book, scroll, or slab.
     local title1 = get_title(item1)	-- always returns a string.
@@ -818,7 +820,7 @@ local function Zcompare_items(item1, item2)
 end
 
 
-local function Process_Item2 (Result2, item)
+local function Take_Stock2_Process_Item2 (Result2, item)
 
     -- Result2 is a sparse table keyed on content_id, value is an array of items.
     --		123 = { item#456 }
@@ -828,7 +830,7 @@ local function Process_Item2 (Result2, item)
     if item.flags.trader then return; end	--  Filter visitor owned items.
     -- TODO is this logical? is this desired?
     if item.flags.in_inventory then return; end	--  Filter carried items.
-    
+
 --[[
     local title = get_title(item)		-- side effects: populates tables
 						--	map_itemid_to_writing_title
@@ -852,8 +854,10 @@ local function Process_Item2 (Result2, item)
     end
 
 end
-  
 
+
+-- used by Take_Stock2_compare_Result_entries()
+-- does NOT contain all written_content, only the ones present in the fort.
 ---type table<df.written_content.id, string>
 map_written_content_id_to_title = map_written_content_id_to_title or {}
 
@@ -863,7 +867,7 @@ map_written_content_id_to_title = map_written_content_id_to_title or {}
 --	element1 is the written_content.id, element2 is an array of df.item .
 -- we want to sort on the written_content.title
 -- TODO we also want to populate the cache maps as return_title() does.
-local function compare_Result_entries(a,b)
+local function Take_Stock2_compare_Result_entries(a,b)
 
     local titlea = map_written_content_id_to_title[a[1]]
     if not titlea then
@@ -883,6 +887,37 @@ local function compare_Result_entries(a,b)
     return (titlea < titleb)
 end
 
+
+local function Take_Stock2 ()
+    local Result2 = {}
+    -- Result2 is a sparse table keyed on content_id, value is an array of items.
+    --		123 = { item#456 }
+    --		234 = { item#567, item#678, item#789 }
+    --	    there are no duplicated items.
+
+    for i, item in ipairs (df.global.world.items.other.BOOK) do
+	Take_Stock2_Process_Item2(Result2, item)
+    end
+    
+    for i, item in ipairs (df.global.world.items.other.TOOL) do
+	Take_Stock2_Process_Item2(Result2, item)
+    end
+
+    local Result = {}
+    -- Result is an array, values are a 2-element array
+    --	    element1 is the written_content.content_id, element2 is an array of items.
+
+    -- collapse the Result2 sparse table into the Result array.
+    for k,v in pairs(Result2) do		-- random order
+	table.insert(Result, { k, v } )
+    end
+    Result2 = {}
+
+    table.sort(Result, Take_Stock2_compare_Result_entries)
+
+    return Result
+end
+  
 
 function Librarian ()
   if not dfhack.isMapLoaded () then
@@ -941,7 +976,8 @@ function Librarian ()
 
  --============================================================
 
-  function Sort (list)
+  -- DEPRECATED
+  function ZSort (list)
     -- list is a Result, as used by Take_Stock().
     -- Result is an array, values are a 2-element array
     --	element1 is the written_content.content_id, element2 is a df.item[] array.
@@ -1082,7 +1118,8 @@ function Librarian ()
             
   --============================================================
 
-  function Process_Item (Result, item)
+  -- DEPRECATED
+  function ZProcess_Item (Result, item)
     local found
     
     if item.pos.x == -30000 or
@@ -1116,18 +1153,19 @@ function Librarian ()
   
   --============================================================
 
-  function Take_Stock ()
+  -- DEPRECATED
+  function ZTake_Stock ()
     local Result = {}
     
     for i, item in ipairs (df.global.world.items.other.BOOK) do
-      Process_Item (Result, item)
+      ZProcess_Item (Result, item)
     end
     
     for i, item in ipairs (df.global.world.items.other.TOOL) do
-      Process_Item (Result, item)
+      ZProcess_Item (Result, item)
     end
     
-    Sort (Result)
+    ZSort (Result)
     
     return Result
   end
@@ -1135,36 +1173,6 @@ function Librarian ()
   --============================================================
 
 
-  function Take_Stock2 ()
-    local Result2 = {}
-    -- Result2 is a sparse table keyed on content_id, value is an array of items.
-    --		123 = { item#456 }
-    --		234 = { item#567, item#678, item#789 }
-    --	    there are no duplicated items.
-
-    for i, item in ipairs (df.global.world.items.other.BOOK) do
-      Process_Item2(Result2, item)
-    end
-    
-    for i, item in ipairs (df.global.world.items.other.TOOL) do
-      Process_Item2(Result2, item)
-    end
-
-    local Result = {}
-    -- Result is an array, values are a 2-element array
-    --	    element1 is the written_content.content_id, element2 is an array of items.
-
-    -- collapse the Result2 sparse table into the Result array.
-    for k,v in pairs(Result2) do		-- random order
-	table.insert(Result, { k, v } )
-    end
-    Result2 = {}
-
-    table.sort(Result, compare_Result_entries)
-
-    return Result
-  end
-  
   --============================================================
 
   function Take_Science_Stock (Stock)
@@ -2504,8 +2512,24 @@ function Librarian ()
     
     Main_Page.Stock = Take_Stock2 ()
 
---print('Take_Stock');printall_recurse(Take_Stock()) --;; debug    WARNING these dump a whole lot of data.
---print('Take_Stock2');printall_recurse(Take_Stock2()) --;; debug  Only run them on maps with 4 or less books.
+    if false and #Main_Page.Stock <= 4 then  -- inspect data structures to ensure they are identical.
+	-- WARNING these dump a whole lot of data.  Only run them on maps with 4 or less books.
+	print('ZTake_Stock');printall_recurse(ZTake_Stock())
+	print('Take_Stock2');printall_recurse(Take_Stock2())
+    end
+    if false then
+	print(#Main_Page.Stock, "local books and scrolls.")
+	local starttime = os.clock()
+	ZTake_Stock()
+	print("ZTake_Stock CPU time", os.clock() - starttime)
+	local starttime = os.clock()
+	Take_Stock2()
+	print("Take_Stock2 CPU time", os.clock() - starttime)
+	-- on a 0.47.05 fort with 12775 local books,
+	--	ZTake_Stock took 170.75 seconds,
+	--	Take_Stock2 took 0.167 seconds.
+	--	speedup of 1000 times.  Not 1000%.  1000 times.
+    end
 
     Main_Page.Filtered_Stock = Filter_Stock (Main_Page.Stock, Content_Type_Selected, Reference_Filter)
 
