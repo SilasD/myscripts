@@ -5,8 +5,10 @@
 librarian
 ================
 ]====]
-local dont_be_silly = false  --  'true' disables the "ook" part from the description of the return from hiding key.
-local ook_start_x = 10       --  x position of where the "ook" key description appears, in case the script clashes with something else.
+local dont_be_silly = false
+--  'true' disables the "ook" part from the description of the return from hiding key.
+local ook_start_x = 10
+--  x position of where the "ook" key description appears, in case the script clashes with something else.
 
 local gui = require 'gui'
 local dialog = require 'gui.dialogs'
@@ -17,8 +19,9 @@ local Ui
 
 -- Compatibility
 
-local translateName = ({dfhack.safecall(function() return dfhack.TranslateName; end)})[2]  -- voodoo to get a working API call,
-        or ({dfhack.safecall(function() return dfhack.translation.translateName; end)})[2] -- because it was renamed in DFHack v50.15-r2.
+-- voodoo to get a working API call, because it was renamed in DFHack v50.15-r2.
+local translateName = ({dfhack.safecall(function() return dfhack.TranslateName; end)})[2]
+        or ({dfhack.safecall(function() return dfhack.translation.translateName; end)})[2]
 
 local DF_pre_50 = (tonumber(string.match(dfhack.getDFVersion(), "^v?(%d+%.%d+)")) < 0.50)
 
@@ -293,7 +296,7 @@ local values = {[df.value_type.LAW] =
                  [1] = "values knowledge",
                  [2] = "views the pursuit of knowledge as deeply important",
                  [3] = "finds the quest for knowledge to be of the very highest value"}}
- 
+
 --=====================================
 
 local knowledge =
@@ -1176,7 +1179,8 @@ function Librarian ()
       
       for k, ref in ipairs (content.refs) do
         if ref._type == df.general_ref_knowledge_scholar_flagst then 
-          for l, flag in ipairs (ref.knowledge.flag_data.flags_0) do  --  Don't care which one, as they'll iterate of all bits regardless
+	  --  Don't care which one, as they'll iterate of all bits regardless
+          for l, flag in ipairs (ref.knowledge.flag_data.flags_0) do
             if flag then
               if not Result [ref.knowledge.flag_type] [l] then
                 Result [ref.knowledge.flag_type] [l] = {}
@@ -1283,7 +1287,8 @@ function Librarian ()
         
           for i, str in ipairs (df.global.world.raws.interactions [ref.interaction_id].str) do
             if str.value:find ("IS_NAME:", 1) ~= nil then
-              table.insert (Result, {str.value:sub (str.value:find (":", 1) + 1, str.value:len () - 1), element})
+              table.insert (Result, 
+			{str.value:sub (str.value:find (":", 1) + 1, str.value:len () - 1), element})
               resolved = true
               break
             end
@@ -1316,7 +1321,8 @@ function Librarian ()
     for i, content in ipairs (df.global.world.written_contents.all) do
       for k, ref in ipairs (content.refs) do
         if ref._type == df.general_ref_knowledge_scholar_flagst then 
-          for l, flag in ipairs (ref.knowledge.flag_data.flags_0) do  --  Don't care which one, as they'll iterate of all bits regardless
+	  --  Don't care which one, as they'll iterate of all bits regardless
+          for l, flag in ipairs (ref.knowledge.flag_data.flags_0) do
             if flag then
               local found = false
              
@@ -1614,7 +1620,7 @@ function Librarian ()
         
         if entity then
           table.insert (text, wrap ("Reference: The " ..  race .. " " ..
-                                    df.historical_entity_type [entity.type] .. " " .. name .. " information\n"))
+		df.historical_entity_type [entity.type] .. " " .. name .. " information\n"))
             
         else
           table.insert (text, wrap ("Reference: Unknown entity (culled?) information\n"))
@@ -1625,7 +1631,8 @@ function Librarian ()
         
         for i, str in ipairs (df.global.world.raws.interactions [ref.interaction_id].str) do
           if str.value:find ("IS_NAME:", 1) ~= nil then
-            table.insert (text, wrap ('Interaction reference: "' .. str.value:sub (str.value:find (":", 1) + 1, str.value:len () - 1) .. '"\n'))
+            table.insert (text, wrap ('Interaction reference: "' .. 
+		str.value:sub (str.value:find (":", 1) + 1, str.value:len () - 1) .. '"\n'))
             resolved = true
             break
           end
@@ -1751,7 +1758,8 @@ function Librarian ()
              event._type == df.history_event_entity_fled_sitest or            
              event._type == df.history_event_tactical_situationst or            
              event._type == df.history_event_squad_vs_squadst then            
-            table.insert (text, wrap ("Reference: Unsupported " .. tostring (event._type) .. " historical event information\n"))
+            table.insert (text, wrap ("Reference: Unsupported " .. tostring (event._type) 
+			.. " historical event information\n"))
 
           elseif event._type == df.history_event_created_sitest then
             table.insert (text, wrap ("Reference: " .. Entity_Name_Of (event.civ) .. " local government " ..
@@ -1765,7 +1773,10 @@ function Librarian ()
 
             if event.position_id ~= -1 and
                entity and
-               #entity.positions.own > event.position_id then  --  ### Had a case of a reference to index 2 on a vector length 2, with next index being 3...
+               #entity.positions.own > event.position_id then  
+	       --  ### Had a case of a reference to index 2 on a vector length 2, with next index being 3...
+
+
               position = " as " .. entity.positions.own [event.position_id].name [0]
             end
               
@@ -1775,7 +1786,10 @@ function Librarian ()
             
           elseif event._type == df.history_event_created_buildingst then
             table.insert (text, wrap ("Reference: " .. Entity_Name_Of (event.civ) .. " created " ..
-                                      df.abstract_building_type [event.structure] .. " in " ..  --### May be reference to buildings at site instead...
+
+				      --### May be reference to buildings at site instead...
+                                      df.abstract_building_type [event.structure] .. " in " ..
+
                                       Site_Name_Of (event.site) .. " by " ..
                                       HF_Name_Of (event.builder_hf) .. "\n"))
             
@@ -1798,7 +1812,8 @@ function Librarian ()
                                       Entity_Name_Of (event.defender_civ) .. "\n"))
           
           elseif event._type == df.history_event_add_hf_hf_linkst then
-            table.insert (text, wrap ("Reference: Added " .. HF_Name_Of (event.hf) .. " " .. df.histfig_hf_link_type [event.type] .. 
+            table.insert (text, wrap ("Reference: Added " .. HF_Name_Of (event.hf) .. " " .. 
+				      df.histfig_hf_link_type [event.type] .. 
                                       " vs " .. HF_Name_Of (event.hf_target) .. "\n"))
               
           elseif event._type == df.history_event_change_hf_statest then
@@ -1822,8 +1837,10 @@ function Librarian ()
                                       " because of " .. df.history_event_reason [event.reason] .. "\n"))
               
           elseif event._type == df.history_event_change_hf_jobst then
-            table.insert (text, wrap ("Reference: " .. HF_Name_Of (event.hfid) .. " changed job from " .. df.profession [event.old_job] .. " to " .. 
-                                      df.profession [event.new_job] .. " in " .. History_Location_Name_Of (event.site, event.region, event.layer) .. "\n"))
+            table.insert (text, wrap ("Reference: " .. HF_Name_Of (event.hfid) .. " changed job from " ..
+				df.profession [event.old_job] .. " to " .. 
+                                df.profession [event.new_job] .. " in " .. 
+				History_Location_Name_Of (event.site, event.region, event.layer) .. "\n"))
               
           elseif event._type == df.history_event_war_plundered_sitest then
             table.insert (text, wrap ("Reference: " .. Entity_Name_Of (event.attacker_civ) .. " attacked " ..
@@ -1833,7 +1850,8 @@ function Librarian ()
                                 
           elseif event._type == df.history_event_creature_devouredst then
             --### caste
-            table.insert (text, wrap ("Reference: The " .. df.global.world.raws.creatures.all [event.race].name [0] .. " " ..
+            table.insert (text, wrap ("Reference: The " .. 
+					df.global.world.raws.creatures.all [event.race].name [0] .. " " ..
                                       HF_Name_Of (event.victim) .. " was devoured by " ..
                                       HF_Name_Of (event.eater) .. " " ..
                                       Entity_Name_Of (event.entity) .. " " ..
@@ -1845,7 +1863,9 @@ function Librarian ()
             
             if schedule.type == df.occasion_schedule_type.DANCE_COMPETITION then
               if schedule.reference ~= -1 then
-                competition_text = "Dance Competition using the " .. translateName (df.global.world.dance_forms.all [schedule.reference].name, true) .. " dance form"
+                competition_text = "Dance Competition using the " .. 
+			translateName (df.global.world.dance_forms.all [schedule.reference].name, true) .. 
+			" dance form"
                 
               else
                 competition_text = "Dance Competition"
@@ -1853,7 +1873,9 @@ function Librarian ()
               
             elseif schedule.type == df.occasion_schedule_type.MUSICAL_COMPETITION then
               if schedule.reference ~= -1 then
-                competition_text = "Musical Competition using the " .. translateName (df.global.world.musical_forms.all [schedule.reference].name, true) .. " musical form"
+                competition_text = "Musical Competition using the " .. 
+			translateName (df.global.world.musical_forms.all [schedule.reference].name, true) .. 
+			" musical form"
                 
               else
                 competition_text = "Musical Competition"
@@ -1861,7 +1883,9 @@ function Librarian ()
               
             elseif schedule.type == df.occasion_schedule_type.POETRY_COMPETITION then
               if schedule.reference ~= -1 then
-                competition_text = "Poetry Competition using the " .. translateName (df.global.world.poetical_forms.all [schedule.reference].name, true) .. " poetical form"
+                competition_text = "Poetry Competition using the " .. 
+			translateName (df.global.world.poetical_forms.all [schedule.reference].name, true) .. 
+			" poetical form"
                 
               else
                 competition_text = "Poetry Competition"
@@ -1874,7 +1898,8 @@ function Librarian ()
               competition_text = "Wrestling Competition"
               
             elseif schedule.type == df.occasion_schedule_type.THROWING_COMPETITION then
-              competition_text = dfhack.items.getSubtypeDef (schedule.reference, schedule.reference2).name .. " Throwing Competition"
+              competition_text = dfhack.items.getSubtypeDef (schedule.reference, schedule.reference2).name .. 
+			" Throwing Competition"
               
             elseif schedule.type == df.occasion_schedule_type.GLADIATORY_COMPETITION then
               competition_text = "Gladiatorial Competition"
@@ -1883,7 +1908,8 @@ function Librarian ()
               competition_text = df.occasion_schedule_type [schedule.type]
             end
                         
-            table.insert (text, wrap ("Reference: " .. competition_text .. " at " .. History_Location_Name_Of (event.site, event.region, event.layer) .. "\n"))
+            table.insert (text, wrap ("Reference: " .. competition_text .. " at " .. 
+			History_Location_Name_Of (event.site, event.region, event.layer) .. "\n"))
             --### competitor_hf and winner_hf vectors
             
           elseif event._type == df.history_event_hf_relationship_deniedst then
@@ -1906,10 +1932,11 @@ function Librarian ()
             --### Reason
             
             table.insert (text, wrap ("Reference: " .. HF_Name_Of (event.histfig) .. " wrote " .. title ..
-                                      " at " .. History_Location_Name_Of (event.site, event.region, event.layer) .. "\n"))
+			" at " .. History_Location_Name_Of (event.site, event.region, event.layer) .. "\n"))
                                 
           else
-            table.insert (text, wrap ("Reference: *UNKNOWN* " .. tostring (event._type) .. " historical event information\n"))
+            table.insert (text, wrap ("Reference: *UNKNOWN* " .. tostring (event._type) .. 
+			" historical event information\n"))
           end
             
         else
@@ -1923,15 +1950,18 @@ function Librarian ()
         local hf = df.historical_figure.find (ref.hist_figure_id)
           
         if hf then
-          table.insert (text, wrap ("Reference: Biography of the " .. df.global.world.raws.creatures.all [hf.race].name [0] ..
-                                    " " .. HF_Name_Of (ref.hist_figure_id) .. "\n"))
+          table.insert (text, wrap ("Reference: Biography of the " .. 
+			df.global.world.raws.creatures.all [hf.race].name [0] ..
+                        " " .. HF_Name_Of (ref.hist_figure_id) .. "\n"))
           
         else
           table.insert (text, wrap ("Reference: Biography of unknown historical figure (culled?)\n"))
         end
           
       elseif ref._type == df.general_ref_knowledge_scholar_flagst then
-        for k, flag in ipairs (ref.knowledge.flag_data.flags_0) do  --  Iterates over all 32 bits regardless of enum value existence, so which "enum" we use doesn't matter
+
+	--  Iterates over all 32 bits regardless of enum value existence, so which "enum" we use doesn't matter
+        for k, flag in ipairs (ref.knowledge.flag_data.flags_0) do
           if flag then
             table.insert (text, wrap ("Reference: " .. knowledge [ref.knowledge.flag_type] [k] .. " knowledge\n"))
           end
@@ -1940,22 +1970,29 @@ function Librarian ()
       elseif ref._type == df.general_ref_value_levelst then
         local strength, level = value_strengh_of (ref.level)
           
-        table.insert (text, wrap ('Reference: Moves values towards "' .. values [ref.value] [strength] .. '" = ' .. level .. "\n"))
+        table.insert (text, wrap ('Reference: Moves values towards "' .. values [ref.value] [strength] .. 
+			'" = ' .. level .. "\n"))
         
       elseif ref._type == df.general_ref_languagest then
-        table.insert (text, wrap ("Reference: Dictionary of the " .. df.global.world.raws.language.translations [ref.anon_1].name .. " language\n")) --###
+        table.insert (text, wrap ("Reference: Dictionary of the " .. 
+			df.global.world.raws.language.translations [ref.anon_1].name .. " language\n"))
+			-- TODO in DF 0.50 (or before? check) .anon_1 was renamed .language_idx
           
       elseif ref._type == df.general_ref_written_contentst then
-        table.insert (text, wrap ("Reference: Written Contents Titled " .. df.global.world.written_contents.all [ref.written_content_id].title .. "\n"))
+        table.insert (text, wrap ("Reference: Written Contents Titled " .. 
+			df.global.world.written_contents.all [ref.written_content_id].title .. "\n"))
          
       elseif ref._type == df.general_ref_poetic_formst then
-        table.insert (text, wrap ("Reference: Poetic Form " .. translateName (df.global.world.poetic_forms.all [ref.poetic_form_id].name, true) .. "\n"))
+        table.insert (text, wrap ("Reference: Poetic Form " .. 
+			translateName (df.global.world.poetic_forms.all [ref.poetic_form_id].name, true) .. "\n"))
       
       elseif ref._type == df.general_ref_musical_formst then
-        table.insert (text, wrap ("Reference: Musical Form " .. translateName (df.global.world.musical_forms.all [ref.musical_form_id].name, true) .. "\n"))
+        table.insert (text, wrap ("Reference: Musical Form " .. 
+			translateName (df.global.world.musical_forms.all [ref.musical_form_id].name, true) .. "\n"))
       
       elseif ref._type == df.general_ref_dance_formst then
-        table.insert (text, wrap ("Reference: Dance Form " .. translateName (df.global.world.dance_forms.all [ref.dance_form_id].name, true) .. "\n"))
+        table.insert (text, wrap ("Reference: Dance Form " .. 
+			translateName (df.global.world.dance_forms.all [ref.dance_form_id].name, true) .. "\n"))
       
       else
         table.insert (text, wrap ("Reference: *UNKNOWN* " .. tostring (ref._type) .. " information\n"))
@@ -2086,8 +2123,10 @@ function Librarian ()
     local Remote_List = {}
     local Remote_List_Map = {}
     
-    if Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1] [Science_Page.Topic_List.selected - 1] then
-      for i, element in ipairs (Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1] [Science_Page.Topic_List.selected - 1]) do
+    if Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1] 
+			[Science_Page.Topic_List.selected - 1] then
+      for i, element in ipairs (Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1] 
+			[Science_Page.Topic_List.selected - 1]) do
         local content = df.written_content.find (element [1])
         local title = content.title
     
@@ -2101,8 +2140,10 @@ function Librarian ()
     
     Science_Page.Own_List:setChoices (Own_List, 1)
 
-    if Science_Page.Remote_Data_Matrix [Science_Page.Category_List.selected - 1] [Science_Page.Topic_List.selected - 1] then
-      for i, element in ipairs (Science_Page.Remote_Data_Matrix [Science_Page.Category_List.selected - 1] [Science_Page.Topic_List.selected - 1]) do
+    if Science_Page.Remote_Data_Matrix [Science_Page.Category_List.selected - 1] 
+			[Science_Page.Topic_List.selected - 1] then
+      for i, element in ipairs (Science_Page.Remote_Data_Matrix [Science_Page.Category_List.selected - 1] 
+			[Science_Page.Topic_List.selected - 1]) do
         local title = element.title
     
         if title == "" then
@@ -2130,8 +2171,10 @@ function Librarian ()
     local Remote_List = {}
     local Remote_List_Map = {}
     
-    if Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1] [Values_Page.Strength_List.selected - 4] then
-      for i, element in ipairs (Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1] [Values_Page.Strength_List.selected - 4]) do
+    if Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1] 
+			[Values_Page.Strength_List.selected - 4] then
+      for i, element in ipairs (Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1] 
+			[Values_Page.Strength_List.selected - 4]) do
         local content = df.written_content.find (element [1])
         local title = content.title
     
@@ -2145,8 +2188,10 @@ function Librarian ()
     
     Values_Page.Own_List:setChoices (Own_List)
 
-    if Values_Page.Remote_Data_Matrix [Values_Page.Values_List.selected - 1] [Values_Page.Strength_List.selected - 4] then
-      for i, element in ipairs (Values_Page.Remote_Data_Matrix [Values_Page.Values_List.selected - 1] [Values_Page.Strength_List.selected - 4]) do
+    if Values_Page.Remote_Data_Matrix [Values_Page.Values_List.selected - 1] 
+			[Values_Page.Strength_List.selected - 4] then
+      for i, element in ipairs (Values_Page.Remote_Data_Matrix [Values_Page.Values_List.selected - 1] 
+			[Values_Page.Strength_List.selected - 4]) do
         local title = element.title
     
         if title == "" then
@@ -2286,9 +2331,11 @@ function Librarian ()
       dfhack.screen.paintString (COLOR_LIGHTRED, ook_start_x, rect.y2, ook_key_string)
       
       if dont_be_silly then
-        dfhack.screen.paintString (COLOR_WHITE, ook_start_x + ook_key_string:len (), rect.y2, ": Return to The Librarian")
+        dfhack.screen.paintString (COLOR_WHITE, ook_start_x + ook_key_string:len (), rect.y2, 
+			": Return to The Librarian")
       else
-        dfhack.screen.paintString (COLOR_WHITE, ook_start_x + ook_key_string:len (), rect.y2, ": Ook! Return to The Librarian")
+        dfhack.screen.paintString (COLOR_WHITE, ook_start_x + ook_key_string:len (), rect.y2, 
+			": Ook! Return to The Librarian")
       end
   
     else
@@ -2462,14 +2509,18 @@ function Librarian ()
 
     Main_Page.Filtered_Stock = Filter_Stock (Main_Page.Stock, Content_Type_Selected, Reference_Filter)
 
-    table.insert (Content_Type_Map, {name = {[false] = "All (" .. tostring (#Main_Page.Stock) .. ")",
-                                             [true] = "All (" .. tostring (#Filter_Stock (Main_Page.Stock, Content_Type_Selected, true)) .. ")"},
-                                     index = -1})
+    table.insert (Content_Type_Map, {name = {
+		[false] = "All (" .. tostring (#Main_Page.Stock) .. ")",
+		[true] = "All (" .. tostring (#Filter_Stock (Main_Page.Stock, Content_Type_Selected, true)) .. ")"},
+		index = -1})
                                      
     for i = df.written_content_type._first_item, df.written_content_type._last_item do
-      table.insert (Content_Type_Map, {name = {[false] = df.written_content_type [i] .. " (" .. tostring (#Filter_Stock (Main_Page.Stock, i + 2, false)) .. ")",
-                                               [true] = df.written_content_type [i] .. " (" .. tostring (#Filter_Stock (Main_Page.Stock, i + 2, true)) .. ")"},
-                                       index = i})
+      table.insert (Content_Type_Map, {name = {
+		[false] = df.written_content_type [i] .. " (" .. 
+			tostring (#Filter_Stock (Main_Page.Stock, i + 2, false)) .. ")",
+		[true] = df.written_content_type [i] .. " (" .. 
+			tostring (#Filter_Stock (Main_Page.Stock, i + 2, true)) .. ")"},
+                index = i})
     end
 
     Main_Page.Content_Type =
@@ -2537,9 +2588,10 @@ function Librarian ()
                      visible = false}
                      
     Main_Page.Book_Label =
-      widgets.Label {text = "Books: O/C = Original/Copy, F = Forbidden, D = Dump, T = Trader, I = In Inventory",
-                     frame = {l = 54, t = 30, y_align = 0},
-                     text_pen = COLOR_WHITE}
+      widgets.Label {
+		text = "Books: O/C = Original/Copy, F = Forbidden, D = Dump, T = Trader, I = In Inventory",
+		frame = {l = 54, t = 30, y_align = 0},
+		text_pen = COLOR_WHITE}
     
     Main_Page.Works_Total:setText (tostring (#Main_Page.Stock))
     Main_Page.Works_Listed:setText (tostring (#Main_Page.List.choices))
@@ -2614,8 +2666,9 @@ function Librarian ()
     
     for i = 0, 13 do  --  Haven't found an enum over the knowledge category range...
       Science_Page.Matrix [i] = {}
-      
-      for k = df.knowledge_scholar_flags_0._first_item, df.knowledge_scholar_flags_0._last_item do  --  Full bit range, rather than used bit range, but same for all...
+
+      --  Full bit range, rather than used bit range, but same for all...      
+      for k = df.knowledge_scholar_flags_0._first_item, df.knowledge_scholar_flags_0._last_item do
         if check_flag ("knowledge_scholar_flags_" .. tostring (i), k) then
           Science_Page.Matrix [i] [k] =
             widgets.Label {text = Science_Character_Of (Science_Page.Data_Matrix, i, k),
@@ -2724,9 +2777,10 @@ function Librarian ()
                      visible = false}
                      
     Science_Page.Book_Label =
-      widgets.Label {text = "Books: O/C = Original/Copy, F = Forbidden, D = Dump, T = Trader, I = In Inventory",
-                     frame = {l = 1, t = 47, y_align = 0},
-                     text_pen = COLOR_WHITE}
+      widgets.Label {
+		text = "Books: O/C = Original/Copy, F = Forbidden, D = Dump, T = Trader, I = In Inventory",
+		frame = {l = 1, t = 47, y_align = 0},
+		text_pen = COLOR_WHITE}
     
     table.insert (sciencePage.subviews, Science_Page.Category_List)
     table.insert (sciencePage.subviews, Science_Page.Topic_List)
@@ -2909,9 +2963,10 @@ function Librarian ()
     table.insert (valuesPage.subviews, Values_Page.Book_Order_Label)
     
     Values_Page.Book_Label =
-      widgets.Label {text = "Books: O/C = Original/Copy, F = Forbidden, D = Dump, T = Trader, I = In Inventory",
-                     frame = {l = 1, t = 64, y_align = 0},
-                     text_pen = COLOR_WHITE}
+      widgets.Label {
+		text = "Books: O/C = Original/Copy, F = Forbidden, D = Dump, T = Trader, I = In Inventory",
+		frame = {l = 1, t = 64, y_align = 0},
+		text_pen = COLOR_WHITE}
     
     table.insert (valuesPage.subviews, Values_Page.Book_Label)
 
@@ -3039,9 +3094,10 @@ function Librarian ()
     table.insert (authorsPage.subviews, Authors_Page.Book_Order_Label)
     
     Authors_Page.Book_Label =
-      widgets.Label {text = "Books: O/C = Original/Copy, F = Forbidden, D = Dump, T = Trader, I = In Inventory",
-                     frame = {l = 65, t = 48, y_align = 0},
-                     text_pen = COLOR_WHITE}
+      widgets.Label {
+	text = "Books: O/C = Original/Copy, F = Forbidden, D = Dump, T = Trader, I = In Inventory",
+	frame = {l = 65, t = 48, y_align = 0},
+	text_pen = COLOR_WHITE}
     
     table.insert (authorsPage.subviews, Authors_Page.Book_Label)
 
@@ -3120,7 +3176,8 @@ function Librarian ()
                        text_pen = COLOR_WHITE}
     else
       Interactions_Page.Details =
-        widgets.Label {text = Produce_Details (Interactions_Page.Interactions [Interactions_Page.Works_List.selected] [2]),
+        widgets.Label {text = Produce_Details (Interactions_Page.Interactions 
+				[Interactions_Page.Works_List.selected] [2]),
                        frame = {l = 65, t = 24, h = 20, y_align = 0},
                        auto_height = false,
                        text_pen = COLOR_WHITE}
@@ -3163,9 +3220,10 @@ function Librarian ()
     table.insert (interactionsPage.subviews, Interactions_Page.Book_Order_Label)
     
     Interactions_Page.Book_Label =
-      widgets.Label {text = "Books: O/C = Original/Copy, F = Forbidden, D = Dump, T = Trader, I = In Inventory",
-                     frame = {l = 65, t = 48, y_align = 0},
-                     text_pen = COLOR_WHITE}
+      widgets.Label {
+		text = "Books: O/C = Original/Copy, F = Forbidden, D = Dump, T = Trader, I = In Inventory",
+		frame = {l = 65, t = 48, y_align = 0},
+		text_pen = COLOR_WHITE}
     
     table.insert (interactionsPage.subviews, Interactions_Page.Book_Label)
 
@@ -3221,7 +3279,8 @@ function Librarian ()
   function Ui:show_science_topic (index, choice)
     local list = {}
 
-    for i = df.knowledge_scholar_flags_0._first_item, df.knowledge_scholar_flags_0._last_item do  --  Don't care about the actual flag. Will iterate over all "bits" anyway.
+    --  Don't care about the actual flag. Will iterate over all "bits" anyway.
+    for i = df.knowledge_scholar_flags_0._first_item, df.knowledge_scholar_flags_0._last_item do
       if check_flag ("knowledge_scholar_flags_" .. tostring (index - 1), i) then
         table.insert (list, knowledge [index - 1] [i])
       end
@@ -3243,12 +3302,14 @@ function Librarian ()
   function Ui:show_science_local_details (index, choice)
     if Science_Page.Own_List then  --  Else initiation
       if Science_Page.Own_List.active then
-        Science_Page.Details:setText (Produce_Details (Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1]
-                                                                                [Science_Page.Topic_List.selected - 1]
-                                                                                [index]))
-        Science_Page.Book_List:setChoices (Produce_Book_List (Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1]
-                                                                                       [Science_Page.Topic_List.selected - 1]
-                                                                                       [index] [2]), 1)
+        Science_Page.Details:setText (Produce_Details (Science_Page.Data_Matrix 
+			[Science_Page.Category_List.selected - 1]
+			[Science_Page.Topic_List.selected - 1]
+			[index]))
+        Science_Page.Book_List:setChoices (Produce_Book_List (Science_Page.Data_Matrix 
+			[Science_Page.Category_List.selected - 1]
+			[Science_Page.Topic_List.selected - 1]
+			[index] [2]), 1)
       end
     end
   end
@@ -3258,9 +3319,10 @@ function Librarian ()
   function Ui:show_science_remote_details (index, choice)
     if Science_Page.Remote_List then  --  Else initiation
       if Science_Page.Remote_List.active then
-        Science_Page.Details:setText (Produce_Details ({Science_Page.Remote_Data_Matrix [Science_Page.Category_List.selected - 1]
-                                                                                        [Science_Page.Topic_List.selected - 1]
-                                                                                        [index].id}))
+        Science_Page.Details:setText (Produce_Details ({Science_Page.Remote_Data_Matrix 
+			[Science_Page.Category_List.selected - 1]
+			[Science_Page.Topic_List.selected - 1]
+			[index].id}))
       end
     end
   end
@@ -3286,12 +3348,14 @@ function Librarian ()
   function Ui:show_values_local_details (index, choice)
     if Values_Page.Own_List then  --  Else initiation
       if Values_Page.Own_List.active then
-        Values_Page.Details:setText (Produce_Details (Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1]
-                                                                              [Values_Page.Strength_List.selected - 4]
-                                                                              [index]))
-        Values_Page.Book_List:setChoices (Produce_Book_List (Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1]
-                                                                                     [Values_Page.Strength_List.selected - 4]
-                                                                                     [index] [2]), 1)
+        Values_Page.Details:setText (Produce_Details (Values_Page.Data_Matrix 
+			[Values_Page.Values_List.selected - 1]
+			[Values_Page.Strength_List.selected - 4]
+			[index]))
+        Values_Page.Book_List:setChoices (Produce_Book_List (Values_Page.Data_Matrix 
+			[Values_Page.Values_List.selected - 1]
+			[Values_Page.Strength_List.selected - 4]
+			[index] [2]), 1)
       end
     end
   end
@@ -3301,9 +3365,10 @@ function Librarian ()
   function Ui:show_values_remote_details (index, choice)
     if Values_Page.Remote_List then  --  Else initiation
       if Values_Page.Remote_List.active then
-        Values_Page.Details:setText (Produce_Details ({Values_Page.Remote_Data_Matrix [Values_Page.Values_List.selected - 1]
-                                                                                      [Values_Page.Strength_List.selected - 4]
-                                                                                      [Values_Page.Remote_List_Map [index]].id}))
+        Values_Page.Details:setText (Produce_Details ({Values_Page.Remote_Data_Matrix 
+			[Values_Page.Values_List.selected - 1]
+			[Values_Page.Strength_List.selected - 4]
+			[Values_Page.Remote_List_Map [index]].id}))
       end
     end
   end
@@ -3319,12 +3384,14 @@ function Librarian ()
   function Ui:show_authors_details (index, choice)
     if Authors_Page.Works_List then  --  Else initiation
       if Authors_Page.Works_List.active then
-        Authors_Page.Details:setText (Produce_Details (Authors_Page.Authors [Authors_Page.Authors_List.selected]
-                                                                            [2]
-                                                                            [index]))
-        Authors_Page.Book_List:setChoices (Produce_Book_List (Authors_Page.Authors [Authors_Page.Authors_List.selected]
-                                                                                   [2]
-                                                                                   [index] [2]), 1)
+        Authors_Page.Details:setText (Produce_Details (Authors_Page.Authors 
+			[Authors_Page.Authors_List.selected]
+			[2]
+			[index]))
+        Authors_Page.Book_List:setChoices (Produce_Book_List (Authors_Page.Authors 
+			[Authors_Page.Authors_List.selected]
+			[2]
+			[index] [2]), 1)
       end
     end
   end
@@ -3334,7 +3401,8 @@ function Librarian ()
   function Ui:show_interactions_details (index, choice)
     if Interactions_Page.Works_List then  --  Else initiation
       if Interactions_Page.Works_List.active then
-        Interactions_Page.Details:setText (Produce_Details (Interactions_Page.Interactions [Interactions_Page.Works_List.selected] [2]))
+        Interactions_Page.Details:setText (Produce_Details (Interactions_Page.Interactions 
+			[Interactions_Page.Works_List.selected] [2]))
       end
     end
   end
@@ -3548,12 +3616,14 @@ function Librarian ()
           Science_Page.Book_List:setChoices (Produce_Book_List (nil))
           
         else
-          Science_Page.Details:setText (Produce_Details (Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1]
-                                                                                  [Science_Page.Topic_List.selected - 1]
-                                                                                  [Science_Page.Own_List.selected]))
-          Science_Page.Book_List:setChoices (Produce_Book_List (Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1]
-                                                                                         [Science_Page.Topic_List.selected - 1]
-                                                                                         [Science_Page.Own_List.selected] [2]))
+          Science_Page.Details:setText (Produce_Details (Science_Page.Data_Matrix 
+			[Science_Page.Category_List.selected - 1]
+			[Science_Page.Topic_List.selected - 1]
+			[Science_Page.Own_List.selected]))
+          Science_Page.Book_List:setChoices (Produce_Book_List (Science_Page.Data_Matrix 
+			[Science_Page.Category_List.selected - 1]
+			[Science_Page.Topic_List.selected - 1]
+			[Science_Page.Own_List.selected] [2]))
         end
       else
         Science_Page.Details:setText (Produce_Details (nil))
@@ -3589,12 +3659,14 @@ function Librarian ()
           Science_Page.Book_List:setChoices (Produce_Book_List (nil))
           
         else
-          Science_Page.Details:setText (Produce_Details (Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1]
-                                                                                  [Science_Page.Topic_List.selected - 1]
-                                                                                  [Science_Page.Own_List.selected]))
-          Science_Page.Book_List:setChoices (Produce_Book_List (Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1]
-                                                                                         [Science_Page.Topic_List.selected - 1]
-                                                                                         [Science_Page.Own_List.selected] [2]))
+          Science_Page.Details:setText (Produce_Details (Science_Page.Data_Matrix 
+			[Science_Page.Category_List.selected - 1]
+			[Science_Page.Topic_List.selected - 1]
+			[Science_Page.Own_List.selected]))
+          Science_Page.Book_List:setChoices (Produce_Book_List (Science_Page.Data_Matrix 
+			[Science_Page.Category_List.selected - 1]
+			[Science_Page.Topic_List.selected - 1]
+			[Science_Page.Own_List.selected] [2]))
         end
       
       elseif Science_Page.Book_List.active then
@@ -3659,12 +3731,14 @@ function Librarian ()
           Values_Page.Book_List:setChoices (Produce_Book_List (nil))
           
         else
-          Values_Page.Details:setText (Produce_Details (Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1]
-                                                                                [Values_Page.Strength_List.selected - 4]
-                                                                                [Values_Page.Own_List.selected]))
-          Values_Page.Book_List:setChoices (Produce_Book_List (Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1]
-                                                                                       [Values_Page.Strength_List.selected - 4]
-                                                                                       [Values_Page.Own_List.selected] [2]))
+          Values_Page.Details:setText (Produce_Details (Values_Page.Data_Matrix 
+			[Values_Page.Values_List.selected - 1]
+			[Values_Page.Strength_List.selected - 4]
+			[Values_Page.Own_List.selected]))
+          Values_Page.Book_List:setChoices (Produce_Book_List (Values_Page.Data_Matrix 
+			[Values_Page.Values_List.selected - 1]
+			[Values_Page.Strength_List.selected - 4]
+			[Values_Page.Own_List.selected] [2]))
        end
         
       else
@@ -3701,12 +3775,14 @@ function Librarian ()
           Values_Page.Book_List:setChoices (Produce_Book_List (nil))
           
         else
-          Values_Page.Details:setText (Produce_Details (Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1]
-                                                                                [Values_Page.Strength_List.selected - 4]
-                                                                                [Values_Page.Own_List.selected]))
-          Values_Page.Book_List:setChoices (Produce_Book_List (Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1]
-                                                                                       [Values_Page.Strength_List.selected - 4]
-                                                                                       [Values_Page.Own_List.selected] [2]))
+          Values_Page.Details:setText (Produce_Details (Values_Page.Data_Matrix 
+			[Values_Page.Values_List.selected - 1]
+			[Values_Page.Strength_List.selected - 4]
+			[Values_Page.Own_List.selected]))
+          Values_Page.Book_List:setChoices (Produce_Book_List (Values_Page.Data_Matrix 
+			[Values_Page.Values_List.selected - 1]
+			[Values_Page.Strength_List.selected - 4]
+			[Values_Page.Own_List.selected] [2]))
         end
       
       elseif Values_Page.Book_List.active then
@@ -3755,12 +3831,14 @@ function Librarian ()
         --  nothing
       
       elseif Authors_Page.Book_List.active then
-        Authors_Page.Details:setText (Produce_Details (Authors_Page.Authors [Authors_Page.Authors_List.selected]
-                                                                            [2]
-                                                                            [Authors_Page.Works_List.selected]))
-        Authors_Page.Book_List:setChoices (Produce_Book_List (Authors_Page.Authors [Authors_Page.Authors_List.selected]
-                                                                                   [2]
-                                                                                   [Authors_Page.Works_List.selected] [2]), 1)
+        Authors_Page.Details:setText (Produce_Details (Authors_Page.Authors 
+			[Authors_Page.Authors_List.selected]
+			[2]
+			[Authors_Page.Works_List.selected]))
+        Authors_Page.Book_List:setChoices (Produce_Book_List (Authors_Page.Authors 
+			[Authors_Page.Authors_List.selected]
+			[2]
+			[Authors_Page.Works_List.selected] [2]), 1)
       
       else
         Authors_Page.Details:setText (Produce_Details (nil))
@@ -3791,12 +3869,14 @@ function Librarian ()
       end
       
       if Authors_Page.Works_List.active then
-        Authors_Page.Details:setText (Produce_Details (Authors_Page.Authors [Authors_Page.Authors_List.selected]
-                                                                            [2]
-                                                                            [Authors_Page.Works_List.selected]))
-        Authors_Page.Book_List:setChoices (Produce_Book_List (Authors_Page.Authors [Authors_Page.Authors_List.selected]
-                                                                                   [2]
-                                                                                   [Authors_Page.Works_List.selected] [2]), 1)
+        Authors_Page.Details:setText (Produce_Details (Authors_Page.Authors 
+			[Authors_Page.Authors_List.selected]
+			[2]
+			[Authors_Page.Works_List.selected]))
+        Authors_Page.Book_List:setChoices (Produce_Book_List (Authors_Page.Authors 
+			[Authors_Page.Authors_List.selected]
+			[2]
+			[Authors_Page.Works_List.selected] [2]), 1)
       
       elseif Authors_Page.Book_List.active then
         --  nothing
@@ -3816,7 +3896,8 @@ function Librarian ()
       Main_Page.Filtered_Stock [Main_Page.List.selected].element [2] [Main_Page.Book_List.selected].flags.forbid =
         not Main_Page.Filtered_Stock [Main_Page.List.selected].element [2] [Main_Page.Book_List.selected].flags.forbid
         
-      Main_Page.Book_List:setChoices (Produce_Book_List (Main_Page.Filtered_Stock [Main_Page.List.selected].element [2]), Main_Page.Book_List.selected)
+      Main_Page.Book_List:setChoices (Produce_Book_List (Main_Page.Filtered_Stock 
+			[Main_Page.List.selected].element [2]), Main_Page.Book_List.selected)
       
     elseif keys [keybindings.dump_book.key] and
            Focus == "Main" and
@@ -3825,7 +3906,8 @@ function Librarian ()
       Main_Page.Filtered_Stock [Main_Page.List.selected].element [2] [Main_Page.Book_List.selected].flags.dump =
         not Main_Page.Filtered_Stock [Main_Page.List.selected].element [2] [Main_Page.Book_List.selected].flags.dump
         
-      Main_Page.Book_List:setChoices (Produce_Book_List (Main_Page.Filtered_Stock [Main_Page.List.selected].element [2]), Main_Page.Book_List.selected)
+      Main_Page.Book_List:setChoices (Produce_Book_List (Main_Page.Filtered_Stock 
+			[Main_Page.List.selected].element [2]), Main_Page.Book_List.selected)
       
     elseif keys [keybindings.trader_book.key] and
            Focus == "Main" and
@@ -3834,7 +3916,8 @@ function Librarian ()
       Main_Page.Filtered_Stock [Main_Page.List.selected].element [2] [Main_Page.Book_List.selected].flags.trader =
         not Main_Page.Filtered_Stock [Main_Page.List.selected].element [2] [Main_Page.Book_List.selected].flags.trader
         
-      Main_Page.Book_List:setChoices (Produce_Book_List (Main_Page.Filtered_Stock [Main_Page.List.selected].element [2]), Main_Page.Book_List.selected)
+      Main_Page.Book_List:setChoices (Produce_Book_List (Main_Page.Filtered_Stock 
+			[Main_Page.List.selected].element [2]), Main_Page.Book_List.selected)
       
     elseif keys [keybindings.zoom.key] and 
            Focus == "Main" and
@@ -3847,13 +3930,16 @@ function Librarian ()
          item.pos.z ~= -30000 then
         local pos, key = Book_Location_And_Access_Key (item)
 
+	--  To exit any competing view mode.
         persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.OPTIONS]] = true,
-                                           [df.interface_key [df.interface_key.LEAVESCREEN]] = true})  --  To exit any competing view mode.
+                                           [df.interface_key [df.interface_key.LEAVESCREEN]] = true})
+
         persist_screen:sendInputToParent (key)
         df.global.cursor.x = pos.x
         df.global.cursor.y = pos.y
         df.global.cursor.z = pos.z
-        persist_screen:sendInputToParent ({[df.interface_key [df.interface_key[Cursor_Left]]] = true})  --  Jiggle to get DF to update.
+	--  Jiggle to get DF to update.
+        persist_screen:sendInputToParent ({[df.interface_key [df.interface_key[Cursor_Left]]] = true})
         if item.pos.x ~= 0 then
           persist_screen:sendInputToParent ({[df.interface_key [df.interface_key[Cursor_Right]]] = true})
         end
@@ -3877,9 +3963,10 @@ function Librarian ()
                                      [Science_Page.Own_List.selected] [2]
                                      [Science_Page.Book_List.selected].flags.forbid
                                        
-      Science_Page.Book_List:setChoices (Produce_Book_List (Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1]
-                                                                                     [Science_Page.Topic_List.selected - 1]
-                                                                                     [Science_Page.Own_List.selected] [2]), Science_Page.Book_List.selected)
+      Science_Page.Book_List:setChoices (Produce_Book_List (Science_Page.Data_Matrix 
+			[Science_Page.Category_List.selected - 1]
+			[Science_Page.Topic_List.selected - 1]
+			[Science_Page.Own_List.selected] [2]), Science_Page.Book_List.selected)
 
     elseif keys [keybindings.dump_book.key] and
            Focus == "Science" and
@@ -3894,9 +3981,10 @@ function Librarian ()
                                      [Science_Page.Own_List.selected] [2]
                                      [Science_Page.Book_List.selected].flags.dump
                                        
-      Science_Page.Book_List:setChoices (Produce_Book_List (Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1]
-                                                                                     [Science_Page.Topic_List.selected - 1]
-                                                                                     [Science_Page.Own_List.selected] [2]), Science_Page.Book_List.selected)
+      Science_Page.Book_List:setChoices (Produce_Book_List (Science_Page.Data_Matrix 
+			[Science_Page.Category_List.selected - 1]
+			[Science_Page.Topic_List.selected - 1]
+			[Science_Page.Own_List.selected] [2]), Science_Page.Book_List.selected)
                                                                                      
     elseif keys [keybindings.trader_book.key] and
            Focus == "Science" and
@@ -3911,31 +3999,35 @@ function Librarian ()
                                      [Science_Page.Own_List.selected] [2]
                                      [Science_Page.Book_List.selected].flags.trader
                                        
-      Science_Page.Book_List:setChoices (Produce_Book_List (Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1]
-                                                                                     [Science_Page.Topic_List.selected - 1]
-                                                                                     [Science_Page.Own_List.selected] [2]), Science_Page.Book_List.selected)
+      Science_Page.Book_List:setChoices (Produce_Book_List (Science_Page.Data_Matrix 
+			[Science_Page.Category_List.selected - 1]
+			[Science_Page.Topic_List.selected - 1]
+			[Science_Page.Own_List.selected] [2]), Science_Page.Book_List.selected)
       
     elseif keys [keybindings.zoom.key] and 
            Focus == "Science" and
            Science_Page.Book_List.active and
            #Science_Page.Book_List.choices > 0 then
-      local item = Science_Page.Data_Matrix [Science_Page.Category_List.selected - 1]
-                                            [Science_Page.Topic_List.selected - 1]
-                                            [Science_Page.Own_List.selected] [2]
-                                            [Science_Page.Book_List.selected]
+      local item = Science_Page.Data_Matrix 
+			[Science_Page.Category_List.selected - 1]
+			[Science_Page.Topic_List.selected - 1]
+			[Science_Page.Own_List.selected] [2]
+			[Science_Page.Book_List.selected]
       
       if item.pos.x ~= -30000 and
          item.pos.y ~= -30000 and
          item.pos.z ~= -30000 then
-         local pos, key = Book_Location_And_Access_Key (item)
+        local pos, key = Book_Location_And_Access_Key (item)
 
-         persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.OPTIONS]] = true,
-                                           [df.interface_key [df.interface_key.LEAVESCREEN]] = true})  --  To exit any competing view mode.
+	--  To exit any competing view mode.
+        persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.OPTIONS]] = true,
+                                           [df.interface_key [df.interface_key.LEAVESCREEN]] = true})
         persist_screen:sendInputToParent (key)
         df.global.cursor.x = pos.x
         df.global.cursor.y = pos.y
         df.global.cursor.z = pos.z
-        persist_screen:sendInputToParent ({[df.interface_key [df.interface_key[Cursor_Left]]] = true})  --  Jiggle to get DF to update.
+	--  Jiggle to get DF to update.
+        persist_screen:sendInputToParent ({[df.interface_key [df.interface_key[Cursor_Left]]] = true})
         if item.pos.x ~= 0 then
           persist_screen:sendInputToParent ({[df.interface_key [df.interface_key[Cursor_Right]]] = true})
         end
@@ -3959,9 +4051,10 @@ function Librarian ()
                                     [Values_Page.Own_List.selected] [2]
                                     [Values_Page.Book_List.selected].flags.forbid
                                        
-      Values_Page.Book_List:setChoices (Produce_Book_List (Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1]
-                                                                                   [Values_Page.Strength_List.selected - 4]
-                                                                                   [Values_Page.Own_List.selected] [2]), Values_Page.Book_List.selected)
+      Values_Page.Book_List:setChoices (Produce_Book_List (Values_Page.Data_Matrix 
+			[Values_Page.Values_List.selected - 1]
+			[Values_Page.Strength_List.selected - 4]
+			[Values_Page.Own_List.selected] [2]), Values_Page.Book_List.selected)
       
     elseif keys [keybindings.dump_book.key] and
            Focus == "Values" and
@@ -3976,9 +4069,10 @@ function Librarian ()
                                     [Values_Page.Own_List.selected] [2]
                                     [Values_Page.Book_List.selected].flags.dump
                                        
-      Values_Page.Book_List:setChoices (Produce_Book_List (Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1]
-                                                                                   [Values_Page.Strength_List.selected - 4]
-                                                                                   [Values_Page.Own_List.selected] [2]), Values_Page.Book_List.selected)
+      Values_Page.Book_List:setChoices (Produce_Book_List (Values_Page.Data_Matrix 
+			[Values_Page.Values_List.selected - 1]
+			[Values_Page.Strength_List.selected - 4]
+			[Values_Page.Own_List.selected] [2]), Values_Page.Book_List.selected)
       
     elseif keys [keybindings.trader_book.key] and
            Focus == "Values" and
@@ -3993,9 +4087,10 @@ function Librarian ()
                                     [Values_Page.Own_List.selected] [2]
                                     [Values_Page.Book_List.selected].flags.trader
                                        
-      Values_Page.Book_List:setChoices (Produce_Book_List (Values_Page.Data_Matrix [Values_Page.Values_List.selected - 1]
-                                                                                   [Values_Page.Strength_List.selected - 4]
-                                                                                   [Values_Page.Own_List.selected] [2]), Values_Page.Book_List.selected)
+      Values_Page.Book_List:setChoices (Produce_Book_List (Values_Page.Data_Matrix 
+			[Values_Page.Values_List.selected - 1]
+			[Values_Page.Strength_List.selected - 4]
+			[Values_Page.Own_List.selected] [2]), Values_Page.Book_List.selected)
       
     elseif keys [keybindings.zoom.key] and 
            Focus == "Values" and
@@ -4009,15 +4104,17 @@ function Librarian ()
       if item.pos.x ~= -30000 and
          item.pos.y ~= -30000 and
          item.pos.z ~= -30000 then
-         local pos, key = Book_Location_And_Access_Key (item)
+        local pos, key = Book_Location_And_Access_Key (item)
 
-         persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.OPTIONS]] = true,
-                                           [df.interface_key [df.interface_key.LEAVESCREEN]] = true})  --  To exit any competing view mode.
+	--  To exit any competing view mode.
+        persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.OPTIONS]] = true,
+                                           [df.interface_key [df.interface_key.LEAVESCREEN]] = true})
         persist_screen:sendInputToParent (key)
         df.global.cursor.x = pos.x
         df.global.cursor.y = pos.y
         df.global.cursor.z = pos.z
-        persist_screen:sendInputToParent ({[df.interface_key [df.interface_key[Cursor_Left]]] = true})  --  Jiggle to get DF to update.
+	--  Jiggle to get DF to update.
+        persist_screen:sendInputToParent ({[df.interface_key [df.interface_key[Cursor_Left]]] = true})
         if item.pos.x ~= 0 then
           persist_screen:sendInputToParent ({[df.interface_key [df.interface_key[Cursor_Right]]] = true})
         end
@@ -4042,9 +4139,10 @@ function Librarian ()
                                   [Authors_Page.Book_List.selected].flags.forbid
         
                                        
-      Authors_Page.Book_List:setChoices (Produce_Book_List (Authors_Page.Authors [Authors_Page.Authors_List.selected]
-                                                                                 [2]
-                                                                                 [Authors_Page.Works_List.selected] [2]), Authors_Page.Book_List.selected)
+      Authors_Page.Book_List:setChoices (Produce_Book_List (Authors_Page.Authors 
+			[Authors_Page.Authors_List.selected]
+			[2]
+			[Authors_Page.Works_List.selected] [2]), Authors_Page.Book_List.selected)
       
     elseif keys [keybindings.dump_book.key] and
            Focus == "Authors" and
@@ -4060,9 +4158,10 @@ function Librarian ()
                                   [Authors_Page.Book_List.selected].flags.dump
         
                                        
-      Authors_Page.Book_List:setChoices (Produce_Book_List (Authors_Page.Authors [Authors_Page.Authors_List.selected]
-                                                                                 [2]
-                                                                                 [Authors_Page.Works_List.selected] [2]), Authors_Page.Book_List.selected)
+      Authors_Page.Book_List:setChoices (Produce_Book_List (Authors_Page.Authors 
+			[Authors_Page.Authors_List.selected]
+			[2]
+			[Authors_Page.Works_List.selected] [2]), Authors_Page.Book_List.selected)
       
     elseif keys [keybindings.trader_book.key] and
            Focus == "Authors" and
@@ -4078,9 +4177,10 @@ function Librarian ()
                                   [Authors_Page.Book_List.selected].flags.trader
         
                                        
-      Authors_Page.Book_List:setChoices (Produce_Book_List (Authors_Page.Authors [Authors_Page.Authors_List.selected]
-                                                                                 [2]
-                                                                                 [Authors_Page.Works_List.selected] [2]), Authors_Page.Book_List.selected)
+      Authors_Page.Book_List:setChoices (Produce_Book_List (Authors_Page.Authors 
+			[Authors_Page.Authors_List.selected]
+			[2]
+			[Authors_Page.Works_List.selected] [2]), Authors_Page.Book_List.selected)
            
     elseif keys [keybindings.zoom.key] and 
            Focus == "Authors" and
@@ -4088,21 +4188,24 @@ function Librarian ()
            #Authors_Page.Book_List.choices > 0 then
       local item = Authors_Page.Authors [Authors_Page.Authors_List.selected]
                                         [2]
-                                        [Authors_Page.Works_List.selected] [2]
+                                        [Authors_Page.Works_List.selected]
+					[2]
                                         [Authors_Page.Book_List.selected]
       
       if item.pos.x ~= -30000 and
          item.pos.y ~= -30000 and
          item.pos.z ~= -30000 then
-         local pos, key = Book_Location_And_Access_Key (item)
+        local pos, key = Book_Location_And_Access_Key (item)
 
-         persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.OPTIONS]] = true,
-                                           [df.interface_key [df.interface_key.LEAVESCREEN]] = true})  --  To exit any competing view mode.
+	--  To exit any competing view mode.
+        persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.OPTIONS]] = true,
+                                           [df.interface_key [df.interface_key.LEAVESCREEN]] = true})
         persist_screen:sendInputToParent (key)
         df.global.cursor.x = pos.x
         df.global.cursor.y = pos.y
         df.global.cursor.z = pos.z
-        persist_screen:sendInputToParent ({[df.interface_key [df.interface_key[Cursor_Left]]] = true})  --  Jiggle to get DF to update.
+	--  Jiggle to get DF to update.
+        persist_screen:sendInputToParent ({[df.interface_key [df.interface_key[Cursor_Left]]] = true})
         if item.pos.x ~= 0 then
           persist_screen:sendInputToParent ({[df.interface_key [df.interface_key[Cursor_Right]]] = true})
         end
@@ -4114,10 +4217,13 @@ function Librarian ()
       end
       
     elseif Focus == "Hidden" then
-      if keys [df.interface_key [df.interface_key.SECONDSCROLL_DOWN]] then  --### Special case because of weird side effects when sending the whole list through.
+
+      --### Special case because of weird side effects when sending the whole list through.
+      if keys [df.interface_key [df.interface_key.SECONDSCROLL_DOWN]] then
         persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.SECONDSCROLL_DOWN]] = true})
-        
-      elseif keys [df.interface_key [df.interface_key.SECONDSCROLL_UP]] then  --### Special case because of weird side effects when sending the whole list through.
+
+      --### Special case because of weird side effects when sending the whole list through.        
+      elseif keys [df.interface_key [df.interface_key.SECONDSCROLL_UP]] then
         persist_screen:sendInputToParent ({[df.interface_key [df.interface_key.SECONDSCROLL_UP]] = true})
         
       else
