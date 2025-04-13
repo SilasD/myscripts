@@ -19,9 +19,8 @@ local Ui
 
 -- Compatibility
 
--- voodoo to get a working API call, because it was renamed in DFHack v50.15-r2.
-local translateName = ({dfhack.safecall(function() return dfhack.TranslateName; end)})[2]
-        or ({dfhack.safecall(function() return dfhack.translation.translateName; end)})[2]
+-- dfhack.TranslateName was renamed in DFHack v50.15-r2.
+local translateName = dfhack.TranslateName or dfhack.translation.translateName
 
 local DF_pre_50 = (tonumber(string.match(dfhack.getDFVersion(), "^v?(%d+%.%d+)")) < 0.50)
 
@@ -1983,13 +1982,17 @@ function Librarian ()
         
       elseif ref._type == df.general_ref_languagest then
 
-	-- UNTESTED: Deal with a renamed field in df.general_ref_languagest
-	local value = ({dfhack.safecall(function() return ref.anon_1; end)})[2]
-		or ({dfhack.safecall(function() return ref.language_idx; end)})[2]
-	value = ((value) and value >= 0 and value < #df.global.world.raws.language.translations)
-		and df.global.world.raws.language.translations[value].name
-		or '<Unknown language>'
-        table.insert (text, wrap ("Reference: Dictionary of the " .. value .. " language\n"))
+	local idx, cname, creature, name
+	idx = (DF_pre_50) and ref.anon_1 or							-- 0 to 4
+		((df.general_ref_languagest._fields.anon_1) and ref.anon_1 or ref.language_idx)
+	print(idx)
+	cname = (idx >= 0 and idx < #df.global.world.raws.language.translations) and 
+		df.global.world.raws.language.translations[idx].name or nil  			-- e.g. DWARF
+	print(cname)
+	_, creature = utils.linear_index(df.global.world.raws.creatures.all, cname, 'creature_id')
+	print(creature)
+	name = (creature) and creature.name[2] or "<Unknown>"					-- e.g. dwarven
+        table.insert (text, wrap ("Reference: Dictionary of the " .. name .. " language\n"))
 
       elseif ref._type == df.general_ref_written_contentst then
         table.insert (text, wrap ("Reference: Written Contents Titled " .. 
