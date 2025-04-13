@@ -1982,10 +1982,15 @@ function Librarian ()
 			'" = ' .. level .. "\n"))
         
       elseif ref._type == df.general_ref_languagest then
-        table.insert (text, wrap ("Reference: Dictionary of the " .. 
-			df.global.world.raws.language.translations [ref.anon_1].name .. " language\n"))
-			-- TODO in DF 0.50 (or before? check) .anon_1 was renamed .language_idx
-          
+
+	-- UNTESTED: Deal with a renamed field in df.general_ref_languagest
+	local value = ({dfhack.safecall(function() return ref.anon_1; end)})[2]
+		or ({dfhack.safecall(function() return ref.language_idx; end)})[2]
+	value = ((value) and value >= 0 and value < #df.global.world.raws.language.translations)
+		and df.global.world.raws.language.translations[value].name
+		or '<Unknown language>'
+        table.insert (text, wrap ("Reference: Dictionary of the " .. value .. " language\n"))
+
       elseif ref._type == df.general_ref_written_contentst then
         table.insert (text, wrap ("Reference: Written Contents Titled " .. 
 			df.global.world.written_contents.all [ref.written_content_id].title .. "\n"))
