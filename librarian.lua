@@ -999,10 +999,35 @@ function Librarian ()
   
   --============================================================
 
+
+  -- DONE this is not sorting list_map[]; why?
+  --	Actually, it looks like list_map[] gets sorted to list[]'s order, but gets clobbered elsewhere.
+  --	This happens in the old version for 0.47 as well, so it's not something I caused.
+  -- TODO track down and fix it.
+  --	It happens on the Science page, after right-arrowing four(?) times to get to the Remote list.
+  --	then down-arrow to get to the second book in the list.  Before the down-arrow, the list appears
+  --	to be sorted, because list_map[1] has the title matching list[1].  But after the down-arrow,
+  --	the UI array corresponding to list_map[] is out-of-sequence.  
+  --	This is apparent because the detailed book info's titles do not match the list's titles.
+  -- okay, Sort_Remote() from the Science page is called by Populate_Own_Remote_Science().
+  --	Populate_Own_Remote_Science() is called from three different places.
+  -- the book details are displayed by Ui:show_science_remote_details()
+  --	Science_Page.Remote_List is staying sorted, but Science_Page.Remote_List_Map gets out-of-sync.
+  --	The odd thing is, Populate_Own_Remote_Science() is the only (obvious) point at which
+  --	Science_Page.Remote_List_Map gets anything assigned to it.
+  --
+  -- Although this is a bubble sort, it is not worth changing to table.sort().
+  -- Even in a world with 22000 books and scrolls, list[] usually has less than 50 entries.
+  -- list[] is a simple array of strings (book titles).
+  -- list_map[] is a simple array of integers, it needs to be sorted along with list[].
+  --	it has values indexing into one of the .Remote_Data_Matrix[][] arrays.
+  --	e.g. Science_Page.Remote_Data_Matrix [Science_Page.Category_List.selected - 1] 
+  --			[Science_Page.Topic_List.selected - 1]
+  -- I have no idea why those are 0-based arrays.
   function Sort_Remote (list, list_map)
     local temp
     local map_temp
-    
+
     for i, dummy in ipairs (list) do
       for k = i + 1, #list do
         if list [k] < list [i] then
@@ -1015,6 +1040,7 @@ function Librarian ()
         end
       end
     end
+
   end
   
   --============================================================
@@ -2172,6 +2198,7 @@ function Librarian ()
     end
     
     Sort_Remote (Remote_List, Remote_List_Map)
+
     Science_Page.Remote_List:setChoices (Remote_List, 1)
     Science_Page.Remote_List_Map = Remote_List_Map
   end
@@ -3354,7 +3381,7 @@ function Librarian ()
         Science_Page.Details:setText (Produce_Details ({Science_Page.Remote_Data_Matrix 
 			[Science_Page.Category_List.selected - 1]
 			[Science_Page.Topic_List.selected - 1]
-			[index].id}))
+			[index].id})) -- this is a df.written_content .
       end
     end
   end
@@ -4280,14 +4307,3 @@ function Librarian ()
 end
 
 Librarian ()
-
--- I have discovered that annotations
---	https://github.com/LuaLS/lua-language-server/wiki/Annotations
---	https://luals.github.io/wiki/annotations/
--- cannot be used in DFHack under 0.50, due to an overbroad regex for detecting the module flag.
--- The regex, found in DFHack 0.47.05-r6 hack/lua/dfhack.lua line 661, is
---	%-%-@([^\n]+)
--- and it is gmatched against the entire file text, as a single chunk.  Because there is no anchor, 
--- it matches any dash-dash-atsymbol anywhere in the entire script being analyzed.
--- So annotations, beginning with dash-dash-dash-atsymbol, are wrongly parsed as module flags.
--- (Well.  They are wrongly parsed as ARBITRARY LUA CODE, but that's neither here nor there.)
