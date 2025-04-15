@@ -1,4 +1,4 @@
---  Display the contents of you library
+--  Display the contents of your library
 --
 --[====[
 
@@ -819,18 +819,25 @@ local function Zcompare_items(item1, item2)
 end
 
 
-local function Take_Stock2_Process_Item2 (Result2, item)
+--  Insert an item into Result2.
+--  Result2 is a sparse table keyed on written_content.id, 
+--      value is an array of df.item.id with that written_content.
+--          123 = { item#456.id }
+--          234 = { item#567.id, item#678.id, item#789.id }
+--      there are no duplicated items.
+--
+---param Result2 table< df.written_content.id, df.item.id[] >
+---param item df.item
+local function Take_Stock2_Process_Item (Result2, item)
 
-    -- Result2 is a sparse table keyed on content_id, value is an array of items.
-    --		123 = { item#456 }
-    --		234 = { item#567, item#678, item#789}
-    --	    there are no duplicated items.
+    if item.pos.x == -30000 then return; end	-- filter items not on the map;
+						-- TODO does this ever match items in buildings?
+    if item.flags.trader then return; end	-- filter visitor owned items.
 
-    if item.flags.trader then return; end	--  Filter visitor owned items.
-    -- TODO is this logical? is this desired?
-    if item.flags.in_inventory then return; end	--  Filter carried items.
+    if item.flags.in_inventory then return; end	-- filter carried items.
+						-- TODO is this logical? is this desired?
 
---[[
+--[[ TODO should we do this?
     local title = get_title(item)		-- side effects: populates tables
 						--	map_itemid_to_writing_title
 						--	map_itemid_to_writing_author_name
@@ -840,13 +847,13 @@ local function Take_Stock2_Process_Item2 (Result2, item)
 ]]
 
     for i, improvement in ipairs (item.improvements) do
-	if improvement._type == df.itemimprovement_pagesst or
-		improvement._type == df.itemimprovement_writingst 
+	if df.itemimprovement_pagesst:is_instance(improvement) or
+		df.itemimprovement_writingst:is_instance(improvement)
 	then
-	    for k, content_id in ipairs (improvement.contents) do
+	    for _, content_id in ipairs (improvement.contents) do
 
 		Result2[content_id] = Result2[content_id] or {}
-		table.insert(Result2[content_id], item)
+		table.insert(Result2[content_id], item.id)
 
 	    end
 	end
@@ -855,68 +862,159 @@ local function Take_Stock2_Process_Item2 (Result2, item)
 end
 
 
--- used by Take_Stock2_compare_Result_entries()
--- does NOT contain all written_content, only the ones present in the fort.
----type table<df.written_content.id, string>
-map_written_content_id_to_title = map_written_content_id_to_title or {}
+---type table< df.written_content.id, df.written_content >
+_map_written_content_id_to_written_content = {} -- global, potentially persistent
 
 
--- compare two values in the Result array, for sorting.
--- Result is an array, values are a 2-element array
---	element1 is the written_content.id, element2 is an array of df.item .
--- we want to sort on the written_content.title
--- TODO we also want to populate the cache maps as return_title() does.
+---param wcid df.written_content.id
+---return df.written_content
+local function df_written_content_find(wcid)
+    local wc = _map_written_content_id_to_written_content[wcid]
+    if not wc then
+	wc = df.written_content.find(wcid)
+	_map_written_content_id_to_written_content[wcid] = wc
+    end
+    return wc
+end
+
+
+---type table< df.written_content.id, string >
+_map_written_content_id_to_title = {} -- global, potentially persistent
+
+
+---param wcid df.written_content.id
+---return string
+local function written_content_id_to_title(wcid)
+    local title = _map_written_content_id_to_title[wcid]
+    if not title then
+	title = tostring(df_written_content_find(wcid).title)
+	if title == "" then title = " <Untitled>"; end
+	_map_written_content_id_to_title[wcid] = title
+    end
+    return title   -- ah ha ha hah, what a bug, to not return anything.  hard to find.
+end
+
+
+--  Compare two elements in the Result array, for sorting.
+--  The elements being compared are a 2-element array
+--          [1] is the written_content.id
+--          [2] is an array of df.item with that written_content.
+--      we are sorting on: primary key written_content.title, secondary key written_content.id
+--  TODO maybe we also want to populate the cache maps as return_title() does.
+---param a { 1:df.written_content.id, 2:df.item[] }
+---param b { 1:df.written_content.id, 2:df.item[] }
+---return boolean
 local function Take_Stock2_compare_Result_entries(a,b)
 
-    local titlea = map_written_content_id_to_title[a[1]]
-    if not titlea then
-	titlea = tostring(df.written_content.find(a[1]).title)
-	map_written_content_id_to_title[a[1]] = titlea
-    end
-
-    local titleb = map_written_content_id_to_title[b[1]]
-    if not titleb then
-	titleb = tostring(df.written_content.find(b[1]).title)
-	map_written_content_id_to_title[b[1]] = titleb
-    end
+    local titlea = written_content_id_to_title(a[1])
+    local titleb = written_content_id_to_title(b[1])
 
     if titlea == titleb then
-	return (a[1] < b[1]) -- use the written_content_id as a tie breaker
+	return (a[1] < b[1]) -- use the written_content.id as a tie breaker
     end
     return (titlea < titleb)
 end
 
 
+--  returns: an array, values are a 2-element array:
+--      [1] is a written_content.id, [2] is an array of df.item with that written_content.
+--  The Result array is returned sorted by:
+--      primary key written_content.title, secondary key written_content.id
+
+--  also returns: a sparse table keyed on written_content.id,
+--      values are arrays of df.item.id with that written_content.id .
+--          123 = { item#456.id }
+--          234 = { item#567.id, item#678.id, item#789.id }
+--      there are no duplicated items.
+--
+---return { 1:df.written_content.id, 2:df.item[] }[]
+---return table< df.written_content.id, df.item.id[] >
 local function Take_Stock2 ()
+
+    ---type { 1:df.written_content.id, 2:df.item[] }[]
+    local Result = {}
+
+    ---type table< df.written_content.id, df.item.id[] >
     local Result2 = {}
-    -- Result2 is a sparse table keyed on content_id, value is an array of items.
-    --		123 = { item#456 }
-    --		234 = { item#567, item#678, item#789 }
-    --	    there are no duplicated items.
+
+    ---type table< df.item.id, df.item >
+    local map_itemid_to_item = {}	-- retain some otherwise-lost info for Result.
 
     for i, item in ipairs (df.global.world.items.other.BOOK) do
-	Take_Stock2_Process_Item2(Result2, item)
-    end
-    
-    for i, item in ipairs (df.global.world.items.other.TOOL) do
-	Take_Stock2_Process_Item2(Result2, item)
+	map_itemid_to_item[item.id] = item
+	Take_Stock2_Process_Item(Result2, item)
     end
 
-    local Result = {}
-    -- Result is an array, values are a 2-element array
-    --	    element1 is the written_content.content_id, element2 is an array of items.
+    for i, item in ipairs (df.global.world.items.other.TOOL) do
+	map_itemid_to_item[item.id] = item
+	Take_Stock2_Process_Item(Result2, item)
+    end
 
     -- collapse the Result2 sparse table into the Result array.
-    for k,v in pairs(Result2) do		-- random order
-	table.insert(Result, { k, v } )
+    for wcid, itemids in pairs(Result2) do
+	---type df.item[]
+	local items = {}
+	for _, itemid in ipairs(itemids) do
+	    table.insert(items, map_itemid_to_item[itemid])
+	end
+	table.insert(Result, { wcid, items } )
     end
-    Result2 = {}
 
+    -- sort the Result array.
     table.sort(Result, Take_Stock2_compare_Result_entries)
+    return Result, Result2
+end
 
+
+--  Called with Main_Page.Stock2
+--  returns a Data_Matrix2, which is:
+--  an array [0.13] {TODO make 1-based?} of
+--      arrays [0..something] {TODO make 1-based?} (the flags in this *scholar_flagst subtype) of
+--          SORTED-by-title tables that can be fed directly to List:SetChoices().
+--              entries look like: 
+--              { text=written_content.title, wcid=written_content.id, books={df.item.id, ...} }
+--      	There are no duplicate written_content.id's or item.id's .
+--
+---param Stock2 table< df.written_content.id, df.item.id[] >
+---return { text=string, wcid=df.written_content.id, books=df.item.id[] }[][]
+local function Take_Science_Stock2 (Stock2)
+
+    ---type { text=string, wcid=df.written_content.id, books=df.item.id[] }[][]
+    local Result = {}
+
+    for index1 = 0, 13 do  --  ref.knowledge.flag_type can have these values; no content type enum known.
+        Result [index1] = {}
+    end
+
+    for wcid, itemids in pairs (Stock2) do
+	---type df.written_content
+        local content = df_written_content_find (wcid)
+
+        for _, ref in ipairs (content.refs) do
+            if df.general_ref_knowledge_scholar_flagst:is_instance(ref) then
+                local index1 = ref.knowledge.flag_type
+
+	        --  Don't care which one, as they'll iterate over all bits regardless.
+                for index2, flag in ipairs (ref.knowledge.flag_data.flags_0) do
+
+                    -- init the selected list if necessary.
+	            Result [index1] [index2] = Result [index1] [index2] or {}
+
+                    if flag then
+
+                        -- wcid is unique, so it's not already in the list.
+	                entry = { text=tostring(content.title), wcid=wcid, books=itemids }
+
+                        utils.insert_sorted(Result [index1] [index2], entry, 'text')
+                    end
+                end
+            end
+        end
+    end
+    
     return Result
 end
-  
+
 
 function Librarian ()
   if not dfhack.isMapLoaded () then
@@ -970,6 +1068,9 @@ function Librarian ()
             
   local Content_Type_Selected = 1
   local Reference_Filter = false
+  ---type { name = { false=string, true=string }, index=number }
+  --   the strings are strings like "Manual (number of manuals in the world)"
+  --   note the use of reserved Lua keywords as keys.  why?
   local Content_Type_Map = {}
   local ook_key_string = dfhack.screen.getKeyDisplay (df.interface_key [keybindings.ook.key])
 
@@ -1015,6 +1116,8 @@ function Librarian ()
   --	Science_Page.Remote_List is staying sorted, but Science_Page.Remote_List_Map gets out-of-sync.
   --	The odd thing is, Populate_Own_Remote_Science() is the only (obvious) point at which
   --	Science_Page.Remote_List_Map gets anything assigned to it.
+  -- okay, got something very interesting.  when the bug hits, the Science_Page.Remote_List_Map
+  --	has been sorted by written_content.id of the first element of each entry.
   --
   -- Although this is a bubble sort, it is not worth changing to table.sort().
   -- Even in a world with 22000 books and scrolls, list[] usually has less than 50 entries.
@@ -1024,6 +1127,7 @@ function Librarian ()
   --	e.g. Science_Page.Remote_Data_Matrix [Science_Page.Category_List.selected - 1] 
   --			[Science_Page.Topic_List.selected - 1]
   -- I have no idea why those are 0-based arrays.
+  -- wait, I do, it's because they are taken from DF enum types.
   function Sort_Remote (list, list_map)
     local temp
     local map_temp
@@ -1042,7 +1146,96 @@ function Librarian ()
     end
 
   end
-  
+
+
+--[[ DEPRECATED
+  --  Work around a bug where the Remote_List and Remote_List_Map get out-of-sync
+  --      while moving the cursor up/down the remote works list.
+  --  By integrating Remote_List and Remote_List_Map into the more versatile
+  --      form that widgets.List accepts as items, we ensure they never desync.
+  --  note: Remote_List and Remote_List_Map are co-aligned; they map to each other.
+  --
+  --  Remote_List_Map is an index into TODO
+  --
+  ---param Remote_List string[]
+  ---param Remote_List_Map integer
+  ---return table< text=string, wcid=df.written_content.id >[]
+  local function sort2_remote_list(Remote_List, Remote_List_Map)
+
+    ---type table<text=string, wcid=df.written_content.id>[]
+    local list = {}
+    for i = 1, #Remote_List do
+	---type df.written_content
+	local wc = TODO translate from Remote_List_Map[i]
+	local choice = { text=Remote_List[i], wcid=wc.id }
+	table.insert(list, choice)
+    end
+    table.sort(list, function(a,b)
+		if a.text==b.text then return(a.wcid<b.wcid);end;
+		return(a.text<b.text);end)
+    return list
+  end
+]]
+
+
+  local function Zcheck_that_Main_Page_Stock_is_sorted()
+    if true then
+	---type { 1:df.written_content.id, 2:df.item[] }[]
+	local target = Main_Page.Stock
+	for i=1, #target do
+	    if type(target[i]) ~= "table" then 
+		dfhack.error('type(target[i]) ~= "table" at position ' .. i, 1, true)
+	    end
+	    if type(target[i][1]) ~= "number" then
+		dfhack.error('type(target[i][1]) ~= "number" at position ' .. i, 1, true)
+	    end
+	    if type(target[i][2]) ~= "table" then 
+		dfhack.error('type(target[i][2]) ~= "table" at position ' .. i, 1, true)
+	    end
+	    if #target[i][2] > 0 and not df.item:is_instance(target[i][2][1]) then 
+		dfhack.error('not df.item:is_instance(target[i][2][1]) at position ' .. i, 1, true)
+	    end
+	    if i < #target and not Take_Stock2_compare_Result_entries(target[i], target[i+1]) then
+		dfhack.error('Main_Page.Stock not sorted at position ' .. i, 1, true)
+	    end
+	end
+    end
+  end
+
+
+  local function Zcheck_that_Main_Page_Filtered_Stock_is_sorted()
+    if true then
+	---type { name=string, element={ 1:df.written_content.id, 2:df.item[] } }[]
+	local target = Main_Page.Filtered_Stock
+
+	for i=1, #target do
+	    if type(target[i]) ~= "table" then 
+		dfhack.error('type(target[i]) ~= "table" at position ' .. i, 1, true)
+	    end
+	    if type(target[i].name) ~= "string" then 
+		dfhack.error('type(target[i].name) ~= "string" at position ' .. i, 1, true)
+	    end
+	    if type(target[i].element) ~= "table" then 
+		dfhack.error('type(target[i].element) ~= "table" at position ' .. i, 1, true)
+	    end
+	    if type(target[i].element[1]) ~= "number" then 
+		dfhack.error('type(target[i].element[1]) ~= "number" at position ' .. i, 1, true)
+	    end
+	    if #target[i].element[2] > 0 and type(target[i].element[2]) ~= "table" then 
+		dfhack.error('type(target[i].element[2]) ~= "table" at position ' .. i, 1, true)
+	    end
+	    if #target[i].element[2] > 0 and not df.item:is_instance(target[i].element[2][1]) then 
+		dfhack.error('not df.item:is_instance(target[i].element[2][1]) at position ' .. i, 1, true)
+	    end
+	    if i < #target and target[i].name > target[i+1].name then
+		print(target[i].name, target[i+1].name)
+		dfhack.error('Main_Page.Filtered_Stock not sorted at position ' .. i, 1, true)
+	    end
+	end
+    end
+  end
+
+
   --============================================================
 
   function Fit (Item, Size)
@@ -1228,7 +1421,7 @@ function Librarian ()
     
     return Result
   end
-  
+
   --============================================================
 
   function Take_Values_Stock (Stock)
@@ -1339,7 +1532,10 @@ function Librarian ()
 
   --============================================================
 
+  ---return { 1=df.written_content }[][]
+  ---return TODO
   function Take_Remote_Stock ()
+    ---type { 1=df.written_content }[][]
     local Science_Result = {}
     local Values_Result = {}
     
@@ -1402,12 +1598,15 @@ function Librarian ()
       end
     end
 
-    Science_Page.Remote_Data_Matrix = Science_Result
-    Values_Page.Remote_Data_Matrix = Values_Result
+    return Science_Result, Values_Result
   end
   
   --============================================================
 
+  ---param Stock { 1:df.written_content.id, 2:df.item[] }[]
+  ---param Content_Type_Selected integer
+  ---param Reference_Filter boolean
+  ---return { name=string, element={ 1:df.written_content.id, 2:df.item[] } }[]
   function Filter_Stock (Stock, Content_Type_Selected, Reference_Filter)
     local include
     local Result = {}
@@ -1415,8 +1614,7 @@ function Librarian ()
     for i, element in ipairs (Stock) do
       local content = df.written_content.find (element [1])
       
-      if Content_Type_Selected == 1 or
-         content.type == Content_Type_Selected - 2 then
+      if Content_Type_Selected == 1 or content.type == Content_Type_Selected - 2 then
         include = not Reference_Filter
         
         if Reference_Filter then
@@ -1436,7 +1634,7 @@ function Librarian ()
     
     return Result
   end
-  
+
   --============================================================
 
   function HF_Name_Of (Id)
@@ -1576,6 +1774,8 @@ function Librarian ()
   
   --============================================================
 
+  ---param element { 1=df.written_content.id, 2=df.item[]? }
+  ---return string  # multi-line text to set in the details panel.
   function Produce_Details (element)
     if not element then
       return ""
@@ -2014,9 +2214,9 @@ function Librarian ()
 	print(idx)
 	cname = (idx >= 0 and idx < #df.global.world.raws.language.translations) and 
 		df.global.world.raws.language.translations[idx].name or nil  			-- e.g. DWARF
-	print(cname)
+	print(cname) -- debugging
 	_, creature = utils.linear_index(df.global.world.raws.creatures.all, cname, 'creature_id')
-	print(creature)
+	print(creature, (creature) and creature.name[2] or 'nil')  -- debugging
 	name = (creature) and creature.name[2] or "<Unknown>"					-- e.g. dwarven
         table.insert (text, wrap ("Reference: Dictionary of the " .. name .. " language\n"))
 
@@ -2041,7 +2241,7 @@ function Librarian ()
       end
     end
     
-    if element [2] then
+    if element [2] then   -- element[2] is df.item[] if it exists.
       for i, item in ipairs (element [2]) do
         if item.flags.artifact then
           original = true
@@ -2078,6 +2278,8 @@ function Librarian ()
   
   --============================================================
 
+  ---param items df.item[]
+  ---return string[]
   function Produce_Book_List (items)
     if not items then
       return {}
@@ -2187,11 +2389,11 @@ function Librarian ()
       for i, element in ipairs (Science_Page.Remote_Data_Matrix [Science_Page.Category_List.selected - 1] 
 			[Science_Page.Topic_List.selected - 1]) do
         local title = element.title
-    
+
         if title == "" then
           title = "<Untitled>"
         end
-      
+
         table.insert (Remote_List, title)
         table.insert (Remote_List_Map, i)
       end
@@ -2201,6 +2403,16 @@ function Librarian ()
 
     Science_Page.Remote_List:setChoices (Remote_List, 1)
     Science_Page.Remote_List_Map = Remote_List_Map
+
+--[[  DEPRECATED.  This was an attemp to solve the Remote_List_Map sorting bug.
+    -- okay, unfortunately Remote_List_Map doesn't contain written_content.id's,
+    --	it contains indices into TODO.
+    local remote_list2 = sort2_remote_list(Remote_List, Remote_List_Map)
+print('vvv');printall_recurse(remote_list2);print('^^^') -- debugging
+
+    Science_Page.Remote_List:setChoices (remote_list2, 1)
+    Science_Page.Remote_List_Map = Remote_List_Map  -- TODO deprecate.
+]]
   end
   
   --============================================================
@@ -2545,41 +2757,50 @@ function Librarian ()
                      frame = {l = 73, t = 1, y_align = 0},
                      text_pen = COLOR_WHITE}
     
-    Main_Page.Stock = Take_Stock2 ()
-
-    if false and #Main_Page.Stock <= 4 then  -- inspect data structures to ensure they are identical.
-	-- WARNING these dump a whole lot of data.  Only run them on maps with 4 or less books.
-	print('ZTake_Stock');printall_recurse(ZTake_Stock())
-	print('Take_Stock2');printall_recurse(Take_Stock2())
+    if false then  -- inspect data structures to ensure they are identical.
+	-- WARNING this dumps a whole lot of data.  Only run this on maps with 4 or less books.
+	_1 = ZTake_Stock()
+	print('ZTake_Stock() Result');printall_recurse(_1)
+	_1, _2 = Take_Stock2()
+	print('Take_Stock2() Result');printall_recurse(_1)
+	print('Take_Stock2() Result2');printall_recurse(_2)
     end
-    if false then
-	print(#Main_Page.Stock, "local books and scrolls.")
+    if false then  -- compare the time they take.
 	local starttime = os.clock()
-	ZTake_Stock()
-	print("ZTake_Stock CPU time", os.clock() - starttime)
+	_1 = ZTake_Stock()
+	print('ZTake_Stock()', #_1, 'local books and scrolls.')
+	print('ZTake_Stock() CPU time', os.clock() - starttime)
 	local starttime = os.clock()
-	Take_Stock2()
-	print("Take_Stock2 CPU time", os.clock() - starttime)
+	_1, _2 = Take_Stock2()
+	print('Take_Stock2()', #_1, #_2, 'local books and scrolls.')
+	print('Take_Stock2() CPU time', os.clock() - starttime)
 	-- on a 0.47.05 fort with 12775 local books,
 	--	ZTake_Stock took 170.75 seconds,
 	--	Take_Stock2 took 0.167 seconds.
 	--	speedup of 1000 times.  Not 1000%.  1000 times.
     end
 
+    ---type { 1:df.written_content.id, 2:df.item[] }[]
+    ---type table<df.written_content.id, df.item.id[]>
+    Main_Page.Stock, Main_Page.Stock2 = Take_Stock2 ()
+
+    ---type { name=string, element={ 1:df.written_content.id, 2:df.item[] } }[]
     Main_Page.Filtered_Stock = Filter_Stock (Main_Page.Stock, Content_Type_Selected, Reference_Filter)
 
     table.insert (Content_Type_Map, {name = {
-		[false] = "All (" .. tostring (#Main_Page.Stock) .. ")",
-		[true] = "All (" .. tostring (#Filter_Stock (Main_Page.Stock, Content_Type_Selected, true)) .. ")"},
+		[false] = "All (" ..
+			tostring (#Main_Page.Stock) .. ")",
+		[true] = "All (" ..
+			tostring (#Filter_Stock (Main_Page.Stock, Content_Type_Selected, true)) .. ")"},
 		index = -1})
-                                     
+
     for i = df.written_content_type._first_item, df.written_content_type._last_item do
       table.insert (Content_Type_Map, {name = {
 		[false] = df.written_content_type [i] .. " (" .. 
 			tostring (#Filter_Stock (Main_Page.Stock, i + 2, false)) .. ")",
 		[true] = df.written_content_type [i] .. " (" .. 
 			tostring (#Filter_Stock (Main_Page.Stock, i + 2, true)) .. ")"},
-                index = i})
+		index = i})
     end
 
     Main_Page.Content_Type =
@@ -2599,14 +2820,15 @@ function Librarian ()
                      text_pen = COLOR_WHITE}
                      
     Main_Page.Book_List =
-      widgets.List {view_id = "Books containting Work",
+      widgets.List {view_id = "Books containing Work",
                     choices = {},
                     frame = {l = 54, t = 32, yalign = 0},
                     text_pen = COLOR_DARKGREY,
                     cursor_pen = COLOR_YELLOW,
                     inactive_pen = COLOR_GREY,
-                    active = false}--,
---                    on_select = self:callback ("show_main_details")}
+                    active = false,
+--                    on_select = self:callback ("show_main_details"),  -- this was already disabled in 0.21 and 0.19, why?
+      }
     
     Main_Page.List =
       widgets.List {view_id = "Selected Written Contents",
@@ -2651,10 +2873,10 @@ function Librarian ()
 		text = "Books: O/C = Original/Copy, F = Forbidden, D = Dump, T = Trader, I = In Inventory",
 		frame = {l = 54, t = 30, y_align = 0},
 		text_pen = COLOR_WHITE}
-    
+
     Main_Page.Works_Total:setText (tostring (#Main_Page.Stock))
     Main_Page.Works_Listed:setText (tostring (#Main_Page.List.choices))
-        
+
     local mainPage = widgets.Panel {
       subviews = {Main_Page.Background,
                   Main_Page.Works_Total,
@@ -2712,17 +2934,24 @@ function Librarian ()
                      frame = {l = 0, t = 1, y_align = 0}}
     
     table.insert (sciencePage.subviews, Science_Page.Background)
-    
+
     Science_Page.Matrix = {}
+
+    ---type { 1=df.written_content.id, 2=df.item[] }[][]
     Science_Page.Data_Matrix = Take_Science_Stock (Main_Page.Stock)
+
+    ---type { text=string, wcid=df.written_content.id, books=df.item.id[] }[][]
+    Science_Page.Data_Matrix2 = Take_Science_Stock2 (Main_Page.Stock2)
+
+    ---type { 1=df.written_content }[][]	-- looks like .Data_Matrix withough the df.item[] list.
     Science_Page.Remote_Data_Matrix = {}
-    
+
     Values_Page.Matrix = {}
     Values_Page.Data_Matrix = Take_Values_Stock (Main_Page.Stock)
     Values_Page.Remote_Data_Matrix = {}
-    
-    Take_Remote_Stock ()
-    
+
+    Science_Page.Remote_Data_Matrix, Values_Page.Remote_Data_Matrix = Take_Remote_Stock ()
+
     for i = 0, 13 do  --  Haven't found an enum over the knowledge category range...
       Science_Page.Matrix [i] = {}
 
@@ -2733,6 +2962,7 @@ function Librarian ()
             widgets.Label {text = Science_Character_Of (Science_Page.Data_Matrix, i, k),
                            frame = {l = 18 + k * 2, w = 1, t = 5 + i, y_align = 0},
                            text_pen = Science_Color_Of (Science_Page.Data_Matrix, i, k)}
+			   -- TODO this seems the obvious place to cache the related book list.
           table.insert (sciencePage.subviews, Science_Page.Matrix [i] [k])
         end
       end
@@ -2781,7 +3011,7 @@ function Librarian ()
                      text_pen = COLOR_WHITE}
                      
     Science_Page.Book_List =
-      widgets.List {view_id = "Books containting Work",
+      widgets.List {view_id = "Books containing Work",
                     choices = {},
                     frame = {l = 1, t = 49, yalign = 0},
                     text_pen = COLOR_DARKGREY,
@@ -2959,7 +3189,7 @@ function Librarian ()
                      text_pen = COLOR_WHITE}
                      
     Values_Page.Book_List =
-      widgets.List {view_id = "Books containting Work",
+      widgets.List {view_id = "Books containing Work",
                     choices = {},
                     frame = {l = 1, t = 66, yalign = 0},
                     text_pen = COLOR_DARKGREY,
@@ -3084,7 +3314,7 @@ function Librarian ()
                      text_pen = COLOR_WHITE}
                      
     Authors_Page.Book_List =
-      widgets.List {view_id = "Books containting Work",
+      widgets.List {view_id = "Books containing Work",
                     choices = {},
                     frame = {l = 65, t = 50, yalign = 0},
                     text_pen = COLOR_DARKGREY,
@@ -3381,7 +3611,7 @@ function Librarian ()
         Science_Page.Details:setText (Produce_Details ({Science_Page.Remote_Data_Matrix 
 			[Science_Page.Category_List.selected - 1]
 			[Science_Page.Topic_List.selected - 1]
-			[index].id})) -- this is a df.written_content .
+			[index].id})) -- this is a single-element array: type { df.written_content.id }
       end
     end
   end
