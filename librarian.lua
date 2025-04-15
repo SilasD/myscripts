@@ -819,49 +819,6 @@ local function Zcompare_items(item1, item2)
 end
 
 
---  Insert an item into Result2.
---  Result2 is a sparse table keyed on written_content.id, 
---      value is an array of df.item.id with that written_content.
---          123 = { item#456.id }
---          234 = { item#567.id, item#678.id, item#789.id }
---      there are no duplicated items.
---
----param Result2 table< df.written_content.id, df.item.id[] >
----param item df.item
-local function Take_Stock2_Process_Item (Result2, item)
-
-    if item.pos.x == -30000 then return; end	-- filter items not on the map;
-						-- TODO does this ever match items in buildings?
-    if item.flags.trader then return; end	-- filter visitor owned items.
-
-    if item.flags.in_inventory then return; end	-- filter carried items.
-						-- TODO is this logical? is this desired?
-
---[[ TODO should we do this?
-    local title = get_title(item)		-- side effects: populates tables
-						--	map_itemid_to_writing_title
-						--	map_itemid_to_writing_author_name
-						--	map_itemid_to_writing_author_hfid
-						--	map_itemid_to_written_content_id
-						--	map_itemid_to_artifact_id
-]]
-
-    for i, improvement in ipairs (item.improvements) do
-	if df.itemimprovement_pagesst:is_instance(improvement) or
-		df.itemimprovement_writingst:is_instance(improvement)
-	then
-	    for _, content_id in ipairs (improvement.contents) do
-
-		Result2[content_id] = Result2[content_id] or {}
-		table.insert(Result2[content_id], item.id)
-
-	    end
-	end
-    end
-
-end
-
-
 ---type table< df.written_content.id, df.written_content >
 _map_written_content_id_to_written_content = {} -- global, potentially persistent
 
@@ -879,7 +836,7 @@ end
 
 
 ---type table< df.written_content.id, string >
-_map_written_content_id_to_title = {} -- global, potentially persistent
+_map_written_content_id_to_title = _map_written_content_id_to_title or {} -- global, potentially persistent
 
 
 ---param wcid df.written_content.id
@@ -891,7 +848,7 @@ local function written_content_id_to_title(wcid)
 	if title == "" then title = " <Untitled>"; end
 	_map_written_content_id_to_title[wcid] = title
     end
-    return title   -- ah ha ha hah, what a bug, to not return anything.  hard to find.
+    return title   -- ah ha ha hah, what a troublesome bug, to not return anything.  hard to find.
 end
 
 
@@ -904,7 +861,7 @@ end
 ---param a { 1:df.written_content.id, 2:df.item[] }
 ---param b { 1:df.written_content.id, 2:df.item[] }
 ---return boolean
-local function Take_Stock2_compare_Result_entries(a,b)
+local function ZTake_Stock2_compare_Result_entries(a,b)
 
     local titlea = written_content_id_to_title(a[1])
     local titleb = written_content_id_to_title(b[1])
@@ -916,52 +873,113 @@ local function Take_Stock2_compare_Result_entries(a,b)
 end
 
 
---  returns: an array, values are a 2-element array:
+--  Returns: an array, values are a 2-element array:
 --      [1] is a written_content.id, [2] is an array of df.item with that written_content.
---  The Result array is returned sorted by:
---      primary key written_content.title, secondary key written_content.id
+--  This array is sorted by:
+--      primary key df.written_content.title, secondary key df.written_content.id
 
---  also returns: a sparse table keyed on written_content.id,
---      values are arrays of df.item.id with that written_content.id .
---          123 = { item#456.id }
---          234 = { item#567.id, item#678.id, item#789.id }
---      there are no duplicated items.
---
+--  Also returns: an array of tables ready to feed to List.setChoices().
+--	The tables contain:
+--	    text = df.written_content.title
+--	    wcid = df.written_content.id
+--	    items = an array of df.item
+--	There are no duplicate wcids or items.
+--  This array is sorted by:
+--      primary key df.written_content.title, secondary key df.written_content.id
+
 ---return { 1:df.written_content.id, 2:df.item[] }[]
----return table< df.written_content.id, df.item.id[] >
+---return { text:string, wcid:df.written_content.id, books:df.item[], refcount:number }[]
 local function Take_Stock2 ()
+
+    --  TODO rename temp
+    --  the reason we need to use temp is that there can be multiple books with the 
+    --      same written_content.id .
+    --  temp is a sparse table keyed on written_content.id .
+    --      values are arrays of df.item with that written_content.id .
+    --          123 = { item#456 }
+    --          234 = { item#567, item#678, item#789 }
+    --      at least one item will always exist for every written_content.id.
+    --      it is theoretically possible to have two or more written_content.id keys
+    --          containing the same item, but in practice that doesn't happen.
+    --      this is because books (but not scrolls) have the potential to contain
+    --          multiple written_content.id's.
+
+    ---type table< df.written_content.id, df.item[] >
+    local temp = {}
+
+
+    --  Insert an item into temp.
+    ---param item df.item
+    local function Take_Stock2_Process_Item (item)
+
+        if item.pos.x == -30000 then return; end -- filter out items in play but not on the map;
+						-- TODO does this ever match items in buildings?
+        if item.flags.trader then return; end	-- filter out visitor owned items.
+
+        if item.flags.in_inventory then return; end	-- filter out carried items.
+						-- TODO is this logical? is this desired?
+
+        for _, improvement in ipairs (item.improvements) do
+	    if df.itemimprovement_pagesst:is_instance(improvement) or
+		    df.itemimprovement_writingst:is_instance(improvement)
+	    then
+		-- currently improvement.contents always contains exactly one entry.
+	        for _, wcid in ipairs (improvement.contents) do
+
+		    temp[wcid] = temp[wcid] or {}  -- init if necessary.
+		    table.insert(temp[wcid], item)
+
+	        end
+	    end
+        end
+    end -- process_item
+
+
+    for _, item in ipairs (df.global.world.items.other.BOOK) do
+	Take_Stock2_Process_Item(item)
+    end
+
+    for _, item in ipairs (df.global.world.items.other.TOOL) do
+	Take_Stock2_Process_Item(item)
+    end
 
     ---type { 1:df.written_content.id, 2:df.item[] }[]
     local Result = {}
-
-    ---type table< df.written_content.id, df.item.id[] >
+    ---type { text:string, wcid:df.written_content.id, books:df.item[], refcount:number }[]
     local Result2 = {}
 
-    ---type table< df.item.id, df.item >
-    local map_itemid_to_item = {}	-- retain some otherwise-lost info for Result.
+    -- collapse the temp sparse table into the Result and Result2 array.
+    for wcid, items in pairs(temp) do
+	wc = df_written_content_find(wcid)
 
-    for i, item in ipairs (df.global.world.items.other.BOOK) do
-	map_itemid_to_item[item.id] = item
-	Take_Stock2_Process_Item(Result2, item)
-    end
-
-    for i, item in ipairs (df.global.world.items.other.TOOL) do
-	map_itemid_to_item[item.id] = item
-	Take_Stock2_Process_Item(Result2, item)
-    end
-
-    -- collapse the Result2 sparse table into the Result array.
-    for wcid, itemids in pairs(Result2) do
-	---type df.item[]
-	local items = {}
-	for _, itemid in ipairs(itemids) do
-	    table.insert(items, map_itemid_to_item[itemid])
-	end
 	table.insert(Result, { wcid, items } )
+
+	table.insert(Result2, {
+		text = written_content_id_to_title(wcid),
+		wcid = wcid,
+		books = items,
+		refcount = #wc.refs,	-- Q: is this really useful enough to preload?
+		-- anything else?	-- A: it helps with Filter_Stock2, so yes.
+	} )
     end
 
-    -- sort the Result array.
-    table.sort(Result, Take_Stock2_compare_Result_entries)
+    table.sort(Result,  function(a,b)
+	    local titlea = written_content_id_to_title(a[1])
+	    local titleb = written_content_id_to_title(b[1])
+
+	    if titlea == titleb then
+	        return (a[1] < b[1])  -- use the written_content.id as a tie breaker
+	    end
+	    return (titlea < titleb)
+        end
+    )
+    table.sort(Result2, function(a,b) 
+	    if a.text == b.text then 
+	        return a.wcid < b.wcid  -- use the written_content.id as a tie breaker
+	    end
+	    return a.text < b.text
+	end
+    )
     return Result, Result2
 end
 
@@ -1176,64 +1194,6 @@ function Librarian ()
     return list
   end
 ]]
-
-
-  local function Zcheck_that_Main_Page_Stock_is_sorted()
-    if true then
-	---type { 1:df.written_content.id, 2:df.item[] }[]
-	local target = Main_Page.Stock
-	for i=1, #target do
-	    if type(target[i]) ~= "table" then 
-		dfhack.error('type(target[i]) ~= "table" at position ' .. i, 1, true)
-	    end
-	    if type(target[i][1]) ~= "number" then
-		dfhack.error('type(target[i][1]) ~= "number" at position ' .. i, 1, true)
-	    end
-	    if type(target[i][2]) ~= "table" then 
-		dfhack.error('type(target[i][2]) ~= "table" at position ' .. i, 1, true)
-	    end
-	    if #target[i][2] > 0 and not df.item:is_instance(target[i][2][1]) then 
-		dfhack.error('not df.item:is_instance(target[i][2][1]) at position ' .. i, 1, true)
-	    end
-	    if i < #target and not Take_Stock2_compare_Result_entries(target[i], target[i+1]) then
-		dfhack.error('Main_Page.Stock not sorted at position ' .. i, 1, true)
-	    end
-	end
-    end
-  end
-
-
-  local function Zcheck_that_Main_Page_Filtered_Stock_is_sorted()
-    if true then
-	---type { name=string, element={ 1:df.written_content.id, 2:df.item[] } }[]
-	local target = Main_Page.Filtered_Stock
-
-	for i=1, #target do
-	    if type(target[i]) ~= "table" then 
-		dfhack.error('type(target[i]) ~= "table" at position ' .. i, 1, true)
-	    end
-	    if type(target[i].name) ~= "string" then 
-		dfhack.error('type(target[i].name) ~= "string" at position ' .. i, 1, true)
-	    end
-	    if type(target[i].element) ~= "table" then 
-		dfhack.error('type(target[i].element) ~= "table" at position ' .. i, 1, true)
-	    end
-	    if type(target[i].element[1]) ~= "number" then 
-		dfhack.error('type(target[i].element[1]) ~= "number" at position ' .. i, 1, true)
-	    end
-	    if #target[i].element[2] > 0 and type(target[i].element[2]) ~= "table" then 
-		dfhack.error('type(target[i].element[2]) ~= "table" at position ' .. i, 1, true)
-	    end
-	    if #target[i].element[2] > 0 and not df.item:is_instance(target[i].element[2][1]) then 
-		dfhack.error('not df.item:is_instance(target[i].element[2][1]) at position ' .. i, 1, true)
-	    end
-	    if i < #target and target[i].name > target[i+1].name then
-		print(target[i].name, target[i+1].name)
-		dfhack.error('Main_Page.Filtered_Stock not sorted at position ' .. i, 1, true)
-	    end
-	end
-    end
-  end
 
 
   --============================================================
@@ -2775,14 +2735,19 @@ print('vvv');printall_recurse(remote_list2);print('^^^') -- debugging
 	print('Take_Stock2()', #_1, #_2, 'local books and scrolls.')
 	print('Take_Stock2() CPU time', os.clock() - starttime)
 	-- on a 0.47.05 fort with 12775 local books,
-	--	ZTake_Stock took 170.75 seconds,
-	--	Take_Stock2 took 0.167 seconds.
+	--	ZTake_Stock() took 170.75 seconds,
+	--	Take_Stock2() took 0.167 seconds.
 	--	speedup of 1000 times.  Not 1000%.  1000 times.
     end
 
     ---type { 1:df.written_content.id, 2:df.item[] }[]
-    ---type table<df.written_content.id, df.item.id[]>
-    Main_Page.Stock, Main_Page.Stock2 = Take_Stock2 ()
+    Main_Page.Stock = {}
+
+    -- this is ready to be passed directly to List.setChoices().
+    ---type { text:string, wcid:df.written_content.id, books:df.item[], refcount:number }[]
+    Main_Page.Stock2 = {}
+
+    Main_Page.Stock, Main_Page.Stock2 = Take_Stock2()
 
     ---type { name=string, element={ 1:df.written_content.id, 2:df.item[] } }[]
     Main_Page.Filtered_Stock = Filter_Stock (Main_Page.Stock, Content_Type_Selected, Reference_Filter)
