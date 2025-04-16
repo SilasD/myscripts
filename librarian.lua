@@ -888,7 +888,7 @@ end
 --      primary key df.written_content.title, secondary key df.written_content.id
 
 ---return { 1:df.written_content.id, 2:df.item[] }[]
----return { text:string, wcid:df.written_content.id, books:df.item[], refcount:number }[]
+---return { text:string, wcid:df.written_content.id, books:df.item[], type:df.written_content_type, refcount:number }[]
 local function Take_Stock2 ()
 
     --  TODO rename temp
@@ -945,7 +945,7 @@ local function Take_Stock2 ()
 
     ---type { 1:df.written_content.id, 2:df.item[] }[]
     local Result = {}
-    ---type { text:string, wcid:df.written_content.id, books:df.item[], refcount:number }[]
+    ---type { text:string, wcid:df.written_content.id, books:df.item[], type:df.written_content_type, refcount:number }[]
     local Result2 = {}
 
     -- collapse the temp sparse table into the Result and Result2 array.
@@ -958,6 +958,7 @@ local function Take_Stock2 ()
 		text = written_content_id_to_title(wcid),
 		wcid = wcid,
 		books = items,
+		type = wc.type,
 		refcount = #wc.refs,	-- Q: is this really useful enough to preload?
 		-- anything else?	-- A: it helps with Filter_Stock2, so yes.
 	} )
@@ -988,25 +989,24 @@ end
 --  returns a Data_Matrix2, which is:
 --  an array [0.13] {TODO make 1-based?} of
 --      arrays [0..something] {TODO make 1-based?} (the flags in this *scholar_flagst subtype) of
---          SORTED-by-title tables that can be fed directly to List:SetChoices().
---              entries look like: 
---              { text=written_content.title, wcid=written_content.id, books={df.item.id, ...} }
---      	There are no duplicate written_content.id's or item.id's .
+--          SORTED-by-title filtered Stock2 entries that can be fed directly to List:SetChoices().
 --
----param Stock2 table< df.written_content.id, df.item.id[] >
----return { text=string, wcid=df.written_content.id, books=df.item.id[] }[][]
+---param Stock2 { text:string, wcid:df.written_content.id, books:df.item[], type:df.written_content_type, refcount:number }[]
+---return { text:string, wcid:df.written_content.id, books:df.item[], type:df.written_content_type, refcount:number }[][][]
 local function Take_Science_Stock2 (Stock2)
 
-    ---type { text=string, wcid=df.written_content.id, books=df.item.id[] }[][]
+    ---type { text:string, wcid:df.written_content.id, books:df.item[], type:df.written_content_type, refcount:number }[][][]
     local Result = {}
 
     for index1 = 0, 13 do  --  ref.knowledge.flag_type can have these values; no content type enum known.
         Result [index1] = {}
     end
 
-    for wcid, itemids in pairs (Stock2) do
+    for _, entry in ipairs(Stock2) do
 	---type df.written_content
-        local content = df_written_content_find (wcid)
+        local content = df_written_content_find (entry.wcid)
+
+	-- TODO could we filter on the .type field?
 
         for _, ref in ipairs (content.refs) do
             if df.general_ref_knowledge_scholar_flagst:is_instance(ref) then
@@ -1021,15 +1021,17 @@ local function Take_Science_Stock2 (Stock2)
                     if flag then
 
                         -- wcid is unique, so it's not already in the list.
-	                entry = { text=tostring(content.title), wcid=wcid, books=itemids }
+			-- this _should_ already be sorted because Stock2 is sorted.
 
-                        utils.insert_sorted(Result [index1] [index2], entry, 'text')
+			table.insert(Result [index1] [index2], entry)
+			-- if it's not, switch to:
+                        -- utils.insert_sorted(Result [index1] [index2], entry, 'text')
                     end
                 end
             end
         end
     end
-    
+
     return Result
 end
 
@@ -1087,7 +1089,7 @@ function Librarian ()
   local Content_Type_Selected = 1
   local Reference_Filter = false
   ---type { name = { false=string, true=string }, index=number }
-  --   the strings are strings like "Manual (number of manuals in the world)"
+  --   the strings have values like "Manual (number of manuals in the world)"
   --   note the use of reserved Lua keywords as keys.  why?
   local Content_Type_Map = {}
   local ook_key_string = dfhack.screen.getKeyDisplay (df.interface_key [keybindings.ook.key])
@@ -1350,9 +1352,6 @@ function Librarian ()
   
   --============================================================
 
-
-  --============================================================
-
   function Take_Science_Stock (Stock)
     local Result = {}
     
@@ -1590,6 +1589,28 @@ function Librarian ()
           end
         end
       end
+    end    
+    
+    return Result
+  end
+
+  ---param Stock2 { text:string, wcid:df.written_content.id, books:df.item[], type:df.written_content_type, refcount:number }[]
+  ---param Content_Type_Selected integer
+  ---param Reference_Filter boolean
+  ---return { text:string, wcid:df.written_content.id, books:df.item[], type:df.written_content_type, refcount:number }[]
+  function Filter_Stock2 (Stock2, Content_Type_Selected, Reference_Filter)
+    local include
+    local Result = {}
+    
+    for _, entry in ipairs (Stock2) do
+      
+        if Content_Type_Selected == 1 or entry.type == Content_Type_Selected - 2 then
+	    local include = (Reference_Filter) and (entry.refcount ~= 0) or true
+
+            if include then
+		table.insert (Result, entry)
+            end
+        end
     end    
     
     return Result
@@ -2744,7 +2765,7 @@ print('vvv');printall_recurse(remote_list2);print('^^^') -- debugging
     Main_Page.Stock = {}
 
     -- this is ready to be passed directly to List.setChoices().
-    ---type { text:string, wcid:df.written_content.id, books:df.item[], refcount:number }[]
+    ---type { text:string, wcid:df.written_content.id, books:df.item[], type:df.written_content_type, refcount:number }[]
     Main_Page.Stock2 = {}
 
     Main_Page.Stock, Main_Page.Stock2 = Take_Stock2()
@@ -2752,18 +2773,22 @@ print('vvv');printall_recurse(remote_list2);print('^^^') -- debugging
     ---type { name=string, element={ 1:df.written_content.id, 2:df.item[] } }[]
     Main_Page.Filtered_Stock = Filter_Stock (Main_Page.Stock, Content_Type_Selected, Reference_Filter)
 
+    ---type { text:string, wcid:df.written_content.id, books:df.item[], type:df.written_content_type, refcount:number }[]
+    Main_Page.Filtered_Stock2 = Filter_Stock2 (Main_Page.Stock2, Content_Type_Selected, Reference_Filter)
+
     table.insert (Content_Type_Map, {name = {
 		[false] = "All (" ..
 			tostring (#Main_Page.Stock) .. ")",
 		[true] = "All (" ..
-			tostring (#Filter_Stock (Main_Page.Stock, Content_Type_Selected, true)) .. ")"},
+			tostring (#Filter_Stock (Main_Page.Stock, 1, true)) .. ")"},
 		index = -1})
 
-    for i = df.written_content_type._first_item, df.written_content_type._last_item do
+    -- oh no no no no.  we're calling Filter_Stock() 50+ times just to get these category counts.  slooooow.
+    for i = 0, df.written_content_type._last_item do
       table.insert (Content_Type_Map, {name = {
 		[false] = df.written_content_type [i] .. " (" .. 
 			tostring (#Filter_Stock (Main_Page.Stock, i + 2, false)) .. ")",
-		[true] = df.written_content_type [i] .. " (" .. 
+		[true]  = df.written_content_type [i] .. " (" .. 
 			tostring (#Filter_Stock (Main_Page.Stock, i + 2, true)) .. ")"},
 		index = i})
     end
@@ -2905,7 +2930,10 @@ print('vvv');printall_recurse(remote_list2);print('^^^') -- debugging
     ---type { 1=df.written_content.id, 2=df.item[] }[][]
     Science_Page.Data_Matrix = Take_Science_Stock (Main_Page.Stock)
 
-    ---type { text=string, wcid=df.written_content.id, books=df.item.id[] }[][]
+    --  an array [0.13] {TODO make 1-based?} of
+    --      arrays [0..something] {TODO make 1-based?} (the flags in this *scholar_flagst subtype) of
+    --          SORTED-by-title filtered Stock2 entries that can be fed directly to List:SetChoices().
+    ---type { text:string, wcid:df.written_content.id, books:df.item[], type:df.written_content_type, refcount:number }[][][]
     Science_Page.Data_Matrix2 = Take_Science_Stock2 (Main_Page.Stock2)
 
     ---type { 1=df.written_content }[][]	-- looks like .Data_Matrix withough the df.item[] list.
