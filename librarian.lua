@@ -987,9 +987,10 @@ end
 
 --  Called with Main_Page.Stock2
 --  returns a Data_Matrix2, which is:
---  an array [0.13] {TODO make 1-based?} of
---      arrays [0..something] {TODO make 1-based?} (the flags in this *scholar_flagst subtype) of
+--  an array [1..14] of
+--      arrays [1..something] (the number of flags in this *scholar_flagst subtype) of
 --          SORTED-by-title filtered Stock2 entries that can be fed directly to List:SetChoices().
+--  note that the DF internal arrays are 0-based: [0..13] and [0..something] .
 --
 ---param Stock2 { text:string, wcid:df.written_content.id, books:df.item[], type:df.written_content_type, refcount:number }[]
 ---return { text:string, wcid:df.written_content.id, books:df.item[], type:df.written_content_type, refcount:number }[][][]
@@ -998,8 +999,19 @@ local function Take_Science_Stock2 (Stock2)
     ---type { text:string, wcid:df.written_content.id, books:df.item[], type:df.written_content_type, refcount:number }[][][]
     local Result = {}
 
-    for index1 = 0, 13 do  --  ref.knowledge.flag_type can have these values; no content type enum known.
+    -- initialize the sub-arrays, only initialize the ones that have valid descriptions in knowledge[][].
+    for index1_0based = 0, 13 do  --  ref.knowledge.flag_type can have these values; no content type enum known.
+	local index1 = index1_0based + 1
         Result [index1] = {}
+
+	--  Don't care which one, as they'll iterate over all bits regardless.
+	-- note: also 0-based.
+        for index2_0based = 0, 31 do
+	    local index2 = index2_0based + 1
+	    if (knowledge [index1_0based] [index2_0based]) ~= nil then
+		Result [index1] [index2] = {}
+	    end
+	end
     end
 
     for _, entry in ipairs(Stock2) do
@@ -1010,22 +1022,18 @@ local function Take_Science_Stock2 (Stock2)
 
         for _, ref in ipairs (content.refs) do
             if df.general_ref_knowledge_scholar_flagst:is_instance(ref) then
-                local index1 = ref.knowledge.flag_type
+                local index1 = (ref.knowledge.flag_type+1) 	-- +1 to make 1-based
 
 	        --  Don't care which one, as they'll iterate over all bits regardless.
-                for index2, flag in ipairs (ref.knowledge.flag_data.flags_0) do
-
-                    -- init the selected list if necessary.
-	            Result [index1] [index2] = Result [index1] [index2] or {}
-
+                for index2_0based, flag in ipairs (ref.knowledge.flag_data.flags_0) do
+		    local index2 = index2_0based + 1
                     if flag then
-
-                        -- wcid is unique, so it's not already in the list.
+			-- wcid is unique, so it's not already in the list.
 			-- this _should_ already be sorted because Stock2 is sorted.
-
 			table.insert(Result [index1] [index2], entry)
-			-- if it's not, switch to:
-                        -- utils.insert_sorted(Result [index1] [index2], entry, 'text')
+
+			-- if it's not sorted, switch to:
+			-- utils.insert_sorted(Result [index1] [index2], entry, 'text')
                     end
                 end
             end
@@ -2192,12 +2200,9 @@ function Librarian ()
 	local idx, cname, creature, name
 	idx = (DF_pre_50) and ref.anon_1 or							-- 0 to 4
 		((df.general_ref_languagest._fields.anon_1) and ref.anon_1 or ref.language_idx)
-	print(idx)
 	cname = (idx >= 0 and idx < #df.global.world.raws.language.translations) and 
 		df.global.world.raws.language.translations[idx].name or nil  			-- e.g. DWARF
-	print(cname) -- debugging
 	_, creature = utils.linear_index(df.global.world.raws.creatures.all, cname, 'creature_id')
-	print(creature, (creature) and creature.name[2] or 'nil')  -- debugging
 	name = (creature) and creature.name[2] or "<Unknown>"					-- e.g. dwarven
         table.insert (text, wrap ("Reference: Dictionary of the " .. name .. " language\n"))
 
@@ -2925,14 +2930,13 @@ print('vvv');printall_recurse(remote_list2);print('^^^') -- debugging
     
     table.insert (sciencePage.subviews, Science_Page.Background)
 
-    Science_Page.Matrix = {}
-
     ---type { 1=df.written_content.id, 2=df.item[] }[][]
     Science_Page.Data_Matrix = Take_Science_Stock (Main_Page.Stock)
 
-    --  an array [0.13] {TODO make 1-based?} of
-    --      arrays [0..something] {TODO make 1-based?} (the flags in this *scholar_flagst subtype) of
+    --  an array [1..14] of
+    --      arrays [1..something] (the number of flags in this *scholar_flagst subtype) of
     --          SORTED-by-title filtered Stock2 entries that can be fed directly to List:SetChoices().
+    --  note that the DF internal arrays are 0-based: [0..13] and [0..something] .
     ---type { text:string, wcid:df.written_content.id, books:df.item[], type:df.written_content_type, refcount:number }[][][]
     Science_Page.Data_Matrix2 = Take_Science_Stock2 (Main_Page.Stock2)
 
@@ -2945,6 +2949,7 @@ print('vvv');printall_recurse(remote_list2);print('^^^') -- debugging
 
     Science_Page.Remote_Data_Matrix, Values_Page.Remote_Data_Matrix = Take_Remote_Stock ()
 
+    Science_Page.Matrix = {}
     for i = 0, 13 do  --  Haven't found an enum over the knowledge category range...
       Science_Page.Matrix [i] = {}
 
@@ -2955,12 +2960,53 @@ print('vvv');printall_recurse(remote_list2);print('^^^') -- debugging
             widgets.Label {text = Science_Character_Of (Science_Page.Data_Matrix, i, k),
                            frame = {l = 18 + k * 2, w = 1, t = 5 + i, y_align = 0},
                            text_pen = Science_Color_Of (Science_Page.Data_Matrix, i, k)}
-			   -- TODO this seems the obvious place to cache the related book list.
-          table.insert (sciencePage.subviews, Science_Page.Matrix [i] [k])
+			   -- note the typo: y_align should be yalign.
+          --DISABLED table.insert (sciencePage.subviews, Science_Page.Matrix [i] [k])
         end
       end
-    end    
-    
+    end
+
+
+    -- produced from Science_Page.Data_Matrix2.  This is the green '!' or red '?' table that
+    --     indicates the presence/absence of this knowledge category in the fort.
+    Science_Page.Matrix2 = {}
+
+    for category = 1, 14 do  --  Haven't found an enum over the knowledge category range...
+
+      -- note: unlike the original Science_Page.Matrix, we are going to build one widgets.Label
+      --     per line, with pens changing color as necessary.
+      -- text will be filled in character-by-character per the Pen API.
+
+      -- type: see Label class, Widget class, View class, and Pen API.
+      local text={}
+      -- Full bit range, rather than used bit range, but same for all...
+      -- note: we process one extra to ensure that the line of text will be finished.
+      for cell, _ in ipairs(Science_Page.Data_Matrix2[category]) do
+
+	table.insert(text, {
+		text = (#Science_Page.Data_Matrix2[category][cell] > 0) and '!' or '?',
+		pen = (  -- callback to dynamically highlight the currrently selected category and topic.
+		    function() 
+		    return {
+			fg = (#Science_Page.Data_Matrix2[category][cell] > 0) 
+			    and COLOR_GREEN or COLOR_LIGHTRED,
+			bg = (Science_Page.Category_List ~= nil 
+				and Science_Page.Category_List.selected == category
+				and Science_Page.Topic_List ~= nil
+				and Science_Page.Topic_List.selected == cell)
+			    and COLOR_GREY or COLOR_BLACK,
+		    }
+		    end
+		),
+		gap = (cell==1) and 0 or 1,
+	} )
+      end
+
+      Science_Page.Matrix2 [category] = widgets.Label
+	    { frame={ t=4+category, h=1, l=18, }, text=text, enabled=true, auto_width=true }
+      table.insert (sciencePage.subviews, Science_Page.Matrix2 [category])
+    end
+
     Science_Page.Background_2 =
       widgets.Label {text = "Category  Scientific Topic                                                         Local Knowledge",
                      frame = {l = 0, t = 21, y_align = 0}}
