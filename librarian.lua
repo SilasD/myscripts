@@ -880,7 +880,7 @@ end
 
 --  Also returns: an array of tables ready to feed to List.setChoices().
 --	The tables contain:
---	    text = df.written_content.title
+--	    text = df.written_content.title   -- DO NOT rename to something more descriptive.
 --	    wcid = df.written_content.id
 --	    items = an array of df.item
 --	There are no duplicate wcids or items.
@@ -2969,43 +2969,44 @@ print('vvv');printall_recurse(remote_list2);print('^^^') -- debugging
 
     -- produced from Science_Page.Data_Matrix2.  This is the green '!' or red '?' table that
     --     indicates the presence/absence of this knowledge category in the fort.
-    Science_Page.Matrix2 = {}
-
+    -- note: unlike the original Science_Page.Matrix, this is one big 63x14 panel.
+    Science_Page.Matrix2 = widgets.Label {
+	frame = { t=5, l=18, },
+	auto_height = true,	-- 14 categories.
+	auto_width = true,	-- 32 topic indicators + 31 gaps = 63 characters.
+	enabled = true,
+    }
+    ---type {...}  # see Label class, Widget class, View class, and Pen API.
+    local text = {}
     for category = 1, 14 do  --  Haven't found an enum over the knowledge category range...
 
-      -- note: unlike the original Science_Page.Matrix, we are going to build one widgets.Label
-      --     per line, with pens changing color as necessary.
       -- text will be filled in character-by-character per the Pen API.
 
-      -- type: see Label class, Widget class, View class, and Pen API.
-      local text={}
       -- Full bit range, rather than used bit range, but same for all...
       -- note: we process one extra to ensure that the line of text will be finished.
-      for cell, _ in ipairs(Science_Page.Data_Matrix2[category]) do
+      for topic, _ in ipairs(Science_Page.Data_Matrix2[category]) do
 
 	table.insert(text, {
-		text = (#Science_Page.Data_Matrix2[category][cell] > 0) and '!' or '?',
-		pen = (  -- callback to dynamically highlight the currrently selected category and topic.
-		    function() 
-		    return {
-			fg = (#Science_Page.Data_Matrix2[category][cell] > 0) 
-			    and COLOR_GREEN or COLOR_LIGHTRED,
-			bg = (Science_Page.Category_List ~= nil 
-				and Science_Page.Category_List.selected == category
-				and Science_Page.Topic_List ~= nil
-				and Science_Page.Topic_List.selected == cell)
-			    and COLOR_GREY or COLOR_BLACK,
-		    }
-		    end
-		),
+		text = (#Science_Page.Data_Matrix2[category][topic] > 0) and '!' or '?',
+
+		-- callback to dynamically highlight the currrently selected category and topic.
+		--    values of category and topic are bound (is that the right word?).
+		pen = function() return {
+		    fg = (#Science_Page.Data_Matrix2[category][topic] > 0) and COLOR_GREEN or COLOR_LIGHTRED,
+		    bg = (Science_Page.Category_List:getSelected() == category 
+				and Science_Page.Topic_List:getSelected() == topic)
+			and COLOR_GREY or COLOR_BLACK,
+		} end,
+
 		gap = (cell==1) and 0 or 1,
 	} )
       end
-
-      Science_Page.Matrix2 [category] = widgets.Label
-	    { frame={ t=4+category, h=1, l=18, }, text=text, enabled=true, auto_width=true }
-      table.insert (sciencePage.subviews, Science_Page.Matrix2 [category])
+      if category < 14 then table.insert(text, NEWLINE); end
     end
+    Science_Page.Matrix2:setText( text )
+    -- because .Matrix2 depends on .Category_List and .Topic_List, delay adding it to the .subviews.
+    text = nil
+
 
     Science_Page.Background_2 =
       widgets.Label {text = "Category  Scientific Topic                                                         Local Knowledge",
@@ -3118,6 +3119,7 @@ print('vvv');printall_recurse(remote_list2);print('^^^') -- debugging
     table.insert (sciencePage.subviews, Science_Page.Book_Order_Label)
     table.insert (sciencePage.subviews, Science_Page.Book_Label)
     table.insert (sciencePage.subviews, Science_Page.Book_List)
+    table.insert (sciencePage.subviews, Science_Page.Matrix2)	-- depends on Category_List and Topic_List
     
     Science_Page.Active_List = {}
     
