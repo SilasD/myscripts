@@ -12,6 +12,7 @@ Run this script while a building is selected.
 -- TODO   and how to handle containers.
 -- TODO only run if there are active traders.
 -- TODO don't trade intermediate items: logs, bars, blocks.
+-- TODO don't trade items worth 0 dwarfbucks.
 -- TODO allow typeof item selections: goblets, all crafts, etc.
 
 
@@ -21,7 +22,6 @@ canTrade() thinks that items in a building are not tradeable.
 markForTrade() does not consult canTrade() .
 markForTrade() does not handle the special-case where the item is already in the depot.
 markForTrade() does not check for forbidden depots.
-The moveToGround() I do may not be necessary; TODO test.
 
 
 library/modules/Items.cpp 
@@ -161,8 +161,8 @@ for i=(#b.contained_items-1), 0, -1 do
 	-- m.flags2.might_contain_artifact don't care
 
     then
-	if not (dfhack.items.moveToGround(m, p) and dfhack.items.markForTrade(m, d)) then
-	    print (('Problem with item #%d %s, failed to move to ground or failed to mark for trade.')
+	if not (dfhack.items.markForTrade(m, d)) then
+	    print (('Problem with item #%d %s, failed to mark for trade.')
 		:format(i, dfhack.items.getReadableDescription(m) ))
 	end
 	n = nil		-- no longer valid after .moveToGround()
