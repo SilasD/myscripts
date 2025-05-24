@@ -8,20 +8,26 @@ Run this script while a building is selected.
 ]====]
 
 -- TODO safety checks.
--- TODO how does this interact with stockpiles.
--- TODO   and how to handle containers.
+-- TODO dry-run.
+-- DONE how does this interact with stockpiles.  A: getSelectedBuilding() doesn't return stockpiles.
+-- DONE   and how to handle containers.  A: ignore them.
 -- TODO only run if there are active traders.
--- TODO don't trade intermediate items: logs, bars, blocks.
--- TODO don't trade items worth 0 dwarfbucks.
--- TODO allow typeof item selections: goblets, all crafts, etc.
+-- DONE don't trade intermediate items: logs, bars, blocks.  now we have hardcoded item types to ignore.
+-- DONT don't trade items worth 0 dwarfbucks.  no longer necessary with hardcoded item types to ignore.
+-- TODO maybe: allow typeof item selections: goblets, all crafts, etc.
+--    partially DONE by hardcoding item types to ignore.
+-- TODO this script has grown wildly since its one-liner origin.  refactor.
 
 
---[=[ 
-Important things about the C++ source code:
+--[=[
+
+Snippets of the C++ source code.
+
+Important things:
 canTrade() thinks that items in a building are not tradeable.
 markForTrade() does not consult canTrade() .
 markForTrade() does not handle the special-case where the item is already in the depot.
-markForTrade() does not check for forbidden depots.
+markForTrade() does not check for forbidden or inaccessible depots.
 
 
 library/modules/Items.cpp 
@@ -99,30 +105,96 @@ for i, dd in ipairs(df.global.world.buildings.other.TRADE_DEPOT) do
 	break
     end
 end
-if d == nil then qerror('No (unforbidden) depot!'); end
+if d == nil then qerror("No (unforbidden) depot!"); end
 local desc = (d.name ~= "") and d.name or dfhack.items.getReadableDescription(d.contained_items[0].item)
-print('Targetting the ' .. desc .. ' Trade Depot.')
+print("Targetting the " .. desc .. " Trade Depot.")
 
 
-local b = dfhack.gui.getSelectedBuilding()
+local b = dfhack.gui.getSelectedBuilding(true)
 
-if not b then qerror('No building selected!'); end
+if not b then qerror("No building selected!"); end
 
-if b == d then qerror('Use the mark-items-in-trade-depot-for-trade script instead!'); end
+if b == d then qerror("Use the mark-items-in-trade-depot-for-trade script instead!"); end
 
-local p = xyz2pos(b.centerx, b.centery, b.z)
+-- local p = xyz2pos(b.centerx, b.centery, b.z)  ! no longer used.
 
 local marked = 0
 
-for i=(#b.contained_items-1), 0, -1 do
-    local n = b.contained_items[i]
+local reject_types = ([[
+
+bag
+bar
+barrel
+blocks
+boulder
+cage
+cloth
+corpse
+corpsepiece
+drink
+liquid
+liquipowder
+meat
+plant
+plant_growth
+pot
+powder
+power
+remains
+rock
+seed
+thread
+wood
+
+]]):trim():split("\n")
+
+
+local reject_tools = ([[
+
+ITEM_TOOL:ITEM_TOOL_LARGE_POT
+ITEM_TOOL:ITEM_TOOL_SCROLL_ROLLERS
+ITEM_TOOL:ITEM_TOOL_BOOK_BINDING
+ITEM_TOOL:ITEM_TOOL_SCROLL
+ITEM_TOOL:ITEM_TOOL_QUIRE
+
+]]):trim():split("\n")
+
+
+for i = 1, #reject_types do
+    local r = reject_types[i]
+    reject_types[i] = load(string.format("return df.item_%sst", r:trim()))() -- voodoo
+end	-- reject_types is now an array of df.item_*st classes.
+
+
+for i = 1, #reject_tools do
+    local r = reject_tools[i]
+    r = string.match(r, "TOOL:.*$")
+    reject_tools[i] = (r) and dfhack.items.findSubtype(r) or -1
+end	-- reject_tools is now an array of integers which are subtypes of item type TOOL.
+
+
+for _,n in ipairs(b.contained_items) do
     local m = n.item
-    if m ~= nil
-	and n.use_mode == 0
+    if m == nil then goto continue; end		-- can't happen
+    if n.use_mode ~= df.building_item_role_type.TEMP then goto continue; end
 
-	-- TODO check item types?
-	-- TODO lots of safety checks, like being an actual building.
+    for _, reject_type in ipairs(reject_types) do
+	if reject_type:is_instance(m) then
+	    -- print("Reject type:", dfhack.items.getReadableDescription(m))
+	    goto continue
+	end
+    end
 
+    if df.item_toolst:is_instance(m) then
+	for _, subtype in ipairs(reject_tools) do
+	    if m.subtype.subtype == subtype then
+		-- print("Reject tool:", dfhack.items.getReadableDescription(m))
+		goto continue
+	    end
+	end
+    end
+
+    if	true
 	-- m.flags.on_ground will always be false
 	and not m.flags.in_job
 	-- m.flags.hostile should always be false
@@ -164,11 +236,12 @@ for i=(#b.contained_items-1), 0, -1 do
 	if not (dfhack.items.markForTrade(m, d)) then
 	    print (('Problem with item #%d %s, failed to mark for trade.')
 		:format(i, dfhack.items.getReadableDescription(m) ))
+	else 
+	    marked = marked + 1
 	end
-	n = nil		-- no longer valid after .moveToGround()
-	marked = marked + 1
     end
+    ::continue::
 end
 
-print(('%d %s was marked for trade in the (first) trade depot.'):format(
-	marked, (marked == 1 and 'item' or 'items'), (marked == 1 and 'was' or 'were') ))
+print(string.format("%d %s marked for trade in the (first) trade depot.",
+	marked, (marked == 1 and "item was" or "items were") ))
