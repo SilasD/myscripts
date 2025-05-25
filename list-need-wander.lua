@@ -13,7 +13,8 @@ if work_detail == nil then
   return
 end
 
-work_detail.flags.cannot_be_everybody = true
+-- work_detail.flags.cannot_be_everybody = true   !  I misunderstood this flag.
+work_detail.flags.mode = 3			-- 1 == everybody, 2 == nobody, 3 == selected
 
 for k,u in ipairs(df.global.world.units.active) do
   if ( dfhack.units.isCitizen(u) )

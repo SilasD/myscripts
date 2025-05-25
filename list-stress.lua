@@ -2,13 +2,14 @@
 
 list-stress
 ===========
-Lists citizens who are stressed.
+If a unit is selected, lists only that unit's longterm stress.
 
-If a unit is selected, lists only that unit's stress.
-Otherwise lists all units with some stress.
+Otherwise lists all citizens with excessive longterm stress.
 
-TODO also should add/remove from orderlies, give food, give water.
+The change in stress from the last time the script was run is also listed.
 ]====]
+
+-- TODO print a header line "Long  Delta  Short  Delta  Name"
 
 local Level1 = 10000
 local Level2 = 20000
