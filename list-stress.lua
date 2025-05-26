@@ -54,10 +54,14 @@ for k,u in ipairs(unitList) do
 	goto CONTINUE
     end
 
-    dfhack.println(string.format("%-8d%s%-7d%-8d%s%-7d%s", longtermStress,
-	deltaLong < 0 and '-' or (deltaLong > 0 and '+' or ' '), math.abs(deltaLong),
-	stress, deltaStress < 0 and '-' or (deltaStress > 0 and '+' or ' '),
-	math.abs(deltaStress), dfhack.units.getReadableName(u) ))
+    dfhack.println(string.format("%-8d%s%-7s%-8d%s%-7s%s", 
+	longtermStress,
+	(deltaLong < 0) and '-' or (deltaLong > 0 and '+' or ' '), 
+	(deltaLong == 0) and '' or tostring(math.abs(deltaLong)),
+	stress, 
+	(deltaStress < 0) and '-' or (deltaStress > 0 and '+' or ' '),
+	(deltaStress == 0) and '' or tostring(math.abs(deltaStress)), 
+	dfhack.units.getReadableName(u) ))
 
     -- update?
     if (oldTick + deltaTick) < currentTick then
