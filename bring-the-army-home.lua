@@ -4,15 +4,18 @@
 
 bring-the-army-home
 ===================
-Returning soldiers will enter the map quickly instead of trickling
-in one at a time.
+After a raid, returning soldiers will enter the map quickly instead 
+of trickling in one at a time.
 
-This script requires a fishing zone with tiles on the edge of the map.
+In addition, all spoils items will be dropped and forbidden.
+
+This script requires a Fishing Zone with tiles on the edge of the map.
 
 Recommended: make the zone as big as 1x20 or even 1x30, on the map edge.
 The zone can be disabled to prevent fishing jobs.
 
-Only the first-created fishing zone with tiles on the map edge will be used.
+Only the earliest-created Fishing Zone with tiles on the map edge will 
+be used.
 
 After a raid, squad members who have not yet entered the map will have 
 their entry point set to a random location in the zone.
@@ -25,40 +28,43 @@ For manual use.  Run this immediately after the
 "Squad Name and others have returned." announcement.
 
 
-    bring-the-army-home units
+    bring-the-army-home start
 
-Notification-based: Every time a new unit is added to the map,
-check for a "Squad Name and others have returned." announcement.
-When the TODO
+The activation is new-unit and notification-based: Every time a new unit 
+is added to the map, the announcement queue is checked for a "Squad Name 
+and others have returned." announcement.  This triggers the script.
 
 --]====]
 
-
-eventful = require('plugins.eventful')
 
 -- TODO generalize to other report types (migrants).
 
 -- TODO find out what happens with messengers.
 
--- TODO catch map load / unload.
+-- DONE catch map load / unload.
 
 -- TODO maybe: Instead of random, equal units per tile ?
 
--- TODO maybe: I just found that squad_order_raid_sitest is where the exit point is defined.
+-- DONT: I just found that squad_order_raid_sitest is where the exit point is defined.
 --   could override that on close of the world map?  to force exits on the army return.
+--   nah, that wouldn't work for migrants, etc.
 
 -- note: squad return event is 301 GUEST_ARRIVAL
 
--- okay, found out there are NO TICKS between the incoming units being placed
--- into units.active, and the announcement, and the first unit entering the map:
+-- note: found out there are NO TICKS between the incoming units being placed
+--   into units.active, and the announcement, and the first unit entering the map:
 --	announcement GUEST_ARRIVAL at year 507 tick 77210
 --	Squad4 and others have returned.
 --	Triggered at tick 77210
 --	At tick 77210, #units.active changed from 699 to 719
 --	At this point, the squad leader was already on the map at the announcement.pos location.
 -- (later) I also found that this is when the army is deleted.  likely the army_controller too.
+--   so you can't study the army/army_controller to cross-check the incoming units.
+--   (could grab any relevant info on every trigger.)
 
 -- There are 100 ticks between waves, that is, attempts to enter.
+--   DONE: could frequency be set as low as 100?  Is the 100 aligned to a boundary?
+--	A: NO.  Probably 10.
 
 -- TODO NEW ISSUE: Babies should not be removed from their mothers.
 --	Mother 11046 Thikut Uz, SQ4 ; Baby 17054 Rith Laz.
@@ -66,7 +72,15 @@ eventful = require('plugins.eventful')
 --	They also have relationship_ids.RiderMount == their mother's id.
 --	mount_type == 1 (CARRIED).
 --	TODO check if that is still true of .inactive babies.
+--   So if a unit has .rider, move them to the same square as their mount, I think.
 
+-- TODO maybe: it turns out that eventful.onUnitNewActive is pretty slow, because it scans
+--   the entire active units vector every n ticks (based on frequency of course).
+--   Consider switching back to a report-based trigger.
+--   (OTOH, there are so many reports that that's slow as well.)
+
+
+eventful = require('plugins.eventful')
 
 local _, plotinfo = pcall(function() return df.global.ui; end)
 if not _ then _, plotinfo = pcall(function() return df.global.plotinfo; end) end
@@ -90,6 +104,8 @@ end
 local current_script_name = dfhack.current_script_name()
 local function dprintf(format, ...)
     if not debugging then return; end
+    -- unfortunately, even if we're not debugging, the script wastes time collecting
+    --   all of the info that would be printed.  So don't do anything too slow.
 
     -- Lua 5.3 Reference Manual 4.9 lua_Debug and lua_getinfo.
     --   2 = immediate caller's frame, n = name info, t = istailcall.
@@ -101,12 +117,13 @@ local function dprintf(format, ...)
     info.name = info.name or ( (info.istailcall) and "{tail call}" or "{no function}" )
     -- I'm not sure we care about namewhat; 'global' or 'local' function doesn't really matter.
     --if info.namewhat == "upvalue" then info.namewhat = "local"; end	-- make things look familiar.
-    dfhack.printerr(string.format("%s %s(): " .. format, current_script_name, 
-	    info.name, ...))
+    dfhack.printerr(string.format("%s %s(): " .. format, current_script_name, info.name, ...))
 end
 
 
-local stop_catching_newunits
+local stop_catching_newunits	-- declared here, defined as a function near the end of the script.
+
+
 local QError = qerror
 local function qerror(msg, lvl)
     stop_catching_newunits()
@@ -140,7 +157,7 @@ end
 local is_on_map_edge_list = {}
 
 
----@param  x integer|coord
+---@param  x integer|coord|df.coord
 ---@param  y integer?
 ---@param  z integer?
 ---@return boolean
@@ -163,14 +180,9 @@ local function is_on_map_edge(x,y,z)
 end
 
 
--- TODO document
+-- returns a list of all of the tiles which are actually in the building, considering extents.
 --
 -- note: only tested with building type df.building_civzonest .
---
--- currently, this tests every tile inside the building's limits, ignoring extents.
--- TODO how to walk the actual building extents?
---     relevant: dfhack.buildings.countExtentTiles(extents,defval)
---     relevant: dfhack.buildings.containsTile(building, x, y)
 --
 ---@building df.building
 ---@return coord[]
@@ -182,50 +194,58 @@ local function get_all_building_tiles(building)
 	for y = building.y1, building.y2 do
 	    local z = building.z
 
-	    table.insert(tiles, xyz2pos(x,y,z))
+	    -- this is how building extents are handled.
+	    if dfhack.buildings.containsTile(building, x, y) then
+		table.insert(tiles, xyz2pos(x,y,z))
+	    end
 	end
     end
     return tiles
 end
 
 
----@type coord[]
-local acceptable_tiles	-- this should be a static local inside find_acceptable_tiles() .
-
-
--- TODO document
--- TODO maybe: should this return the list of acceptable tiles, as if 'acceptable_tiles' was local-static ?
--- TODO maybe: should it be something like get_an_incoming_tile() ?
+---@return coord[]	# a (possibly-empty) list of coords of teleportation targets.
 local function find_acceptable_tiles()
 
     ---@type coord[]
-    local intersect = {}
+    local acceptable_tiles = {}
 
     for _,zone in ipairs( df.global.world.buildings.other.ZONE_FISHING_AREA ) do
+
 	if not df.building_civzonest:is_instance(zone) then 
 	    qerror('ERR: not a zone!')  -- can't happen.
 	end
 
-	intersect = {}
+	acceptable_tiles = {}
 
-	for _, p in ipairs(get_all_building_tiles(zone)) do
+	for _, pos in ipairs(get_all_building_tiles(zone)) do
 
-	    --print(pos2str(p),is_on_map_edge(p),dfhack.maps.getWalkableGroup(p),	-- debugging
-	    --   dfhack.buildings.checkFreeTiles(p,{x=1,y=1},nil,false,true))		-- debugging
+	    --dprintf("%s, %s, %d, %s", pos2str(pos), is_on_map_edge(pos) and 'true' or 'false',
+	    --    dfhack.maps.getWalkableGroup(pos),
+	    --    dfhack.buildings.checkFreeTiles(pos,{x=1,y=1},nil,false,true) and 'true' or 'false' )
 
-	    if is_on_map_edge(p)
-		    and dfhack.maps.getWalkableGroup(p) > 0
-		    and dfhack.buildings.checkFreeTiles(p,{x=1,y=1},nil,false,true) == true
+	    if is_on_map_edge(pos) == true
+		    and dfhack.maps.getWalkableGroup(pos) > 0
+		    and dfhack.buildings.checkFreeTiles(pos,{x=1,y=1},nil,false,true) == true
 	    then
-		table.insert(intersect, p)
+		table.insert(acceptable_tiles, pos)
 	    end
 	end
-	if #intersect > 0 then break; end
+	if #acceptable_tiles > 0 then break; end
     end
 
-    if #intersect == 0 then qerror("There aren't any fishing zones with tiles on the map edge!"); end
+    return acceptable_tiles
+end
 
-    acceptable_tiles = intersect
+
+---@param item df.item
+---@return boolean
+local function isMinerWoodcutterHunterEquipment(item)
+    -- actually this was not hard to check.  nice.
+    for _, id in ipairs(plotinfo.equipment.work_weapons) do
+	if id == item.id then return true; end
+    end
+    return false
 end
 
 
@@ -235,10 +255,11 @@ end
 --
 -- Spoils tests that are not performed are:
 --	* Not fort-produced.
---	* Not owned by the unit.  For some reason, returning soldiers don't own anything at all.
+--	* Not owned by the unit.  For some reason, returning soldiers don't own anything at all.  Bug!
 --	* A spoils item is expected to be the last item in the inventory.
 --
--- TODO: what happens if a miner/woodcutter/hunter is used as a site messenger?
+-- DONE: what happens if a miner/woodcutter/hunter is used as a site messenger?
+--	Does their equipment count as squad-owned?  I bet not.  Resolution: manually checked.
 --
 ---@param unit df.unit
 local function drop_and_forbid_spoils(unit)
@@ -254,7 +275,7 @@ local function drop_and_forbid_spoils(unit)
 
 	-- DONT bother: the spoils should be the last item in the inventory.
 
-	-- So for some reason, the returning squaddies don't haul the spoils;
+	-- So for some reason, the returning squaddies don't haul the spoils item;
 	--   it is carried as Weapons.  (so are shields, BTW.)
 
 	-- Unfortunately, a returning soldier doesn't own any of their inventory items.
@@ -263,12 +284,14 @@ local function drop_and_forbid_spoils(unit)
 
 	if  (      invitem.mode == df.inv_item_role_type.Hauled	-- if unit is active.
 	        or invitem.mode == df.inv_item_role_type.Weapon	-- if unit is inactive.
-	    ) and not dfhack.items.isSquadEquipment(item)
-	    -- it can happen that an arriving active unit is hauling their squad equipment;
+	    )
+	    and not dfhack.items.isSquadEquipment(item)
+	    and not isMinerWoodcutterHunterEquipment(item)
+	    -- note: it can happen that an arriving active unit is hauling their squad equipment;
 	    -- I saw one example of hauling a squad-assigned flask to the flask stockpile.
 	then
 	    if i ~= #unit.inventory-1 then
-		dprintf("NOTICE: Spoils item %d is not the last inventory item.", item.id)
+		dprintf("NOTICE: Spoils item %d is not the last inventory item.  So that happens.", item.id)
 	    end
 	    table.insert(items_to_drop, item)
 	end
@@ -276,10 +299,15 @@ local function drop_and_forbid_spoils(unit)
 
     -- processor.
     for _, item in ipairs(items_to_drop) do
+	if #items_to_drop > 0 then
+	    dprintf("NOTICE: More than one spoils item.  Probably a bug.  %d, %d", unit.id, item.id)
+	end
 	local success = dfhack.items.moveToGround(item, unitpos)
 	dprintf("Dropping and forbidding spoils item %d at (%s).%s", item.id,
 		pos2str(unitpos), (success) and '' or '  FAILED!' )
-	if item.flags.on_ground then item.flags.forbid = true; end
+	if item.flags.on_ground then
+	    item.flags.forbid = true
+	end
     end
 end
 
@@ -289,7 +317,8 @@ end
 --
 ---@param unit df.unit
 ---@param entrypos coord?
-local function teleport_to_a_random_incoming_tile(unit, entrypos)
+---@param acceptable_tiles coord[]
+local function teleport_unit_to_a_random_incoming_tile(unit, entrypos, acceptable_tiles)
 
     -- handle the case where the unit is not actually on the entrypos.
     --     (this shouldn't happen, but early experiments showed that it does.)
@@ -304,7 +333,7 @@ local function teleport_to_a_random_incoming_tile(unit, entrypos)
     ---@type coord
     local pos
 
-    -- I had an issue where the game's chosen incoming tile was in acceptable_tiles.
+    -- I had an issue where the game's chosen incoming tile was in acceptable_tiles[].
     -- this manifested as: the units I assigned to that tile were not able to enter the map.
     -- the cause of this was tracked down to occ.unit and occ.unit_grounded, but I could
     --   not figure out why occ.unit kept being set.
@@ -373,9 +402,9 @@ end
 
 
 ---@param itemlist df.item[]
-local function move_items_to_a_random_incoming_tile(itemlist)
+---@param acceptable_tiles coord[]
+local function move_items_to_a_random_incoming_tile(itemlist, acceptable_tiles)
 
-    ---@type coord
     local pos = acceptable_tiles[ math.random(#acceptable_tiles) ]
 
     for _, item in ipairs(itemlist) do
@@ -389,8 +418,18 @@ local function move_items_to_a_random_incoming_tile(itemlist)
 end
 
 
----@param entrypos coord?
+---@param entrypos coord?	# the original entrance location, parsed from the announcement.
+---@return integer		# the number of units which were teleported.
 local function assign_incoming_units_to_tiles(entrypos)
+
+    local acceptable_tiles = find_acceptable_tiles()
+    if #acceptable_tiles == 0 then
+	dprintf("find_acceptable_tiles() returned false")
+	printf("bring-the-army-home could not locate any tiles to place the returning army on!")
+	printf("Please create a Fishing Zone on the edge of the map, in the location where the")
+	printf("army should return.  (The Fishing Zone can be disabled to prevent fishing jobs.)")
+	return 0
+    end
 
     -- debug logging, chasing an issue.  kind of slow, but only if debugging, so it's okay.
     for _,unit in ipairs(df.global.world.units.active) do
@@ -407,7 +446,7 @@ local function assign_incoming_units_to_tiles(entrypos)
 	if not debugging then break; end
 	local occ = dfhack.maps.getTileBlock(pos).occupancy[pos.x % 16][pos.y % 16]
 	if occ.unit_grounded then 
-	    dprintf("NOTICE: Before any teleports, tile (%s) has occ.unit_grounded set.", pos)
+	    dprintf("NOTICE: Before any teleports, tile (%s) has occ.unit_grounded set.", pos2str(pos))
 	    local a, ang, ag = 0, 0, 0
 	    for _, unit in ipairs(df.global.world.units.active) do
 		local unitpos = xyz2pos(dfhack.units.getPosition(unit))
@@ -416,9 +455,9 @@ local function assign_incoming_units_to_tiles(entrypos)
 			unit.id, (unit.flags1.inactive) and 'true ' or 'false',
 			(unit.flags1.on_ground) and 'true ' or 'false' )
 		end
-		a = a + (not(unit.flags1.inactive)) and 1 or 0
-		ang = ang + (not(unit.flags1.inactive) and not(unit.flags1.on_ground)) and 1 or 0
-		ag = ag + (not(unit.flags1.inactive) and (unit.flags1.on_ground)) and 1 or 0
+		a = a + ((not unit.flags1.inactive) and 1 or 0)
+		ang = ang + ((not unit.flags1.inactive and not unit.flags1.on_ground) and 1 or 0)
+		ag = ag + ((not unit.flags1.inactive and unit.flags1.on_ground) and 1 or 0)
 	    end
 	    dprintf("\tThis tile had %d active, %d nongrounded, %d grounded units.", a, ang, ag)
 	end
@@ -442,7 +481,7 @@ local function assign_incoming_units_to_tiles(entrypos)
 		and dfhack.units.isFortControlled(unit) )
 	    or ( (entrypos) and same_xyz(xyz2pos(dfhack.units.getPosition(unit)), entrypos) )
 	then
-	    teleport_to_a_random_incoming_tile(unit)
+	    teleport_unit_to_a_random_incoming_tile(unit, entrypos, acceptable_tiles)
 
 	    processed = processed + 1
 	end
@@ -450,7 +489,7 @@ local function assign_incoming_units_to_tiles(entrypos)
 
     -- special case: soldiers who already entered the map may have already dropped their spoils.
     if (entrypos) then
-	move_items_to_a_random_incoming_tile( get_items_on_this_tile(entrypos) )
+	move_items_to_a_random_incoming_tile( get_items_on_this_tile(entrypos), acceptable_tiles )
     end
 
     -- debug logging, chasing an issue.  kind of slow, but only if debugging, so it's okay.
@@ -468,7 +507,7 @@ local function assign_incoming_units_to_tiles(entrypos)
 	if not debugging then break; end
 	local occ = dfhack.maps.getTileBlock(pos).occupancy[pos.x % 16][pos.y % 16]
 	if occ.unit_grounded then 
-	    dprintf("NOTICE: After all teleports, tile (%s) has occ.unit_grounded set.", pos)
+	    dprintf("NOTICE: After all teleports, tile (%s) has occ.unit_grounded set.", pos2str(pos))
 	    local a, ang, ag = 0, 0, 0
 	    for _, unit in ipairs(df.global.world.units.active) do
 		local unitpos = xyz2pos(dfhack.units.getPosition(unit))
@@ -477,9 +516,9 @@ local function assign_incoming_units_to_tiles(entrypos)
 			unit.id, (unit.flags1.inactive) and 'true ' or 'false',
 			(unit.flags1.on_ground) and 'true ' or 'false' )
 		end
-		a = a + (not(unit.flags1.inactive)) and 1 or 0
-		ang = ang + (not(unit.flags1.inactive) and not(unit.flags1.on_ground)) and 1 or 0
-		ag = ag + (not(unit.flags1.inactive) and (unit.flags1.on_ground)) and 1 or 0
+		a = a + ((not unit.flags1.inactive) and 1 or 0)
+		ang = ang + ((not unit.flags1.inactive and not unit.flags1.on_ground) and 1 or 0)
+		ag = ag + ((not unit.flags1.inactive and unit.flags1.on_ground) and 1 or 0)
 	    end
 	    dprintf("\tThis tile had %d active, %d nongrounded, %d grounded units.", a, ang, ag)
 	end
@@ -527,7 +566,7 @@ local function check_for_our_announcement()
 		then
 		    ---@type coord
 		    local pos = report.pos
-		    dprintf("It is an army return!  at (%s)", pos2str(pos))
+		    dprintf("It is an army return!  at (%s)  tick %d", pos2str(pos), report.time)
 		    if (report.time % 10) ~= 0 then
 			-- test a hypothesis:
 			dprintf("NOTICE: the announcement's time is not divisible by 10.  So that happens.")
@@ -580,10 +619,11 @@ local function catch_newunits(unit_id)
 	print("\a")	-- ring the bell
 
 	-- TODO this would be the place to check that all squad members arrived safely.
-	--     (or, you know, were legitimately killed horribly by a demon....)
+	--   (or, you know, were legitimately killed horribly by a demon....)
 
-	-- TODO should we redo find_acceptable_tiles() on each arrival?
-	--     in case of new constructions, bridges, newly-grown trees, etc....
+	-- DONE should we redo find_acceptable_tiles() on each arrival?
+	--   in case of new constructions, bridges, newly-grown trees, etc....
+	--   yes, did this in assign_incoming_units_to_tiles()
 
 	if assign_incoming_units_to_tiles(pos) == 0 then
 	    -- TODO report that no units could be teleported?
@@ -601,8 +641,8 @@ end
 local bring_the_army_home_KEY = dfhack.current_script_name()	-- must be globally unique in all scripts.
 local function start_catching_newunits()
 
-    -- 2nd parameter is frequency.  1 == every tick.
-    --     16 ticks is too many; we can miss the first incoming unit.
+    -- 2nd parameter is frequency.  1 == every tick, 16 == every 16 ticks.
+    --   16 ticks is too many; we can miss the first incoming unit.
     --
     -- TODO: we don't need to check every tick; we just need to do our stuff before the
     --   first-to-arrive unit (i.e. already active on the map) takes their first step.
@@ -610,7 +650,8 @@ local function start_catching_newunits()
     --   note: preserve-rooms checks every 109 ticks.
     --
     -- TODO: it looks like arrivals only happen on ticks where ticks % 10 == 0.  Needs more testing.
-    eventful.enableEvent(eventful.eventType.UNIT_NEW_ACTIVE, 8)
+    --   TODO: if that's true, synchronize ourself to a 10-tick boundary.
+    eventful.enableEvent(eventful.eventType.UNIT_NEW_ACTIVE, 10)
 
     eventful['onUnitNewActive'][bring_the_army_home_KEY] = 
 	    function(unit_id) catch_newunits(unit_id); end
@@ -619,9 +660,10 @@ local function start_catching_newunits()
 end
 
 
-stop_catching_newunits = function()
-    -- note: the odd syntax is because we pre-declared the local variable stop_catching_newunits, 
-    -- so that my replacement qerror() could reference it.  Now we are defining it as a function.  see:
+--[[ local function ]] stop_catching_newunits = function()
+    -- note: the odd declaration syntax is because we pre-declared the local variable 
+    -- stop_catching_newunits, so that my replacement qerror() could reference it.  
+    -- Now we are defining it as a function.  see:
     -- https://stackoverflow.com/questions/12291203/lua-how-to-call-a-function-prior-to-it-being-defined
 
     -- note: this routine MUST not call qerror(), because it is called by my replacement qerror().
@@ -635,28 +677,54 @@ stop_catching_newunits = function()
 end
 
 
+local function catch_events(event_id)
+
+    if event == SC_MAP_UNLOADED then
+	dprintf("handling SC_MAP_UNLOADED.")
+	stop_catching_newunits()
+	dfhack.onStateChange[GLOBAL_KEY] = nil
+    end
+end
+
+
+enabled = enabled or false
+function isEnabled()
+    return enabled
+end
+
+
 local function main(...)
 
     -- TODO real parsing.
     local cmd = ...
 
-    if cmd == 'stop' then
+    if cmd == 'stop' then		-- TODO after module-izing, this will be redundant.
 	stop_catching_newunits()
-    elseif cmd == 'units' then
-	stop_catching_newunits()
-	find_acceptable_tiles()	-- may crash with qerror() ! TODO deal with this elegantly.
+    elseif cmd == 'start' then
 	start_catching_newunits()
     else
-	find_acceptable_tiles()	-- may crash with qerror() ! TODO deal with this elegantly.
-	local pos = check_for_our_announcement()
-	if assign_incoming_units_to_tiles(pos) == 0 then	-- no pos?  run it anyway.
+	local pos = check_for_our_announcement()		-- may return nil
+	if assign_incoming_units_to_tiles(pos) == 0 then	-- if pos is nil?  run it anyway.
 	    print('There were no incoming units!')
 	end
     end
 end
 
 
-main(...)
+if dfhack_flags.module and dfhack_flags.enable_state then
+    dprintf("running as an enabled module.  installing hooks.")
+    enabled = true
+    dfhack.onStateChange[GLOBAL_KEY] = function(event_id) catch_events(event_id); end
+    start_catching_newunits()
+elseif dfhack_flags.module and not dfhack_flags.enable_state then
+    dprintf("running as a disabled module.  disabling hooks.")
+    enabled = false
+    dfhack.onStateChange[GLOBAL_KEY] = nil
+    stop_catching_newunits()
+else
+    dprintf("running from commandline.")
+    main(...)
+end
 
 
 --[[
@@ -767,8 +835,8 @@ The only thing I see is that the entry tile was inside my list of acceptable_til
 
 
 (later: So it turns out that teleporting an inactive unit onto a square with an 
-active unit causes the inactive unit to have .flags1.on_ground set.  Makes sense,
-but we need to workaround it.)
+active unit causes the inactive unit to have .flags1.on_ground set, also (maybe?)
+.occupancy.unit_grounded is set.  Makes sense, but we need to workaround it.)
 
 --]]
 

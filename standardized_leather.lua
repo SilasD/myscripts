@@ -783,3 +783,8 @@ end
 --	Unknown side effects, probably weird ones.
 --	They're not available as a metal at the forge.
 --	They can be flagged to be melted.
+
+-- TODO	I am ALSO having a similar / the same problem with plant-based clothing!
+--	Other Materials/Silk/Cloth/Yarn is not being sorted into stockpiles.
+--	I spent hours trying to figure out why this is happening; it must be my
+--	mod although I don't see how.  TODO figure out if it's a DF bug.
