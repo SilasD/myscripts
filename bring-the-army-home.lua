@@ -40,14 +40,27 @@ and others have returned." announcement.  This triggers the script.
 -- TODO generalize to other report types (migrants).
 
 -- TODO find out what happens with messengers.
+--   Messengers get an army_controller with goal type 19,
+--   with data containing the hfids of the workers being requested.
+--   The army_controller does not have squads, but does have an
+--   entity id (to our group) and an 'epp id' (into our site's
+--   historical_entity.positions.assignments[], which also has a 
+--   backlink to the army_controller).
+-- Messengers get an army when they leave the map.  The army links
+--   to the relevant army_controller, has one member and no squads,
+--   and the army.flags are all false.
+
+
 
 -- DONE catch map load / unload.
 
 -- TODO maybe: Instead of random, equal units per tile ?
 
--- DONT: I just found that squad_order_raid_sitest is where the exit point is defined.
---   could override that on close of the world map?  to force exits on the army return.
---   nah, that wouldn't work for migrants, etc.
+-- DONT: keep a cache of already-processed unit-ids and tick time, and don't double-process them.
+--   I dealt with this issue in a different way.
+
+-- TODO maybe: I just found that squad_order_raid_sitest is where the exit point is defined.
+--   could override that on close of the world map?  to force the army to exit on our zone.
 
 -- note: squad return event is 301 GUEST_ARRIVAL
 
@@ -77,7 +90,7 @@ and others have returned." announcement.  This triggers the script.
 -- TODO maybe: it turns out that eventful.onUnitNewActive is pretty slow, because it scans
 --   the entire active units vector every n ticks (based on frequency of course).
 --   Consider switching back to a report-based trigger.
---   (OTOH, there are so many reports that that's slow as well.)
+--   (OTOH, so many reports come in that that's slow as well.)
 
 
 eventful = require('plugins.eventful')
@@ -134,13 +147,15 @@ end
 ---@alias coord {x=integer, y=integer, z=integer}	# coercible into a df.coord .
 
 
----@param x integer
----@param y integer
----@param z integer
+---@param  x integer
+---@param  y integer
+---@param  z integer
+---@return string
 local function xyz2str(x,y,z)
-    if not x or not y or not z then qerror('not enough parameters'); end
-    x = tonumber(x); y = tonumber(y); z = tonumber(z)
-    if not x or not y or not z then qerror('invalid number'); end
+    x = math.tointeger(x); y = math.tointeger(y); z = math.tointeger(z)
+    if not x or not y or not z then
+	qerror("not enough parameters, or a parameter could not be converted to an integer.")
+    end
     return(string.format("%d,%d,%d",x,y,z))
 end
 
@@ -151,7 +166,8 @@ local function pos2str(pos)
 end
 
 
--- This should be static-local inside is_on_map_edge() .  I wish we had a way to make static variables.
+-- This should be static-local inside is_on_map_edge() .  I wish we had a way to make static local variables.
+--   (Q: can closures do this?  A: no, you still need a variable in an outer scope.  so there's no gain.)
 ---@type { [string]: boolean }	# dictionary, i.e. a table<strpos, true>.
 --  				# If the key exists, the strpos is on the (surface) map edge.
 local is_on_map_edge_list = {}
@@ -184,17 +200,16 @@ end
 --
 -- note: only tested with building type df.building_civzonest .
 --
----@building df.building
+---@param  building df.building
 ---@return coord[]
 local function get_all_building_tiles(building)
     ---@type coord[]
     local tiles = {}
 
+    local z = building.z
     for x = building.x1, building.x2 do
 	for y = building.y1, building.y2 do
-	    local z = building.z
 
-	    -- this is how building extents are handled.
 	    if dfhack.buildings.containsTile(building, x, y) then
 		table.insert(tiles, xyz2pos(x,y,z))
 	    end
@@ -208,7 +223,8 @@ end
 local function find_acceptable_tiles()
 
     ---@type coord[]
-    local acceptable_tiles = {}
+    local acceptable_tiles = {}			-- note: we do not cache this because e.g. trees
+						--   can grow or buildings can be constructed.
 
     for _,zone in ipairs( df.global.world.buildings.other.ZONE_FISHING_AREA ) do
 
@@ -238,6 +254,9 @@ local function find_acceptable_tiles()
 end
 
 
+-- returns whether an item is assigned to a miner, woodcutter, or hunter.
+-- essentially like dfhack.items.isSquadEquipment()
+--
 ---@param item df.item
 ---@return boolean
 local function isMinerWoodcutterHunterEquipment(item)
@@ -299,8 +318,8 @@ local function drop_and_forbid_spoils(unit)
 
     -- processor.
     for _, item in ipairs(items_to_drop) do
-	if #items_to_drop > 0 then
-	    dprintf("NOTICE: More than one spoils item.  Probably a bug.  %d, %d", unit.id, item.id)
+	if #items_to_drop > 1 then
+	    dprintf("NOTICE: More than one spoils item.  Probably a bug.  unit %d, item %d", unit.id, item.id)
 	end
 	local success = dfhack.items.moveToGround(item, unitpos)
 	dprintf("Dropping and forbidding spoils item %d at (%s).%s", item.id,
@@ -315,17 +334,39 @@ end
 -- Teleport a unit to the special zone.  The unit can be active (alive & on the map) or inactive.
 -- The unit's alive/dead status is not considered; this has not been tested with dead units.
 --
+-- TODO it would be better to deal with entrypos == nil in assign_incoming_units_to_tiles() .
+--
 ---@param unit df.unit
 ---@param entrypos coord?
 ---@param acceptable_tiles coord[]
 local function teleport_unit_to_a_random_incoming_tile(unit, entrypos, acceptable_tiles)
 
-    -- handle the case where the unit is not actually on the entrypos.
-    --     (this shouldn't happen, but early experiments showed that it does.)
-    --     (later: probably the unit had moved away from the entrypos before the script ran.)
+    -- making entrypos a valid coord that is not on the map simplifies processing.
+    local had_an_entrypos = (entrypos ~= nil)
+    if entrypos == nil then entrypos = xyz2pos(-30000, -30000, -30000); end
+
     ---@type coord
     local oldpos = xyz2pos(dfhack.units.getPosition(unit))
-    if (entrypos) and (oldpos) and not same_xyz(entrypos, oldpos) then
+
+    -- testing whether this works.  if it works, it will avoid (most) double-processing.
+    -- note that if the unit is on entrypos, and entrypos happens to be in acceptable_tiles, 
+    --   we do not skip the teleport.
+    if not (same_xyz(oldpos, entrypos)) then
+	for _, atile in ipairs(acceptable_tiles) do
+	    if same_xyz(oldpos, atile) then
+		dprintf("NOTICE: unit %d 's current position is already in acceptable_tiles; " .. 
+			"skipping teleport.", unit.id)
+		return
+	    end
+	end
+    end
+
+    -- handle the case where the unit is not actually on the entrypos.
+    --     this shouldn't happen, but early experiments showed that it does.
+    --     later: probably the unit had moved away from the entrypos before the script ran.
+    --     even later: or the unit got double-processed because entrypos was in the acceptable tiles,
+    --       and two armies returned at nearly the same time.
+    if had_an_entrypos and not same_xyz(entrypos, oldpos) then
 	dprintf("NOTICE: Unit %d is is at (%s), not on the entrypos (%s).  So that does happen.",
 		unit.id, pos2str(oldpos), pos2str(entrypos))
     end
@@ -343,7 +384,7 @@ local function teleport_unit_to_a_random_incoming_tile(unit, entrypos, acceptabl
     --     and one other tile.
     repeat
 	pos = acceptable_tiles[ math.random(#acceptable_tiles) ]
-    until not ( (entrypos) and same_xyz(entrypos, pos) )
+    until not same_xyz(entrypos, pos)
 
     dprintf("Teleporting %s unit %d to arrive at (%s)", unit.flags1.inactive and 'inactive' or 'active',
 	unit.id, pos2str(pos) )
