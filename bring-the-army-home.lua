@@ -85,6 +85,8 @@ and others have returned." announcement.  This triggers the script.
 --	They also have relationship_ids.RiderMount == their mother's id.
 --	mount_type == 1 (CARRIED).
 --	TODO check if that is still true of .inactive babies.
+--	On-map, active units being 'ridden' have flags1.ridden set.
+--	No specific-ref, no general-ref.  No relationship_id for being ridden.
 --   So if a unit has .rider, move them to the same square as their mount, I think.
 
 -- TODO maybe: it turns out that eventful.onUnitNewActive is pretty slow, because it scans
@@ -682,17 +684,31 @@ end
 local bring_the_army_home_KEY = dfhack.current_script_name()	-- must be globally unique in all scripts.
 local function start_catching_newunits()
 
-    -- 2nd parameter is frequency.  1 == every tick, 16 == every 16 ticks.
-    --   16 ticks is too many; we can miss the first incoming unit.
-    --
-    -- TODO: we don't need to check every tick; we just need to do our stuff before the
+    local frequency = 10
+
+    -- DONE: we don't need to check every tick; we just need to do our stuff before the
     --   first-to-arrive unit (i.e. already active on the map) takes their first step.
     --   (however, consider the fastdwarf module.)
     --   note: preserve-rooms checks every 109 ticks.
     --
-    -- TODO: it looks like arrivals only happen on ticks where ticks % 10 == 0.  Needs more testing.
-    --   TODO: if that's true, synchronize ourself to a 10-tick boundary.
-    eventful.enableEvent(eventful.eventType.UNIT_NEW_ACTIVE, 10)
+    -- DONE: it looks like arrivals only happen on ticks where ticks % 10 == 0.  Needs more testing.
+    --   DONE: if that's true, synchronize ourself to a 10-tick boundary.
+
+    dprintf("on entry, current tick is %d; modulo frequency is %d",
+	    dfhack.world.ReadCurrentTick(), (dfhack.world.ReadCurrentTick() % frequency) )
+
+    if (dfhack.world.ReadCurrentTick() % frequency) ~= 0 then
+	-- skip a bit, brother.
+	local delay = frequency - (dfhack.world.ReadCurrentTick() % frequency)
+	dprintf("setting a timeout to call this function again in %d ticks.", delay)
+	dfhack.timeout( delay, 'ticks', start_catching_newunits )
+	return
+    end
+
+
+    -- 2nd parameter is frequency.  1 == every tick, 16 == every 16 ticks.
+    --   16 ticks is too many; we can miss the first incoming unit.
+    eventful.enableEvent(eventful.eventType.UNIT_NEW_ACTIVE, frequency)
 
     eventful['onUnitNewActive'][bring_the_army_home_KEY] = 
 	    function(unit_id) catch_newunits(unit_id); end
@@ -703,8 +719,8 @@ end
 
 --[[ local function ]] stop_catching_newunits = function()
     -- note: the odd declaration syntax is because we pre-declared the local variable 
-    -- stop_catching_newunits, so that my replacement qerror() could reference it.  
-    -- Now we are defining it as a function.  see:
+    --   stop_catching_newunits, so that my replacement qerror() could reference it.  
+    -- now we are defining it as a function.  see:
     -- https://stackoverflow.com/questions/12291203/lua-how-to-call-a-function-prior-to-it-being-defined
 
     -- note: this routine MUST not call qerror(), because it is called by my replacement qerror().
@@ -712,6 +728,7 @@ end
     -- DONE Q: how to disable?
     --     A: apparently you disable the callback by setting the key to nil.
     --     A2: you cannot disable the timer, though.  it keeps running.
+    --     A3: you can't even change the frequency to make the timer trigger less often.
     eventful['onUnitNewActive'][bring_the_army_home_KEY] = nil
 
     catch_newunits_enabled = false
@@ -724,6 +741,7 @@ local function catch_events(event_id)
 	dprintf("handling SC_MAP_UNLOADED.")
 	stop_catching_newunits()
 	dfhack.onStateChange[GLOBAL_KEY] = nil
+	last_announcement_id = -1
     end
 end
 
