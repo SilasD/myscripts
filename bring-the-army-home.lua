@@ -34,22 +34,27 @@ The activation is new-unit and notification-based: Every time a new unit
 is added to the map, the announcement queue is checked for a "Squad Name 
 and others have returned." announcement.  This triggers the script.
 
+    bring-the-army-home stop
+
+Stop running the script, if previously started.
+
 --]====]
 
 
 -- TODO generalize to other report types (migrants).
 
--- TODO find out what happens with messengers.
+-- DONE find out what happens with messengers.
 --   Messengers get an army_controller with goal type 19,
 --   with data containing the hfids of the workers being requested.
 --   The army_controller does not have squads, but does have an
---   entity id (to our group) and an 'epp id' (into our site's
+--   entity id (to our group) and an 'epp id' (into our group's
 --   historical_entity.positions.assignments[], which also has a 
 --   backlink to the army_controller).
 -- Messengers get an army when they leave the map.  The army links
 --   to the relevant army_controller, has one member and no squads,
 --   and the army.flags are all false.
-
+-- When Messengers return, they trigger a 301 announcement, with
+--   "have returned" text.  It's handled just like an army return.
 
 
 -- DONE catch map load / unload.
@@ -78,6 +83,7 @@ and others have returned." announcement.  This triggers the script.
 -- There are 100 ticks between waves, that is, attempts to enter.
 --   DONE: could frequency be set as low as 100?  Is the 100 aligned to a boundary?
 --	A: NO.  Probably 10.
+-- However, there are not necessarily 100 ticks between the first unit to enter, and the next wave.
 
 -- TODO NEW ISSUE: Babies should not be removed from their mothers.
 --	Mother 11046 Thikut Uz, SQ4 ; Baby 17054 Rith Laz.
@@ -97,7 +103,7 @@ and others have returned." announcement.  This triggers the script.
 
 eventful = require('plugins.eventful')
 
-local _, plotinfo = pcall(function() return df.global.ui; end)
+local _, plotinfo = pcall(function() return df.global.ui; end)		-- voodoo, get ui/plotinfo.
 if not _ then _, plotinfo = pcall(function() return df.global.plotinfo; end) end
 
 
@@ -116,7 +122,7 @@ end
 --   and log to the stderr.log file.  
 -- The debug library is used to find both the filename and the function name.
 --
-local current_script_name = dfhack.current_script_name()
+local current_script_name = dfhack.current_script_name():match( '([^/]*)$' )
 local function dprintf(format, ...)
     if not debugging then return; end
     -- unfortunately, even if we're not debugging, the script wastes time collecting
@@ -139,10 +145,10 @@ end
 local stop_catching_newunits	-- declared here, defined as a function near the end of the script.
 
 
-local QError = qerror
+-- does not return!
 local function qerror(msg, lvl)
     stop_catching_newunits()
-    QError(msg, lvl)
+    dfhack.BASE_G.qerror(msg, lvl)	-- voodoo, call the original global qerror()
 end
 
 
@@ -170,6 +176,7 @@ end
 
 -- This should be static-local inside is_on_map_edge() .  I wish we had a way to make static local variables.
 --   (Q: can closures do this?  A: no, you still need a variable in an outer scope.  so there's no gain.)
+--
 ---@type { [string]: boolean }	# dictionary, i.e. a table<strpos, true>.
 --  				# If the key exists, the strpos is on the (surface) map edge.
 local is_on_map_edge_list = {}
@@ -238,9 +245,11 @@ local function find_acceptable_tiles()
 
 	for _, pos in ipairs(get_all_building_tiles(zone)) do
 
-	    --dprintf("%s, %s, %d, %s", pos2str(pos), is_on_map_edge(pos) and 'true' or 'false',
-	    --    dfhack.maps.getWalkableGroup(pos),
-	    --    dfhack.buildings.checkFreeTiles(pos,{x=1,y=1},nil,false,true) and 'true' or 'false' )
+	    if false and debugging then
+		dprintf("%s, %s, %d, %s", pos2str(pos), is_on_map_edge(pos),
+			dfhack.maps.getWalkableGroup(pos),
+			dfhack.buildings.checkFreeTiles(pos,{x=1,y=1},nil,false,true))
+	    end
 
 	    if is_on_map_edge(pos) == true
 		    and dfhack.maps.getWalkableGroup(pos) > 0
@@ -257,9 +266,9 @@ end
 
 
 -- returns whether an item is assigned to a miner, woodcutter, or hunter.
--- essentially like dfhack.items.isSquadEquipment()
+-- essentially works like dfhack.items.isSquadEquipment() .
 --
----@param item df.item
+---@param  item df.item
 ---@return boolean
 local function isMinerWoodcutterHunterEquipment(item)
     -- actually this was not hard to check.  nice.
@@ -280,9 +289,9 @@ end
 --	* A spoils item is expected to be the last item in the inventory.
 --
 -- DONE: what happens if a miner/woodcutter/hunter is used as a site messenger?
---	Does their equipment count as squad-owned?  I bet not.  Resolution: manually checked.
+--	Does their equipment count as squad-owned?  I bet not.  RESOLVED: found how to check this.
 --
----@param unit df.unit
+---@param  unit df.unit
 local function drop_and_forbid_spoils(unit)
 
     ---@type coord
@@ -312,7 +321,8 @@ local function drop_and_forbid_spoils(unit)
 	    -- I saw one example of hauling a squad-assigned flask to the flask stockpile.
 	then
 	    if i ~= #unit.inventory-1 then
-		dprintf("NOTICE: Spoils item %d is not the last inventory item.  So that happens.", item.id)
+		dprintf("NOTICE: Unit %d spoils item %d is not the last inventory item.  " .. 
+			"So that happens.", unit.id, item.id)
 	    end
 	    table.insert(items_to_drop, item)
 	end
@@ -321,7 +331,8 @@ local function drop_and_forbid_spoils(unit)
     -- processor.
     for _, item in ipairs(items_to_drop) do
 	if #items_to_drop > 1 then
-	    dprintf("NOTICE: More than one spoils item.  Probably a bug.  unit %d, item %d", unit.id, item.id)
+	    dprintf("NOTICE: More than one spoils item.  Probably a bug.  unit %d, item %d", 
+		    unit.id, item.id)
 	end
 	local success = dfhack.items.moveToGround(item, unitpos)
 	dprintf("Dropping and forbidding spoils item %d at (%s).%s", item.id,
@@ -335,6 +346,8 @@ end
 
 -- Teleport a unit to the special zone.  The unit can be active (alive & on the map) or inactive.
 -- The unit's alive/dead status is not considered; this has not been tested with dead units.
+--
+-- The unit should be in world.units.active[]; this is not tested.
 --
 -- TODO it would be better to deal with entrypos == nil in assign_incoming_units_to_tiles() .
 --
@@ -388,10 +401,10 @@ local function teleport_unit_to_a_random_incoming_tile(unit, entrypos, acceptabl
 	pos = acceptable_tiles[ math.random(#acceptable_tiles) ]
     until not same_xyz(entrypos, pos)
 
-    dprintf("Teleporting %s unit %d to arrive at (%s)", unit.flags1.inactive and 'inactive' or 'active',
-	unit.id, pos2str(pos) )
+    dprintf("Teleporting %s unit %d to arrive at (%s)",
+	    unit.flags1.inactive and 'inactive' or 'active', unit.id, pos2str(pos) )
 
-    -- .inactive units are assigned a map tile, but do not yet occupy it.
+    -- .flags1.inactive units are assigned a map tile, but do not yet occupy it.
     -- the teleport sets the occupancy flags per the normal case of an active unit.
     -- we need to undo that.
 
@@ -451,10 +464,10 @@ local function move_items_to_a_random_incoming_tile(itemlist, acceptable_tiles)
     local pos = acceptable_tiles[ math.random(#acceptable_tiles) ]
 
     for _, item in ipairs(itemlist) do
+	local oldpos = xyz2pos(dfhack.items.getPosition(item))
 	local success = dfhack.items.moveToGround(item, pos)
 	dprintf("Moving and forbidding just-dropped item %d at (%s) to (%s).%s",
-		item.id, xyz2str(dfhack.items.getPosition(item)), pos2str(pos), 
-		(success) and '' or '  FAILED!' )
+		item.id, pos2str(oldpos), pos2str(pos), (success) and '' or '  FAILED!' )
 	-- TODO maybe, consider it: only forbid if it's not a fort-created item.
 	if item.flags.on_ground then item.flags.forbid = true; end
     end
@@ -467,12 +480,16 @@ local function assign_incoming_units_to_tiles(entrypos)
 
     local acceptable_tiles = find_acceptable_tiles()
     if #acceptable_tiles == 0 then
-	dprintf("find_acceptable_tiles() returned false")
+	dprintf("find_acceptable_tiles() returned 0 tiles.")
 	printf("bring-the-army-home could not locate any tiles to place the returning army on!")
 	printf("Please create a Fishing Zone on the edge of the map, in the location where the")
 	printf("army should return.  (The Fishing Zone can be disabled to prevent fishing jobs.)")
 	return 0
     end
+
+    -- TODO maybe: there are issues when the entrypos is a member of the acceptable_tiles set.
+    --   it would simplifiy logic elsewhere if we just removed entrypos from the set.
+    --   it would get rid of some special-case handling and nested or convoluted logic.
 
     -- debug logging, chasing an issue.  kind of slow, but only if debugging, so it's okay.
     for _,unit in ipairs(df.global.world.units.active) do
@@ -594,8 +611,11 @@ local function check_for_our_announcement()
 	if report.id > last_announcement_id then
 
 	    last_announcement_id = report.id
-	    --dprintf("new announcement: id %d  year %d  tick %d  type %s  text %s", 
-	    --	    report.id, report.year, report.time, df.announcement_type[report.type], report.text)
+	    if false and debugging then
+		dprintf("new announcement: id %d  year %d  tick %d  type %s  text %s", 
+			report.id, report.year, report.time, df.announcement_type[report.type],
+			report.text)
+	    end
 
 	    if report.type == df.announcement_type.GUEST_ARRIVAL then
 		dprintf('Found a new GUEST_ARRIVAL announcement!')
@@ -603,7 +623,7 @@ local function check_for_our_announcement()
 		-- note: even the singular case gets plural text: "Squad1 have returned."
 		--   however, the text " has returned." is in the binary, so better safe than sorry.
 		-- aha, it does happen, when a single unit returns.
-		-- TODO what happens with messengers?
+		-- DONE: what happens with messengers?  A: treated just the same as an army return.
 		if string.match(report.text, "has returned.$")
 		    or string.match(report.text, "have returned.$")
 		then
@@ -626,10 +646,22 @@ end
 catch_newunits_enabled = catch_newunits_enabled or false	-- global, persistant.
 
 
+local debugging_modulus = 0
 local function catch_newunits(unit_id)
+
+    if debugging then
+	local frequency = 10
+	local current_modulus = (dfhack.world.ReadCurrentTick() % frequency)
+	if current_modulus ~= 0 and current_modulus ~= debugging_modulus then
+	    dprintf("NOTICE: ticks modulo %d is not 0; value is %d; suppressing further reports.",
+		frequency, current_modulus)
+	    debugging_modulus = current_modulus
+	end
+    end
 
     -- TODO counting for status reporting.
 
+    -- TODO I don't think it's worth testing these.
     if not catch_newunits_enabled then
 	stop_catching_newunits()
 	dprintf("unexpectedly triggered with catch_newunits_enabled==false")
@@ -651,7 +683,9 @@ local function catch_newunits(unit_id)
 	return
     end
 
-    dprintf("Caught a new unit: id %d  tick %d", unit_id, dfhack.world.ReadCurrentTick())
+    if debugging then
+	dprintf("Caught a new unit: id %d  tick %d", unit_id, dfhack.world.ReadCurrentTick())
+    end
 
     ---@type df.coord?
     local pos = check_for_our_announcement()
@@ -676,12 +710,10 @@ local function catch_newunits(unit_id)
 end
 
 
--- note: the eventful C++ code shuts down the world-specific exports at world-unload.
--- so we don't really _need_ to catch fort/map/world unloads.  Unless we're caching stuff.
---
 -- note: onUnitNewActive is UNDOCUMENTED.
 --
 local bring_the_army_home_KEY = dfhack.current_script_name()	-- must be globally unique in all scripts.
+local synchronization_timer_id = nil
 local function start_catching_newunits()
 
     local frequency = 10
@@ -692,19 +724,21 @@ local function start_catching_newunits()
     --   note: preserve-rooms checks every 109 ticks.
     --
     -- DONE: it looks like arrivals only happen on ticks where ticks % 10 == 0.  Needs more testing.
-    --   DONE: if that's true, synchronize ourself to a 10-tick boundary.
+    --   DONE: looks true, so synchronize ourself to a 10-tick boundary.
 
-    dprintf("on entry, current tick is %d; modulo frequency is %d",
+    dprintf("on entry, current tick is %d; tick modulo frequency is %d.",
 	    dfhack.world.ReadCurrentTick(), (dfhack.world.ReadCurrentTick() % frequency) )
 
-    if (dfhack.world.ReadCurrentTick() % frequency) ~= 0 then
-	-- skip a bit, brother.
+    if (dfhack.world.ReadCurrentTick() % frequency) ~= 0 then	-- skip a bit, brother.
 	local delay = frequency - (dfhack.world.ReadCurrentTick() % frequency)
 	dprintf("setting a timeout to call this function again in %d ticks.", delay)
-	dfhack.timeout( delay, 'ticks', start_catching_newunits )
+	synchronization_timer_id = dfhack.timeout( delay, 'ticks', 
+		function() start_catching_newunits(); end )
 	return
     end
 
+    synchronization_timer_id = nil	-- if we reach this point, either we never invoked a timer
+					--   or the timer just triggered and therefore expired.
 
     -- 2nd parameter is frequency.  1 == every tick, 16 == every 16 ticks.
     --   16 ticks is too many; we can miss the first incoming unit.
@@ -731,10 +765,18 @@ end
     --     A3: you can't even change the frequency to make the timer trigger less often.
     eventful['onUnitNewActive'][bring_the_army_home_KEY] = nil
 
+    -- turn off the timer if it's running.
+    dfhack.timeout_active(synchronization_timer_id, nil)
+    synchronization_timer_id = nil
+
     catch_newunits_enabled = false
 end
 
 
+-- note: the eventful C++ code shuts down the world-specific exports at world-unload.
+--   so we don't really _need_ to catch fort/map/world unloads.
+-- unless we're caching stuff that should be reset.  which we are.  so do catch it.
+--
 local function catch_events(event_id)
 
     if event == SC_MAP_UNLOADED then
@@ -759,8 +801,10 @@ local function main(...)
 
     if cmd == 'stop' then		-- TODO after module-izing, this will be redundant.
 	stop_catching_newunits()
+
     elseif cmd == 'start' then
 	start_catching_newunits()
+
     else
 	local pos = check_for_our_announcement()		-- may return nil
 	if assign_incoming_units_to_tiles(pos) == 0 then	-- if pos is nil?  run it anyway.
@@ -798,7 +842,9 @@ TODO try to catch this case.  At least complain, if not try to fix it.
 --[[
 
 1593856 69      D_MIGRANTS_ARRIVAL      Some migrants have arrived.     508     57410
-1593855 344     MONARCH_ARRIVAL Your ruler has arrived with a full entourage.  Your thriving site is now the capital, and with continued fortune and toil, the legend of a true Mountainhome may yet be written.        508     57410
+1593855 344     MONARCH_ARRIVAL Your ruler has arrived with a full entourage.  Your thriving 
+                site is now the capital, and with continued fortune and toil, the legend of 
+                a true Mountainhome may yet be written.        508     57410
 
 two of those migrants or entourage were soldiers who were out on a mission.  
 they were unassigned from their squad.  ISTR they lost all their weapons/armor as well.
@@ -852,7 +898,7 @@ A non-returner's HF has:
 	.year		508		current year.
 	.year_tick	153920		this was the tick of the 'has returned' message.
 
-	So exactly the same.
+So exactly the same.
 
 The same non-returner's unit has:
 	.pos		(0, 60, 43)	This was the army-return entry location.

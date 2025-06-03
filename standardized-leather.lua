@@ -29,8 +29,7 @@ local Mod_ID = 'standardized_leather'
 
 
 -- modified from dfhack.current_script_name()
--- this is voodoo programming; I don't understand the debug module.
--- it's maybe Accessing Upvalues https://www.lua.org/pil/23.1.2.html
+-- this returns the entire path, which may be absolute, or may be relative to the DF executable directory.
 local function current_script_file()
     local frame = 1
     while true do
