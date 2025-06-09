@@ -4,7 +4,7 @@ local utils = require('utils')
 
 local doit = true
 
---testing if any books have .world_data_id
+-- testing if any books have .world_data_id
 if false then for _, i in ipairs(df.global.world.items.all) do
     if (df.item_bookst:is_instance(i) or df.item_toolst:is_instance(i))
 	and i.world_data_id ~= -1 then print(i.id); return;
@@ -72,9 +72,9 @@ end;print('none');return;end
 
 
 local book_id, writing_id
-local plotinfo = ({dfhack.safecall(function() return df.global.plotinfo; end)})[2]
-	or ({dfhack.safecall(function() return df.global.ui; end)})[2]
-local our_site_id = plotinfo.site_id
+local world = df.global.world
+local _, plotinfo = pcall(function() return df.global.ui; end)
+if not _ then _, plotinfo = pcall(function() return df.global.plotinfo; end) end
 
 
 if #args < 2 then args[1] = "help"; end
@@ -87,13 +87,17 @@ elseif args[1]:startswith('w') then
     book_id = nil
 
     -- slow; find the first book (presumably the artifact book) with that written_contents_id.
-    for _,i in ipairs(df.global.world.items.all) do
+    for _,i in ipairs(world.items.all) do
 
-	if df.item_bookst:is_instance(i) or df.item_toolst:is_instance(i) then
-	    for _,j in ipairs(i.improvements) do 
+	--  if df.item_bookst:is_instance(i) or df.item_toolst:is_instance(i) then
+	if i:hasWriting() then	-- the df.items vtable gives us a better way.
+	    for _,j in ipairs(i.improvements) do
+		
 		--if i.id < 100 and df.itemimprovement_pagesst:is_instance(j) then dfhack.print(i.id .. ":" .. j.contents[0], '');end
 		--if df.itemimprovement_pagesst:is_instance(j) and #j.contents > 1 then dfhack.print(i.id,'');end
-		if df.itemimprovement_pagesst:is_instance(j) and j.contents[0] == writing_id then
+		--if df.itemimprovement_pagesst:is_instance(j) and j.contents[0] == writing_id then
+		if (j:getType() == df.improvement_type.PAGES or j:getType() == df.improvement_type.WRITING)
+			and j.contents[0] == writing_id then
 		    book_id = i.id
 		    break
 		end
@@ -109,22 +113,21 @@ else
     return
 end
 
-local item = (type(book_id) == "number") and df.item.find(book_id) or nil
-local artifact = nil
 
+local item = (math.type(book_id) == "integer") and df.item.find(book_id) or nil     -- find the item again.
 if not item then qerror('could not find book'); end
 
--- test with book 4473
-local _, in_play, _ = utils.binsearch(df.global.world.items.other.IN_PLAY, item.id, 'id')
+
+local _, in_play, _ = utils.binsearch(world.items.other.IN_PLAY, item.id, 'id')
 if in_play then qerror('that book is already on the map.'); end
-if artifact and artifact.site == our_site_id then qerror('that book is on-site but not on the map.'); end
 
 
-for _, gref in ipairs(item.general_refs) do
-    if df.general_ref_is_artifactst:is_instance(gref) then
-	artifact = df.artifact_record.find(gref.artifact_id)
-    end
-end
+local artifact = nil
+local artifact = (dfhack.items.getGeneralRef(item, df.general_ref_type.IS_ARTIFACT) ~= nil)
+	and dfhack.items.getGeneralRef(item, df.general_ref_type.IS_ARTIFACT).artifact_id or -1
+artifact = df.artifact_record.find(artifact)
+
+if artifact and artifact.site == plotinfo.site_id then qerror('that book is on-site but not on the map.'); end
 
 
 -- print('book_id', book_id, 'item', item.id, 'artifact', artifact.id)
@@ -152,7 +155,7 @@ if doit and artifact then
 	-- okay. populace.artifacts[] looks to be sorted by .id, but that may just be an
 	--   artifact (no pun intended) caused by loading the savegame.  I don't trust it.
 	local index, _ = utils.linear_index(art_site.populace.artifacts, artifact.id, 'id')
-	print( (index) and "artifact found in site, index " .. index or "artifact not found in site" )
+	-- print( (index) and "artifact found in site, index " .. index or "artifact not found in site" )
 	if index then
 	    art_site.populace.artifacts:erase(index)
 	    index, _ = utils.linear_index(art_site.populace.artifacts, artifact.id, 'id')  -- verify deletion
@@ -183,7 +186,7 @@ if doit and artifact then
     artifact.abs_tile_y = -1000000
     artifact.abs_tile_z = -1000000
     artifact.last_local_bld_id = -1
-    artifact.site = our_site_id
+    artifact.site = plotinfo.site_id
     artifact.structure_local = -1
     artifact.site_building_profile = -1
     artifact.subregion = -1
@@ -200,6 +203,8 @@ if doit and artifact then
 end
 
 if doit then
+--[[ all of this is the hard way, and is otherwise problematic.
+
     local O = df.global.world.items.other
 
     if df.item_bookst:is_instance(item) then
@@ -221,24 +226,34 @@ if doit then
     if not utils.insert_sorted(O.IN_PLAY, item, 'id') then
 	qerror('failed to insert into IN_PLAY')
     end
+]]
+
+    item:categorize(true)		-- this is the better way.
+
 
     item.flags.foreign = true
     item.flags.trader = false
     item.flags.forbid = true
-    item.temperature.whole = 10025	-- reasonable value
-    item.temperature.fraction = 0
 
     local pos = xyz2pos(
 	plotinfo.map_edge.surface_x[0],
 	plotinfo.map_edge.surface_y[0],
 	plotinfo.map_edge.surface_z[0]
     )
+    local locstr = "The book should now be on the surface, at the top-left corner of the map."
+
+    if #world.buildings.other.TRADE_DEPOT > 0 then
+	local b = world.buildings.other.TRADE_DEPOT[0]
+	pos = xyz2pos(b.centerx, b.centery, b.z)
+	locstr = "The book should now be at the center of the (first) trade depot."
+    end
+
     item.pos = pos
     local map_block = dfhack.maps.getTileBlock(pos)
     utils.insert_or_update(map_block.items, item.id)
     item.flags.on_ground = true
+    item:setTemperatureFromMap( --[[local=]] true, --[[contained=]] false)
+    print(locstr)
 
-    print('The book should now be on the surface, at the top-left corner of the map.')
-    
 end
 
