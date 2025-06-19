@@ -140,11 +140,15 @@ local function process(unit, args, need_newline)
         -- Include weapons so we can check we have them later
         if  (   inv_item.mode == df.inv_item_role_type.Worn or
                 inv_item.mode == df.inv_item_role_type.Weapon or
-                inv_item.mode == df.inv_item_role_type.Strapped
+                inv_item.mode == df.inv_item_role_type.Strapped or
+                inv_item.mode == df.inv_item_role_type.Flask
             ) and
-            (   -- only clothing items can block clothing items; crafts, quivers, backpacks, flasks cannot.
+            (   -- only clothing items can block clothing items; crafts cannot.
                 item:getType() == df.item_type.WEAPON or    -- cannot block but we need to check later.
                 item:getType() == df.item_type.SHIELD or    -- cannot block but we need to check later.
+                item:getType() == df.item_type.QUIVER or    -- cannot block but we need to check later.
+                item:getType() == df.item_type.BACKPACK or  -- cannot block but we need to check later.
+                item:getType() == df.item_type.FLASK or     -- cannot block but we need to check later.
                 item:getType() == df.item_type.ARMOR or
                 item:getType() == df.item_type.HELM or
                 item:getType() == df.item_type.GLOVES or
@@ -165,6 +169,13 @@ local function process(unit, args, need_newline)
                 -- Include weapon and shield so we can avoid dropping them, or pull them out of container/inventory later
                 assigned_items[assigned] = df.item.find(assigned)
             end
+        end
+    end
+    -- Include special-case items that are not part of the .uniform structure
+    for _, specialcase in ipairs( { "quiver", "backpack", "flask" } ) do
+        local assigned = squad_position.equipment[specialcase]
+        if assigned ~= -1 then
+            assigned_items[assigned] = df.item.find(assigned)
         end
     end
 
@@ -194,11 +205,19 @@ local function process(unit, args, need_newline)
                             end
                         end
                     end
+                    -- Handle special-case items
+                    for _, specialcase in ipairs( { "quiver", "backpack", "flask" } ) do
+                        if squad_position.equipment[specialcase] == u_id then
+                            squad_position.equipment[specialcase] = -1
+                        end
+                    end
+
+                    -- also remove the item from the (secondary) .assigned_items list.
                     if utils.binsearch(squad_position.equipment.assigned_items, item.id) ~= nil then
-                        dfhack.printerr(unit_name, "removing item.id", item.id, "from .equipment.assigned_items.")
+                        dfhack.printerr(unit_name .. " removing object #" .. u_id .. " from .equipment.assigned_items.")
                         utils.erase_sorted(squad_position.equipment.assigned_items, item.id)
                     else
-                        dfhack.printerr(unit_name, "unexpectedly, item.id", item.id, "was not in .equipment.assigned_items.")
+                        dfhack.printerr("UNEXPECTEDLY, " .. unit_name .. " object #" .. u_id .. " was not in .equipment.assigned_items.")
                     end
                 end
             else
