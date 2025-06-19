@@ -194,6 +194,12 @@ local function process(unit, args, need_newline)
                             end
                         end
                     end
+                    if utils.binsearch(squad_position.equipment.assigned_items, item.id) ~= nil then
+                        dfhack.printerr(unit_name, "removing item.id", item.id, "from .equipment.assigned_items.")
+                        utils.erase_sorted(squad_position.equipment.assigned_items, item.id)
+                    else
+                        dfhack.printerr(unit_name, "unexpectedly, item.id", item.id, "was not in .equipment.assigned_items.")
+                    end
                 end
             else
                 missing_ids[u_id] = item
