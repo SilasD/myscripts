@@ -1,6 +1,6 @@
 
 local world = df.global.world
-local plotinfo = df.global.plotinfo
+local plotinfo = (df.global._fields.plotinfo ~= nil) and df.global.plotinfo or df.global.ui
 local C = dfhack.df2console
 local function X(name) return C(dfhack.translation.translateName(name, true)); end
 local function Cname(unit) return C(X(dfhack.units.getVisibleName(unit))); end
