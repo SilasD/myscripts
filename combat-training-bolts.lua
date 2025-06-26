@@ -20,7 +20,7 @@ Note: This should work for all ranged weapons / ammunition types, but has only b
 
 local utils = require('utils')
 
-local plotinfo = df.global.plotinfo or df.global.ui
+local plotinfo = (df.global._fields.plotinfo ~= nil) and df.global.plotinfo or df.global.ui
 local translateName = dfhack.TranslateName or dfhack.translation.translateName
 
 
