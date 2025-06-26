@@ -787,3 +787,5 @@ end
 --	Other Materials/Silk/Cloth/Yarn is not being sorted into stockpiles.
 --	I spent hours trying to figure out why this is happening; it must be my
 --	mod although I don't see how.  TODO figure out if it's a DF bug.
+
+-- TODO when scanning items, scan _books_ and _scrolls_ for parchment.
