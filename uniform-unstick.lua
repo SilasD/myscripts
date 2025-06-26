@@ -213,9 +213,8 @@ local function process(unit, args, need_newline)
                     end
 
                     -- also remove the item from the (secondary) .assigned_items list.
-                    if utils.binsearch(squad_position.equipment.assigned_items, item.id) ~= nil then
-                        dfhack.printerr(unit_name .. " removing object #" .. u_id .. " from .equipment.assigned_items.")
-                        utils.erase_sorted(squad_position.equipment.assigned_items, item.id)
+                    if utils.erase_sorted(squad_position.equipment.assigned_items, item.id) then
+                        dfhack.printerr(unit_name .. " removed object #" .. u_id .. " from .equipment.assigned_items.")
                     else
                         dfhack.printerr("UNEXPECTEDLY, " .. unit_name .. " object #" .. u_id .. " was not in .equipment.assigned_items.")
                     end
