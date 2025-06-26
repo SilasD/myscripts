@@ -56,6 +56,13 @@ Stop running the script, if previously started.
 -- When Messengers return, they trigger a 301 announcement, with
 --   "have returned" text.  It's handled just like an army return.
 
+-- TODO When messengers return with workers, the _workers_ do not
+--   own the clothing they're wearing.  Fix that.
+
+-- TODO When messengers return with a former site occupier, that
+--   site occupier's weapon and shield are dropped and forbidden.
+--   (Other former uniform items are handled normally by the game.)
+--   (Sometimes.  TODO more research.)
 
 -- DONE catch map load / unload.
 
@@ -99,6 +106,9 @@ Stop running the script, if previously started.
 --   the entire active units vector every n ticks (based on frequency of course).
 --   Consider switching back to a report-based trigger.
 --   (OTOH, so many reports come in that that's slow as well.)
+
+-- TODO catch_newunits() is getting out of sync; it drifts from the preferred 10-tick boundary.
+--   what can be done about that?
 
 
 eventful = require('plugins.eventful')
