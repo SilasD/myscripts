@@ -138,22 +138,22 @@ local function process(unit, args, need_newline)
     for _, inv_item in ipairs(unit.inventory) do
         local item = inv_item.item
         -- Include weapons so we can check we have them later
-        if  (   inv_item.mode == df.inv_item_role_type.Worn or
-                inv_item.mode == df.inv_item_role_type.Weapon or
-                inv_item.mode == df.inv_item_role_type.Strapped or
-                inv_item.mode == df.inv_item_role_type.Flask
+        if  (      inv_item.mode == df.inv_item_role_type.Worn
+                or inv_item.mode == df.inv_item_role_type.Weapon
+                or inv_item.mode == df.inv_item_role_type.Strapped
+                or inv_item.mode == df.inv_item_role_type.Flask
             ) and
             (   -- only clothing items can block clothing items; crafts cannot.
-                item:getType() == df.item_type.WEAPON or    -- cannot block but we need to check later.
-                item:getType() == df.item_type.SHIELD or    -- cannot block but we need to check later.
-                item:getType() == df.item_type.QUIVER or    -- cannot block but we need to check later.
-                item:getType() == df.item_type.BACKPACK or  -- cannot block but we need to check later.
-                item:getType() == df.item_type.FLASK or     -- cannot block but we need to check later.
-                item:getType() == df.item_type.ARMOR or
-                item:getType() == df.item_type.HELM or
-                item:getType() == df.item_type.GLOVES or
-                item:getType() == df.item_type.PANTS or
-                item:getType() == df.item_type.SHOES
+                   item:getType() == df.item_type.WEAPON    -- cannot block but we need to check later.
+                or item:getType() == df.item_type.SHIELD    -- cannot block but we need to check later.
+                or item:getType() == df.item_type.QUIVER    -- cannot block but we need to check later.
+                or item:getType() == df.item_type.BACKPACK  -- cannot block but we need to check later.
+                or item:getType() == df.item_type.FLASK     -- cannot block but we need to check later.
+                or item:getType() == df.item_type.ARMOR
+                or item:getType() == df.item_type.HELM
+                or item:getType() == df.item_type.GLOVES
+                or item:getType() == df.item_type.PANTS
+                or item:getType() == df.item_type.SHOES
             )
         then
             worn_items[item.id] = item
