@@ -113,8 +113,7 @@ Stop running the script, if previously started.
 
 eventful = require('plugins.eventful')
 
-local _, plotinfo = pcall(function() return df.global.ui; end)		-- voodoo, get ui/plotinfo.
-if not _ then _, plotinfo = pcall(function() return df.global.plotinfo; end) end
+local plotinfo = (df.global._fields.plotinfo ~= nil) and df.global.plotinfo or df.global.ui
 
 
 local debugging = true
