@@ -73,8 +73,7 @@ end;print('none');return;end
 
 local book_id, writing_id
 local world = df.global.world
-local _, plotinfo = pcall(function() return df.global.ui; end)
-if not _ then _, plotinfo = pcall(function() return df.global.plotinfo; end) end
+local plotinfo = (df.global._fields.plotinfo ~= nil) and df.global.plotinfo or df.global.ui
 
 
 if #args < 2 then args[1] = "help"; end
