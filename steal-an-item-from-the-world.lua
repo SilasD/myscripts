@@ -1,72 +1,105 @@
-local args = {...}
-
-local utils = require('utils')
+-- 'item {item.id}'
+-- 'book {item.id}
+-- 'writing {written_content.id}
+-- 'artifact {artifact.id}'
+-- 'artifact {artifact name}'
+--   can be in either the untranslated or translated form.
+--   does not need the accent marks.
+-- only the first letter of the command needs to be used.
 
 local doit = true
 
+
+local utils = require('utils')
+local translateName = dfhack.TranslateName or dfhack.translation.translateName
+
+local args = {...}
+
+-- note: unlike normal printf, this ends the line even if '\n' is not used.
+local function printf(...)
+    print(string.format(...))
+end
+
+local function improvement_is_writing(improvement)
+    if not df.itemimprovement:is_instance(improvement) then error(); end
+    return (df.itemimprovement_pagesst:is_instance(improvement) 
+	or df.itemimprovement_writingst:is_instance(improvement))
+end
+
 -- testing if any books have .world_data_id
 if false then for _, i in ipairs(df.global.world.items.all) do
-    if (df.item_bookst:is_instance(i) or df.item_toolst:is_instance(i))
-	and i.world_data_id ~= -1 then print(i.id); return;
+    if i:hasWriting() and i.world_data_id ~= -1 then print(i.id); return;
     end
 end;print('none');return;end
 
 -- probing for first book with author historical_figure holding it, by .written_content.author
 if false then for _, i in ipairs(df.global.world.items.all) do
-    if (df.item_bookst:is_instance(i) or df.item_toolst:is_instance(i)) then
+    local gref = (i.flags.artifact) and dfhack.items.getGeneralRef(i, df.general_ref_type.IS_ARTIFACT) or nil
+    if gref and i:hasWriting() then
 	for _,j in ipairs(i.improvements) do
-	    if df.itemimprovement_pagesst:is_instance(j) or df.itemimprovement_writingst:is_instance(j) then
+	    if improvement_is_writing(j) then
 		local wc = df.written_content.find(j.contents[0])
 		local hfid = wc.author; local hf = df.historical_figure.find(hfid)
-		if hf and hf.info and hf.info.books and #hf.info.books.artifacts_held > 0 then 
-		    print(i.id, hfid);
-		    return
+		if hf and hf.info and hf.info.books and #hf.info.books.artifacts_held > 0 then
+		    local a = df.artifact_record.find(gref.artifact_id)
+		    print(i.id, hfid, a.owner_hf, a.holder_hf, a.site, a.storage_site);
+
+		    -- so when this happens, the artifact_record has
+		    --   .owner_hf == hf, .holder_hf == hf, .site == -1, .storage_site == -1
+		    -- or
+		    --   .owner_hf == -1, .holder_hf == -1, .site == a site, .storage_site == the same site.
 		end
-		-- so when this happens, the artifact_record
-		-- .owner_hf == hf, .holder_hf == hf, .site == -1, .storage_site == -1
 	    end
+	end
+    end
+end;return;end
+
+-- probing for first artifact book with author historical_figure holding it, by general_ref
+if false then for _, i in ipairs(df.global.world.items.all) do
+    if i.flags.artifact and i:hasWriting() then
+	local gref = dfhack.items.getGeneralRef(i, df.general_ref_type.IS_ARTIFACT)
+	local art = (gref) and df.artifact_record.find(gref.artifact_id) or nil
+	if art and art.holder_hf > -1 then
+	    print(i.id)
+	    return
 	end
     end
 end;print('none');return;end
 
--- probing for first artifact book with author historical_figure holding it, by general_ref
+-- probing for first artifact book that is in a site, by general_ref
 if false then for _, i in ipairs(df.global.world.items.all) do
-    if (df.item_bookst:is_instance(i) or df.item_toolst:is_instance(i)) and i.flags.artifact then
-	for _,gref in ipairs(i.general_refs) do if df.general_ref_is_artifactst:is_instance(gref) then
-	    local art = df.artifact_record.find(gref.artifact_id)
-	    if art and art.holder_hf > -1 then print(i.id); return; end
-	end;end
-    end
-end;print('none');return;end
-
--- probing for first artifact book that is in a site
-if false then for _, i in ipairs(df.global.world.items.all) do
-    if (df.item_bookst:is_instance(i) or df.item_toolst:is_instance(i)) and i.flags.artifact then
-	for _,gref in ipairs(i.general_refs) do if df.general_ref_is_artifactst:is_instance(gref) then
-	    local art = df.artifact_record.find(gref.artifact_id)
-	    if art and art.site > -1 then print(i.id); return; end
-	end;end
+    if i.flags.artifact and i:hasWriting() and i:getType() ~= df.item_type.SLAB then
+	local gref = dfhack.items.getGeneralRef(i, df.general_ref_type.IS_ARTIFACT)
+	local art = (gref) and df.artifact_record.find(gref.artifact_id) or nil
+	if art and art.site > -1 then
+	    print(i.id)
+	    return
+	end
     end
 end;print('none');return;end
 
 -- probing for first artifact book with abs_tile_x set
 if false then for _, i in ipairs(df.global.world.items.all) do
-    if (df.item_bookst:is_instance(i) or df.item_toolst:is_instance(i)) and i.flags.artifact then
-	for _,gref in ipairs(i.general_refs) do if df.general_ref_is_artifactst:is_instance(gref) then
-	    local art = df.artifact_record.find(gref.artifact_id)
-	    if art and art.abs_tile_x ~= -1000000 then print(i.id); return; end
-	end;end
+    if i.flags.artifact and i:hasWriting() then
+	local gref = dfhack.items.getGeneralRef(i, df.general_ref_type.IS_ARTIFACT)
+	local art = (gref) and df.artifact_record.find(gref.artifact_id) or nil
+	if art and art.abs_tile_x ~= -1000000 then
+	    print(i.id)
+	    return
+	end
     end
 end;print('none');return;end
 
 -- probing for first artifact book with feature_layer > -1
 -- there weren't any in either of my test worlds.
 if false then for _, i in ipairs(df.global.world.items.all) do
-    if (df.item_bookst:is_instance(i) or df.item_toolst:is_instance(i)) and i.flags.artifact then
-	for _,gref in ipairs(i.general_refs) do if df.general_ref_is_artifactst:is_instance(gref) then
-	    local art = df.artifact_record.find(gref.artifact_id)
-	    if art and art.feature_layer > -1 then print(i.id); return; end
-	end;end
+    if i.flags.artifact and i:hasWriting() then
+	local gref = dfhack.items.getGeneralRef(i, df.general_ref_type.IS_ARTIFACT)
+	local art = (gref) and df.artifact_record.find(gref.artifact_id) or nil
+	if art and art.feature_layer > -1 then 
+	    print(i.id)
+	    return
+	end
     end
 end;print('none');return;end
 
@@ -74,63 +107,98 @@ end;print('none');return;end
 local book_id, writing_id
 local world = df.global.world
 local plotinfo = (df.global._fields.plotinfo ~= nil) and df.global.plotinfo or df.global.ui
+local translateName = dfhack.TranslateName or dfhack.translation.translateName
 
 
 if #args < 2 then args[1] = "help"; end
 
-if args[1]:startswith('b') then
-    book_id = tonumber(args[2])
+if args[1]:startswith('b') or args[1]:startswith('i') then
+    book_id = math.tointeger(args[2])
+
+elseif args[1]:startswith('a') then
+    local artifact_id = math.tointeger(args[2])
+    if artifact_id ~= nil then
+        local artifact = df.artifact_record.find(artifact_id)
+        book_id = artifact.item.id
+
+    else
+	local artifact_name = table.concat(args, ' ', 2, #args)
+	artifact_name = dfhack.toSearchNormalized(artifact_name)
+	printf("Searching artifacts for %s", artifact_name)
+
+	for i,art in ipairs(df.artifact_record.get_vector()) do
+	    local aname1 = translateName(art.name, false)
+	    aname1 = dfhack.toSearchNormalized(aname1)
+
+	    local aname2 = (art.name.first_name == '') and translateName(art.name, true) or nil
+	    aname2 = (aname2) and dfhack.toSearchNormalized(aname2) or nil
+	    local anamep = aname1 .. ( (aname2) and (' (' .. aname2 .. ')') or '' )
+
+	    -- print(anamep)
+
+	    if aname1 == artifact_name or (aname2 and aname2 == artifact_name) then
+		printf("Found artifact id %d item id %d name %s", art.id, art.item.id, anamep)
+		book_id = art.item.id
+		break
+	    end
+
+	    -- if i > 25 then return;end
+	end
+    end
 
 elseif args[1]:startswith('w') then
-    writing_id = tonumber(args[2])
+    writing_id = math.tointeger(args[2])
     book_id = nil
 
     -- slow; find the first book (presumably the artifact book) with that written_contents_id.
     for _,i in ipairs(world.items.all) do
 
-	--  if df.item_bookst:is_instance(i) or df.item_toolst:is_instance(i) then
-	if i:hasWriting() then	-- the df.items vtable gives us a better way.
+	if i:hasWriting() then
 	    for _,j in ipairs(i.improvements) do
-		
-		--if i.id < 100 and df.itemimprovement_pagesst:is_instance(j) then dfhack.print(i.id .. ":" .. j.contents[0], '');end
-		--if df.itemimprovement_pagesst:is_instance(j) and #j.contents > 1 then dfhack.print(i.id,'');end
-		--if df.itemimprovement_pagesst:is_instance(j) and j.contents[0] == writing_id then
-		if (j:getType() == df.improvement_type.PAGES or j:getType() == df.improvement_type.WRITING)
-			and j.contents[0] == writing_id then
+		-- if improvement_is_writing(j) then print(i.id, j.contents[0]); end
+		if improvement_is_writing(j) and j.contents[0] == writing_id then
 		    book_id = i.id
 		    break
 		end
 	    end
 	end
 
+	-- if i.id > 999 then return;end
+
 	if book_id ~= nil then break; end
     end
     if book_id == nil then qerror('could not find book with that written_contents id'); end
 else
-    print(("Usage:\n    %s book <item_id>\nor\n    %s writing <written_contents_id>\n"):format
-	(dfhack.current_script_name(), dfhack.current_script_name()))
+    print(([[
+Usage:
+    %s item <item id>
+    %s book <item id>
+    %s writing <written_contents id>
+    %s artifact <artifact id>
+    %s artifact <artifact name>
+]]):trim():format
+	(dfhack.current_script_name(), dfhack.current_script_name(), dfhack.current_script_name(),
+	 dfhack.current_script_name(), dfhack.current_script_name()
+    ))
     return
 end
 
 
 local item = (math.type(book_id) == "integer") and df.item.find(book_id) or nil     -- find the item again.
-if not item then qerror('could not find book'); end
+if not item then qerror("item does not exist"); end
+if utils.binsearch(world.items.other.IN_PLAY, item.id, 'id') then qerror("that item is already on the map."); end
+
+-- find the artifact again
+local gref = dfhack.items.getGeneralRef(item, df.general_ref_type.IS_ARTIFACT)
+local artifact_id = (gref) and gref.artifact_id or -1
+local artifact = df.artifact_record.find(artifact_id)
+
+if artifact and artifact.site == plotinfo.site_id then qerror('that item is somehow on-site but not on the map.'); end
 
 
-local _, in_play, _ = utils.binsearch(world.items.other.IN_PLAY, item.id, 'id')
-if in_play then qerror('that book is already on the map.'); end
 
-
-local artifact = nil
-local artifact = (dfhack.items.getGeneralRef(item, df.general_ref_type.IS_ARTIFACT) ~= nil)
-	and dfhack.items.getGeneralRef(item, df.general_ref_type.IS_ARTIFACT).artifact_id or -1
-artifact = df.artifact_record.find(artifact)
-
-if artifact and artifact.site == plotinfo.site_id then qerror('that book is on-site but not on the map.'); end
-
-
--- print('book_id', book_id, 'item', item.id, 'artifact', artifact.id)
-
+printf("Retrieving item %d artifact %d %s from the world.", item.id, (artifact) and artifact.id or -1,
+	dfhack.items.getReadableDescription(item))
 
 if doit and artifact then
 
@@ -151,29 +219,38 @@ if doit and artifact then
     -- the site has 21 buildings, none of which contain any items.
     -- oh.  the artifact is in .populace.artifacts[]. good.
     if art_site then
+	printf("The artifact was located in site %d %s", art_site.id, translateName(art_site.name))
 	-- okay. populace.artifacts[] looks to be sorted by .id, but that may just be an
 	--   artifact (no pun intended) caused by loading the savegame.  I don't trust it.
 	local index, _ = utils.linear_index(art_site.populace.artifacts, artifact.id, 'id')
-	-- print( (index) and "artifact found in site, index " .. index or "artifact not found in site" )
 	if index then
 	    art_site.populace.artifacts:erase(index)
 	    index, _ = utils.linear_index(art_site.populace.artifacts, artifact.id, 'id')  -- verify deletion
-	    if index then qerror("didn't delete artifact from site"); end
+	    if index then print("WARNING: didn't remove artifact from site"); end
+	else
+	    print("WARNING: didn't find artifact in site.")
 	end
     end
 
     if art_holder_hf then
+	printf("The artifact was being held by historical figure %d %s", art_holder_hf.id,
+		dfhack.units.getReadableName(art_holder_hf) )
 	local held = (art_holder_hf and art_holder_hf.info and art_holder_hf.info.books)
 		and art_holder_hf.info.books.artifacts_held or nil
 	if held then
 	    local index, _ = utils.linear_index(held, artifact.id, 'id')
 	    if index then 
 		held:erase(index)
+	    else
+		print("WARNING: The artifact holder was not actually holding the artifact.")
 	    end
+	else
+	    print("WARNING: The artifact holder was not actually holding the artifact.")
 	end
     end
 
     if art_subregion then
+	printf("The artifact was lost in subregion %d", artifact.subregion)
 	-- nothing in a subregion tracks artifacts.
 	-- not sure what to do except clearing artifact's abs_tile_xyz, subregion, and loss_region.
     end
@@ -202,36 +279,22 @@ if doit and artifact then
 end
 
 if doit then
---[[ all of this is the hard way, and is otherwise problematic.
 
-    local O = df.global.world.items.other
+    print('----')
+    printall(utils.parse_bitfield_int(item.flags.whole,df.item_flags))
+    printall(utils.parse_bitfield_int(item.flags2.whole,df.item_flags2))
 
-    if df.item_bookst:is_instance(item) then
-	if not utils.insert_sorted(O.BOOK, item, 'id') then
-	    qerror('failed to insert into BOOK')
-	end
-    elseif df.item_toolst:is_instance(item) then
-	if not utils.insert_sorted(O.TOOL, item, 'id') then
-	    qerror('failed to insert into TOOL')
-	end
-    else 
-	qerror('this is not an item I know how to insert into the items.other arrays.')
-    end
+    item.flags.removed = false
+    item.flags2.utterly_destroyed = false
 
-    if artifact and not utils.insert_sorted(O.ANY_ARTIFACT, item, 'id') then
-	qerror('failed to insert into ANY_ARTIFACT')
-    end
+    item:categorize(true)
 
-    if not utils.insert_sorted(O.IN_PLAY, item, 'id') then
-	qerror('failed to insert into IN_PLAY')
-    end
-]]
+    print('----')
+    printall(utils.parse_bitfield_int(item.flags.whole,df.item_flags))
+    printall(utils.parse_bitfield_int(item.flags2.whole,df.item_flags2))
 
-    item:categorize(true)		-- this is the better way.
-
-
-    item.flags.foreign = true
-    item.flags.trader = false
+    item.flags.foreign = true  -- some artifacts are marked as .foreign, many are not.
+    item.flags.trader = false  -- some artifacts are marked as .trader.  unknown why.
     item.flags.forbid = true
 
     local pos = xyz2pos(
@@ -239,20 +302,23 @@ if doit then
 	plotinfo.map_edge.surface_y[0],
 	plotinfo.map_edge.surface_z[0]
     )
-    local locstr = "The book should now be on the surface, at the top-left corner of the map."
+    local locstr = "The item should now be on the surface, at the top-left corner of the map."
 
     if #world.buildings.other.TRADE_DEPOT > 0 then
 	local b = world.buildings.other.TRADE_DEPOT[0]
 	pos = xyz2pos(b.centerx, b.centery, b.z)
-	locstr = "The book should now be at the center of the (first) trade depot."
+	locstr = "The item should now be at the center of the (first) trade depot."
     end
 
-    item.pos = pos
-    local map_block = dfhack.maps.getTileBlock(pos)
-    utils.insert_or_update(map_block.items, item.id)
-    item.flags.on_ground = true
+    item.flags.on_ground = true  -- fake out .moveToGround().
+    dfhack.items.moveToGround(item, pos)
+
     item:setTemperatureFromMap( --[[local=]] true, --[[contained=]] false)
     print(locstr)
+
+    print('----')
+    printall(utils.parse_bitfield_int(item.flags.whole,df.item_flags))
+    printall(utils.parse_bitfield_int(item.flags2.whole,df.item_flags2))
 
 end
 
