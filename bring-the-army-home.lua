@@ -41,6 +41,8 @@ Stop running the script, if previously started.
 --]====]
 
 
+-- TODO when dropping items, first remove any job.  Store in stockpile/bookcase can be active.
+
 -- TODO generalize to other report types (migrants).
 
 -- DONE find out what happens with messengers.
