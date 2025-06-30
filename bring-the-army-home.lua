@@ -66,6 +66,8 @@ Stop running the script, if previously started.
 --   own the clothing they're wearing.  Fix that.
 --   (later) same for the messengers, at least sometimes.
 --   it's all similar to the handling of squaddies.
+--   It's more obvious for the workers, as they immediately drop
+--   all their clothing and walk naked to the new clothes they choose.
 
 -- TODO When messengers return with a former site occupier, that
 --   site occupier's weapon and shield are dropped and forbidden.
