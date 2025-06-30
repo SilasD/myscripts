@@ -7,6 +7,9 @@ TODO: unchain and uncage relevant war animals.  Or at least warn about them.
 TODO: experiment with assigning unit.idle_area* (pos, threshold=0, type=27 HeadForEdge) with the
 squad's exit location.  See if it sticks or is overridden.
 
+TODO: now that I know how, inspect all jobs to see if they are chaining, caging, or pasturing
+a relevant war animal.
+
 ]====]
 
 local verbose = false
