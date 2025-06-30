@@ -58,8 +58,14 @@ Stop running the script, if previously started.
 -- When Messengers return, they trigger a 301 announcement, with
 --   "have returned" text.  It's handled just like an army return.
 
+-- TODO When messengers return with a worker who happens to be a
+--   merchant, that worker cannot be assigned to the military,
+--   and seemingly isn't a full member of the fort in other ways.
+
 -- TODO When messengers return with workers, the _workers_ do not
 --   own the clothing they're wearing.  Fix that.
+--   (later) same for the messengers, at least sometimes.
+--   it's all similar to the handling of squaddies.
 
 -- TODO When messengers return with a former site occupier, that
 --   site occupier's weapon and shield are dropped and forbidden.
