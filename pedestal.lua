@@ -635,6 +635,14 @@ local function attach_item(item, display_bld)
     display_bld.displayed_items:insert('#', item.id)
     item.flags.forbid = false
     item.flags.in_building = false
+    -- bugfix: if the item is already in this display furniture, set .in_building.
+    --   (this is necessary when the item was being displayed, then was un-displayed, then re-displayed.)
+    for _, contained_item in ipairs(display_bld.contained_items) do
+        if item == contained_item.item then
+            item.flags.in_building = true
+            break
+        end
+    end
 end
 
 function AssignItems:toggle_item_base(choice, target_value)
