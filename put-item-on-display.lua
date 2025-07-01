@@ -158,10 +158,10 @@ function put_item_on_display_teleport(item, building)
     -- DONE3: (found later) OTOH, scripts/internal/caravan/pedestal.lua sorts them.
     --   AND it expects them to be in sorted order when removing them ,in its unassign_item().
     -- So I think I really should.
-    -- TODO: check the big 0.47 fort.  Check all pedestals.
-    -- TODO if this is changed, also change the similar logic in put_item_on_display_job()
-    --building.displayed_items:insert('#', item.id)
-    utils.insert_sorted(building.displayed_items, item.id)
+    -- DONE4: I confirmed through experimentation that DF itself does not sort the vector,
+    --   and it is not in lockstep with the .contained_items vector.  So append.
+    building.displayed_items:insert('#', item.id)
+    -- BADCODE: utils.insert_sorted(building.displayed_items, item.id)
 
     -- ... and we're done.
     return true
@@ -195,8 +195,7 @@ function put_item_on_display_job(item, building)
     item.general_refs:insert('#', 
 	{ new = df.general_ref_building_display_furniturest, building_id = building.id } )
 
-    -- see notes in put_item_on_display_teleport()
-    utils.insert_sorted(building.displayed_items, item.id)
+    building.displayed_items:insert('#', item.id)
 
     local job = df.job:new()
     job:assign( { job_type = df.job_type.PutItemOnDisplay, pos = pos, aux_id = -1 } )
