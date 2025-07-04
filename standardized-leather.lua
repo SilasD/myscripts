@@ -27,6 +27,7 @@ local Mod_ID = 'standardized_leather'
 	-- okay, now that we have current_script_file(), we could find info.txt in the path,
 	--	and parse it.  we could....
 
+-- TODO: look at get_active_mods() and get_mod_info_metadata(mod_path, tags)
 
 -- modified from dfhack.current_script_name()
 -- this returns the entire path, which may be absolute, or may be relative to the DF executable directory.
