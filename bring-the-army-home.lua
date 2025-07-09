@@ -300,12 +300,12 @@ end
 
 -- Drop and forbid an incoming unit's spoils.  Spoils are determined with these tests:
 --	* Not squad equipment.
+--	* Not fort-produced.
 --	* The carry mode is .Hauled (for active units) or .Weapons (for inactive units).
 --
 -- Spoils tests that are not performed are:
---	* Not fort-produced.
 --	* Not owned by the unit.  For some reason, returning soldiers don't own anything at all.  Bug!
---	* A spoils item is expected to be the last item in the inventory.
+--	* Spoils item(s) are expected to be the last item(s) in the inventory.
 --
 -- DONE: what happens if a miner/woodcutter/hunter is used as a site messenger?
 --	Does their equipment count as squad-owned?  I bet not.  RESOLVED: found how to check this.
@@ -322,11 +322,6 @@ local function drop_and_forbid_spoils(unit)
     for i, invitem in ipairs(unit.inventory) do
 	local item = invitem.item
 
-	-- DONT bother: the spoils should be the last item in the inventory.
-
-	-- So for some reason, the returning squaddies don't haul the spoils item;
-	--   it is carried as Weapons.  (so are shields, BTW.)
-
 	-- Unfortunately, a returning soldier doesn't own any of their inventory items.
 	-- That has to be a bug; I should extend preserve-rooms to deal with that.
 	-- But this script just has to deal.
@@ -334,12 +329,15 @@ local function drop_and_forbid_spoils(unit)
 	if  (      invitem.mode == df.inv_item_role_type.Hauled	-- if unit is active.
 	        or invitem.mode == df.inv_item_role_type.Weapon	-- if unit is inactive.
 	    )
-	    and not dfhack.items.isSquadEquipment(item)
+	    and item.flags.foreign
+	    and not dfhack.items.isSquadEquipment(item)		-- expensive
 	    and not isMinerWoodcutterHunterEquipment(item)
 	    -- note: it can happen that an arriving active unit is hauling their squad equipment;
 	    -- I saw one example of hauling a squad-assigned flask to the flask stockpile.
 	then
-	    if i ~= #unit.inventory-1 then
+	    if (false) and (i ~= #unit.inventory-1) then
+		-- This happens when a unit both looted an artifact or book, and looted a
+		--   "Loot other items" such as a crutch or a nest box.
 		dprintf("NOTICE: Unit %d spoils item %d is not the last inventory item.  " .. 
 			"So that happens.", unit.id, item.id)
 	    end
@@ -349,12 +347,34 @@ local function drop_and_forbid_spoils(unit)
 
     -- processor.
     for _, item in ipairs(items_to_drop) do
-	if #items_to_drop > 1 then
-	    dprintf("NOTICE: More than one spoils item.  Probably a bug.  unit %d, item %d", 
-		    unit.id, item.id)
+	if (false) and (#items_to_drop > 1) then
+	    -- This happens when a unit both looted an artifact or book, and also looted a
+	    --   "Loot other items" such as a crutch or a nest box.
+	    dprintf("NOTICE: A unit was carrying more than one spoils item.  Probably a bug.  " .. 
+		    "unit %d %s, item %d %s",
+	    	    unit.id, dfhack.units.getReadableName(unit),
+		    item.id, dfhack.items.getReadableDescription(item) )
+	end
+	local sref = dfhack.items.getSpecificRef(item, df.specific_ref_type.JOB)
+	if (true) and (sref) then
+	    dprintf("NOTICE: Spoils item %d %s was in job %d, type %s",
+		    item.id, dfhack.items.getReadableDescription(item),
+		    sref.data.job.id, df.job_type[sref.data.job.job_type] )
+	end
+	if (true) and (item.flags.in_job ~= (sref ~= nil)) then
+	    dprintf("NOTICE: Spoils item %d %s: the job data is out of sync: .flags.in_job=%s, sref=%s",
+		    item.id, dfhack.items.getReadableDescription(item),
+		    (item.flags.in_job) and 'true' or 'false',
+		    (sref) and 'exists' or 'nil' )
+	end
+	if (sref) then dfhack.job.removeJob(sref.data.job); end
+	local sref = dfhack.items.getSpecificRef(item, df.specific_ref_type.JOB)
+	if (true) and (sref) then
+	    dprintf("WARNING: Failed to remove job for spoils item %d %s", item.id,
+		    dfhack.items.getReadableDescription(item))
 	end
 	local success = dfhack.items.moveToGround(item, unitpos)
-	dprintf("Dropping and forbidding spoils item %d at (%s).%s", item.id,
+	dprintf("Dropping and forbidding spoils item %d at (%s)%s.", item.id,
 		pos2str(unitpos), (success) and '' or '  FAILED!' )
 	if item.flags.on_ground then
 	    item.flags.forbid = true
