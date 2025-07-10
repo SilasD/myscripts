@@ -111,6 +111,11 @@ Stop running the script, if previously started.
 --	On-map, active units being 'ridden' have flags1.ridden set.
 --	No specific-ref, no general-ref.  No relationship_id for being ridden.
 --   So if a unit has .rider, move them to the same square as their mount, I think.
+--   Okay, another chance to resolve this.  Bembul Nil, SQ4 has a baby, Lorbam Erith.
+--	Bembul: flags1.ridden true.
+--	Lorbam: profession 104 Baby, profession2 104 Baby, flags1.rider true, mood 8 Baby,
+--	    birth_year 514, birth_time 10284, relationship_ids.RiderMount mother's unit_id,
+--	    mount_type 1 CARRIED, 3 owned items (somehow).
 
 -- TODO maybe: it turns out that eventful.onUnitNewActive is pretty slow, because it scans
 --   the entire active units vector every n ticks (based on frequency of course).
@@ -329,13 +334,15 @@ local function drop_and_forbid_spoils(unit)
 	if  (      invitem.mode == df.inv_item_role_type.Hauled	-- if unit is active.
 	        or invitem.mode == df.inv_item_role_type.Weapon	-- if unit is inactive.
 	    )
-	    and item.flags.foreign
+	    and ( item.flags.foreign				-- NOT ALWAYS TRUE OF SPOILS!  some artifacts
+								--   (books, at least) don't have .foreign.
+		or item.flags.artifact )			-- so let's try this alternative.
 	    and not dfhack.items.isSquadEquipment(item)		-- expensive
 	    and not isMinerWoodcutterHunterEquipment(item)
 	    -- note: it can happen that an arriving active unit is hauling their squad equipment;
 	    -- I saw one example of hauling a squad-assigned flask to the flask stockpile.
 	then
-	    if (false) and (i ~= #unit.inventory-1) then
+	    if (true) and (i ~= #unit.inventory-1) then
 		-- This happens when a unit both looted an artifact or book, and looted a
 		--   "Loot other items" such as a crutch or a nest box.
 		dprintf("NOTICE: Unit %d spoils item %d is not the last inventory item.  " .. 
@@ -688,7 +695,7 @@ catch_newunits_enabled = catch_newunits_enabled or false	-- global, persistant.
 local debugging_modulus = 0
 local function catch_newunits(unit_id)
 
-    if debugging then
+    if (debugging) then
 	local frequency = 10
 	local current_modulus = (dfhack.world.ReadCurrentTick() % frequency)
 	if current_modulus ~= 0 and current_modulus ~= debugging_modulus then
@@ -722,7 +729,7 @@ local function catch_newunits(unit_id)
 	return
     end
 
-    if debugging then
+    if (false) and (debugging) then
 	dprintf("Caught a new unit: id %d  tick %d", unit_id, dfhack.world.ReadCurrentTick())
     end
 
