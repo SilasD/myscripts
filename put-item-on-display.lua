@@ -35,7 +35,7 @@ local function vprintf(...)
 end
 
 
--- most logic taken from hack/scripts/gui/caravan/pedestal.lua:is_displayable_item()
+-- most logic taken from hack/scripts/internal/caravan/pedestal.lua::is_displayable_item()
 function is_displayable_item(item)
 
     if not item
