@@ -660,36 +660,120 @@ well-minced cow meat, and well-minced cow meat), then dwarves will treat them as
 were **just** that ingredient (e.g. they'll behave as if it's just an ordinary piece of cow 
 meat) and will get tired of eating them.
 
-( 5/18/25 on item lag.)
-https://discord.com/channels/793331351645323264/873014631315148840/1373680216777429023
-so called item lag is mostly caused by stockpiles trying to find an item to fill their 
-empty slots
-So wait, is it the jobs being generated to fill stockpiles causing the lag or just having 
-large unfilled stockpiles even if there aren't any items to fill it?
-the latter
-Huh, more reason to go QSP then
-every so many ticks each stockpile with at least one empty space iterate the entire item 
-list to find the closest item that is not stockpiled already and which matches that 
-stockpiles admit filter
+Tachytaenius 1/3/2025
+https://discord.com/channels/793331351645323264/793331351645323267/1324788382496329758
+Is it possible to make meals less valuable
 
-( 6/17/25 on ammo.)
-https://discord.com/channels/793331351645323264/873014631315148840/1384748321972682916
-Another thing that has a similar issue that I'm not sure if they're addressing with the 
-marksman update is quivers. Currently the squad can hold a total of 250 ammo in total, 
-which is *implied* to split between each squad member to 25 ammo each for all 10 members. 
-But if one of them happens to carry a stack of 25 and then a stack of 12, one member will 
-only be able to carry up to 13 ammo (if individual stacks can be found or an exact stack 
-of 13 is available).
-And if multiple cases like that exist within a squad, chances are one member will not be 
-able to pick up any ammo and you'll be pulling your hairs not knowing what's wrong
-This is extremely common if you end up actually using your marksdwarves and over time 
-they start carrying non-standard stacks of ammo
-The solution: make quivers hold a set value amount of ammo and get rid of the squad-wide 
-ammo limit
-I'm aware of that issue, and have in fact made a script to fix it (along with a few other 
-ammo issues). So far it's working well, but it probably won't be needed anymore if Toady 
-does indeed fix the issue.
-https://discord.com/channels/793331351645323264/793331351645323267/1381548462386053212
+(and following discussion)
+
+Quietust 1/3/25
+Prepared meals aren't created using reactions - indeed, attempting to create a FOOD object 
+via custom reaction tends to crash the game (unless that got fixed at some point).
+We could certainly override the implementation of `item_foodst::getImprovementsValue()`, 
+since that's where ingredients are actually taken into account (and _nothing else_).
+
+Quietust 1/3/25
+Right now, food ingredients follow the same formula as other items:
+* 0: itemval
+* 1: itemval * 1.1 + 3
+* 2: itemval * 1.2 + 6
+* 3: itemval * 1.33 + 10
+* 4: itemval * 1.5 + 15
+* 5: itemval * 2 + 30
+
+Interestingly, the real formula works like this:
+```
+topval = itemval * 2 + 30;
+if (quality == 0) outval = itemval;
+if (quality == 1) outval = (topval + itemval*9) / 10;
+if (quality == 2) outval = (topval + itemval*4) / 5;
+if (quality == 3) outval = (topval + itemval*2) / 3;
+if (quality == 4) outval = (topval + itemval) / 2;
+if (quality == 5) outval = topval;
+if (outval < itemval + quality) outval = itemval + quality;
+```
+(the last line is there, but it will never have any effect because `quality` is always
+less than `30 / [10|5|3|2]`)
+
+Izmerilda Richter — 1/3/2025 1:23 PM
+Maybe, because single-ingredient food crash the game. When I tried to add meal type even
+lesser than biscuits, with 1 ingredient, the game crashed.
+https://discord.com/channels/793331351645323264/793331351645323267/1324867248393031710
+rome of oxtrot — 1/3/2025 2:29 PM
+any attempt to make a custom reaction that produces a FOOD item crashes the game
+Quietust — 1/3/2025 7:14 PM
+The *job* for creating prepared meals iterates across all items attached to the job, and 
+when it finds a container, it uses all of the items inside that container.
+For things like bags of flour/sugar or barrels of alcohol/Dwarven syrup, there's only one 
+item in the barrel so it works fine.
+But if the job mistakenly picks up a barrel containing **multiple** cookable items (e.g. 
+meat/fish/plants, or multiple individual stacks of milk), then things go a bit weird.
+When you milk creatures yourself, you can end up with a barrel containing 100 individual 
+milk items, and if that barrel gets used by a Prepare Meal job, then it will add 100 
+ingredients to the meal.
+It's a **very** old bug, one I personally reproduced in a fortress in version 0.23.130.23a.
+myk002 — 1/3/2025 7:18 PM
+If we can't hook a reaction, another option might be to adjust stack sizes **as the items 
+for the job are fetched**
+myk002 — 1/3/2025 7:19 PM
+that is, when an item is attached to the job, split the stack or dump things out of the 
+barrel (hrm. liquids) before the item is grabbed
+myk002 — 1/3/2025 7:21 PM
+for items in barrels, maybe temporarily hold the extra items in limbo and re-insert them 
+into the barrel after the job is complete/canceled
+
+
+Very long discussion of cooked meals.
+https://discord.com/channels/793331351645323264/873014631315148840/1349091352075305073
+Thyrus — 3/11/25, 11:47 AM
+So, some testing: it is absolutely possible to satisfy the EatGoodMeal need without catering 
+for preferences. Cooking four stacks of quarry bush into a *quarry bush roast* yields a meal 
+whose individual portions are worth 22, which seems to be enough to satisfy the need, 
+regardless of preferences.
+Thyrus — 3/11/25, 12:02 PM
+Second observation: The primary ingredient (The only ingredient whose value is counted fully, 
+in addition to being averaged with the other ingredients) seems to be the ingredient that is 
+fetched last. This is sad, because I already know how to create jobs where the first job 
+item is assigned.
+{...}
+https://discord.com/channels/793331351645323264/873014631315148840/1349102526271852695
+rome of oxtrot — 3/11/25, 12:31 PM
+i don't know if we can force specific ingredients into a prepared meal
+we could try to reorder the ingredients vector, i suppose
+{...}
+https://discord.com/channels/793331351645323264/873014631315148840/1349180558701494405
+Scunt — 3/11/25, 5:41 PM
+Are we getting a dfhack tool to make dwarves cook proper meals with diverse ingredients?
+tmPreston — 3/11/25, 6:29 PM
+0.47 had a tool that allowed you to specify all 4 ingredients of a meal. Maybe you could 
+look into that?
+It was the same tool that allowed you to engrave only specific furniture or mill only dyes 
+by editing the repeat job itself.
+myk002 — 3/11/25, 8:19 PM
+How about reordering the item requirements instead of the items? That will change the order 
+that they are fetched and used
+myk002 — 3/11/25, 8:20 PM
+We have a PR open to reinstate that tool
+Thyrus — 3/11/25, 11:08 PM
+Unless I messes up, the primary ingredient is the last ingredient.
+{...}
+https://discord.com/channels/793331351645323264/873014631315148840/1349424295087964170
+Thyrus — 3/12/25, 9:50 AM
+I misread the meal value formula yesterday. The contribution of the main ingredient is:  
+<meal_base=1> * <material value> * <quality multiplier> * + <quality bonus>. So this can 
+differ greatly for ingredients of equal value (e.g. cheese has <base = 10> * <material=1> 
+and quarry bushes have <base=2> * <material=5>. Sugar and syrup profit the most 
+<base=1>*<material=20>.
+{...}
+https://discord.com/channels/793331351645323264/873014631315148840/1349485162215510070
+Thyrus — 3/12/25, 1:52 PM
+If your cook is skilled enough, a portion value of 22 should be obtainable fairly reliably 
+from ingredients of value 10. An there's quite a few of those.
+But 5 points in cooking is now a must on embark.
+https://discord.com/channels/793331351645323264/873014631315148840/1349486149436969062
+{this link has value calculation for drinks}
+{or maybe it's for meals, the subsequent discussion isn't clear}
+{lots and lots of subsequent discussion}
 
 
 --]==]
@@ -822,6 +906,23 @@ Recipe: Pizza:
 	CHEESE
 
 ]=]
+
+--[==[
+
+***
+On the possibility of extending / overriding the df.food_ingredient_type vector.
+
+The df.food_ingredient_type._identity points into the DFHack DLL ?
+	userdata: 0000_7FFB_FE7F_A2D0
+
+In the binary:
+One hit for "The ingredients are "
+One hit for "minced "
+One hit for "cooked "
+When is cooked used instead of minced?
+
+
+]==]
 
 
 --[==[
