@@ -49,7 +49,7 @@ end
 
 local function ip_key_by_item(item)
     local item_type, type, index = item:getType(), nil, nil
-    if item_type == df.item_type.FISH then
+    if item_type == df.item_type.FISH then		-- TODO :isCasteMaterial()x
 	type = item:getRace()
 	index = -1
     else
@@ -71,8 +71,8 @@ end
 
 local function fill_in_ip(ip, item_type, type, index)
     local ip = ip or {}
-	
-    ip.key =		ip.key		or ip_key(item_type, type, index)
+
+    ip.key =		ip.key		or ip_key(item_type, type, index)	-- TODO ensure_key()
     ip.item_type =	ip.item_type	or item_type
     ip.type =		ip.type		or type
     ip.index =		ip.index	or index
@@ -381,9 +381,9 @@ local function mark_for_purchase()
 	--	this plant can be processed-to-bag or processed-to-barrel.
 
 	if ip.item_type == df.item_type.DRINK then
-	    purchase_it = (ip.ingredient + ip.purchasing < 25)  -- TODO tune
+	    purchase_it = (ip.ingredient + ip.purchasing < 50)  -- TODO tune
 	else
-	    purchase_it = (ip.ingredient  + ip.purchasing < 20)
+	    purchase_it = (ip.ingredient + ip.purchasing < 20)	-- TODO tune
 	end
 
 	if purchase_it then
@@ -418,183 +418,80 @@ local function purge_ip_by_cmpfn(ip_list, cmpfn)
 end
 
 
--- hacky
----@param f (df.item|df.item.id|integer)[]
-local function make_specific_prepared_meal(f)
-    if type(f) ~= "table" or #f == 0 then qerror('no ingredients'); end
-
-    for ii, item in ipairs(f) do  -- sanity/safety checks
-	item = (math.type(item) == "integer") and df.item.find(item) or item
-	if not df.item:is_instance(item) then qerror('not an item!'); end
-	local i = utils.binsearch(df.global.world.items.other.ANY_COOKABLE,item.id,'id')
-	if not i then qerror(ii ..' ingredient not cookable: ' .. dfhack.items.getReadableDescription(item)); end
-	if i.flags.in_job then qerror(ii .. ' ingredient in job: ' .. dfhack.items.getReadableDescription(item)); end
-    end
-
-    local b=dfhack.gui.getSelectedBuilding(true)
-    if not b or b:getType() ~= 13 or b:getSubtype() ~= 19 then qerror('not in kitchen'); end
-
-    local j = nil
-    for i,jj in ipairs(b.jobs) do
-	if jj.job_type == 114 and #jj.items == 0 then j = jj; print('editing job ' .. i); break; end
-    end
-    if not j then qerror('did not find a cooking job without assigned ingredients'); end
-
-    for ii, item in ipairs(f) do
-	item = (type(item) == "number") and df.item.find(item) or item
-	dfhack.job.attachJobItem(j,item,df.job_role_type.Hauled,(ii==1) and 0 or 1, (ii-1));
-    end
-
-    for _,e in ipairs(j.job_items.elements) do e.quantity=0; end
-end
-
-
 local function isPreferenceFor(item)
    local ip, idx = get_ip_by_item(ingredient_preferences, item)
-   return (ip ~= nil)
+   return (ip ~= nil and ip.units ~= 0)
 end
-
-
--- overly simplistic; returns the first match in the list.  fragile.
-local function find_ingredient(item_type)
-
-    for i,item in ipairs(df.global.world.items.other.ANY_COOKABLE) do
-	f = item.flags
-
-	if	   f.forbid 
-		or f.in_job 
-		or f.dump
-		or f.rotten 
-		or f.owned 
-		or f.removed 
-		or f.garbage_collect
-		or f.already_uncategorized 
-	then
-	    goto CONTINUE
-	end
-
-	if      item_type == item:getType()
-		and (
-		   item:getType() == df.item_type.MEAT
-		or item:getType() == df.item_type.FISH
-		or item:getType() == df.item_type.PLANT
-		or item:getType() == df.item_type.PLANT_GROWTH
-		or item:getType() == df.item_type.CHEESE
-		or item:getType() == df.item_type.SEEDS
-	        )
-
-		and isCookable(item)
-		and isPreferenceFor(item)
-	then
-	    remove_ip_by_item(ingredient_preferences, item)
-	    return item
-	end
-
-	if	item_type == df.item_type.POWDER_MISC
-		and item:getType() == df.item_type.BAG
-		and #dfhack.items.getContainedItems(item) == 1
-	then
-	    for _, item2 in ipairs(dfhack.items.getContainedItems(item)) do   -- exactly one iteration.
-		if	item2:getType() == df.item_type.POWDER_MISC
-			and isCookable(item2)
-			and isPreferenceFor(item2)
-		then
-		    remove_ip_by_item(ingredient_preferences, item2)
-		    return item
-		end
-	    end
-	end
-
-	if	( item_type == df.item_type.DRINK or item_type == df.item_type.LIQUID_MISC )
-		and ( item:getType() == df.item_type.BARREL or item:getType() == df.item_type.TOOL )  -- TODO tool subtype use flags
-		and #dfhack.items.getContainedItems(item) == 1
-	then
-	    for _, item2 in ipairs(dfhack.items.getContainedItems(item)) do   -- exactly one iteration.
-		if	item_type == item2:getType()
-			and isCookable(item2)
-			and isPreferenceFor(item2)
-		then
-		    remove_ip_by_item(ingredient_preferences, item2)
-		    return item
-		end
-	    end
-	end
-
-	::CONTINUE::
-    end
-
-    qerror('did not find item of type ' .. item_type)
-end
-
 
 
 collect_ingredient_preferences()
 collect_ingredient_counts()
 purge_ip_by_cmpfn(ingredient_preferences, function(ip) return (ip.units == 0); end)
-purge_ip_by_cmpfn(ingredient_preferences, function(ip) return (ip.trader == 0); end)
---purge_ip_by_cmpfn(ingredient_preferences, function(ip) return (ip.purchasing == 0); end)
-purge_ip_by_cmpfn(ingredient_preferences, function(ip) return (ip.ingredient >=20); end)
+--purge_ip_by_cmpfn(ingredient_preferences, function(ip) return (ip.trader == 0); end)
+--purge_ip_by_cmpfn(ingredient_preferences, function(ip) return (ip.ingredient >= 30); end)
 purge_ip_by_cmpfn(ingredient_preferences, function(ip) return(ip.meals>=ip.units*5); end)
 mark_for_purchase()
+purge_ip_by_cmpfn(ingredient_preferences, function(ip) return (ip.purchasing == 0); end)
 --purge_ip_by_cmpfn(ingredient_preferences, function(ip) return(ip.meals>=ip.units*5 or ip.ingredient==0); end)
 --purge_ip_by_cmpfn(ingredient_preferences, function(ip) return(ip.meals>=ip.units*5 or ip.ingredient~=0); end)
 
 
-
---[[
-capture={};function print(...)local out={};for i,p in ipairs({...}) do p=tostring(p);p=p..(' '):rep((8-(p:len()%8))or 8)
-table.insert(out,p);end;table.insert(capture,table.concat(out):trim()..'\n');end;-- TODO rtrim()
-print(1,2,3);print(4,' ',' ',5);print(6,77,8888,9999,11111,222222,3333333,44444444,555555555);print(10 .. 11 .. 12);
-print=dfhack.BASE_G.print;print('done');dfhack.internal.setClipboardTextCp437Multiline(table.concat(capture))
-1       2       3
-4                       5
-6       77      8888    9999    11111   222222  3333333 44444444        555555555
-101112
-]]
-
-if false then  -- print to clipboard
-
-    local capture = {}
-    local function print(...)   -- testing making this local
-	local out={}
-	for i,p in ipairs({...}) do
-            p = tostring(p)
-            p = p .. (' '):rep( (8-(p:len()%8)) or 8)
-            table.insert(out,p)
-	end
-	table.insert(capture, table.concat(out):trim() .. '\n')  -- TODO rtrim()
-    end
+local function print_ingredient_preferences()
     for _, ip in ipairs(ingredient_preferences) do print_ingredient_preference(ip); end
-    print = dfhack.BASE_G.print
+end
+
+
+local function print_to_clipboard(...)	-- params as you would pass to pcall() or curry()
+    local capture = {}
+
+    local function captureprint(...)
+	local line = {}
+	local nextindent = 0
+	for i,p in ipairs({...}) do
+	    p = tostring(p)
+	    p, nextindent = (' '):rep(nextindent) .. p , 8-(p:len()%8)
+	    table.insert(line,p)
+	end
+	table.insert(line,NEWLINE)
+	table.insert(capture, table.concat(line))
+    end
+
+    local oldprint = print
+    print = captureprint
+    local success, msg = pcall(...)
+    print = oldprint
+    if not success then dfhack.error(msg); end
     dfhack.internal.setClipboardTextCp437Multiline(table.concat(capture))
 end
 
-if true then  -- print to console
-    for _, ip in ipairs(ingredient_preferences) do print_ingredient_preference(ip); end
+
+if (false) then
+    function ptest(...)
+	print(1,2,3)
+	print(4,'','',5, '')
+	print(6,77,888,9999,11111,222222,3333333,44444444,555555555)
+	print(...)
+    end
+    print_to_clipboard(ptest,'A','BB','CCC','DDDD')
+    do return; end
+end
+--[[
+1       2       3
+4                       5       
+6       77      888     9999    11111   222222  3333333 44444444        555555555
+A       BB      CCC     DDDD
+]]
+
+
+if (false) then  -- print to clipboard
+    print_to_clipboard(print_ingredient_preferences)
+end
+
+if (false) then  -- print to console
+    print_ingredient_preferences()
 end
 
 print('done')
-
---[=[ -- cook a meal from a 'recipe'
-
--- TODO dfhack.kitchen.findExclusion(), dfhack.kitchen.removeExclusion(), dfhack.kitchen.addExclusion()
-
-local item
-ingredient_preferences = {}
-collect_ingredient_preferences()
-collect_ingredient_counts()
-purge_ip_by_cmpfn(ingredient_preferences, function(ip) return((ip.meals>=ip.units*5)) or ip.ingredient==0; end)
-for i = 1,1 do
-  local ingredients = {
-	find_ingredient(df.item_type.FISH),
-	find_ingredient(df.item_type.PLANT),
-	find_ingredient(df.item_type.DRINK),
-	find_ingredient(df.item_type.CHEESE),
-  }
-  for _, item in ipairs(ingredients) do print(item.id, dfhack.items.getReadableDescription(item)); end
-  make_specific_prepared_meal( ingredients )
-end
---]=]
 
 
 --[[
@@ -626,389 +523,362 @@ game.main_interface.trade
 https://discord.com/channels/793331351645323264/873014631315148840/1361938112170954763
 
 (an important post in that discussion)
+rome of oxtrot — 4/15/25, 10:52 PM
 https://discord.com/channels/793331351645323264/873014631315148840/1361942363458768906
 it arguably creates more of an incentive to try to have meals that satisfy individual dwarf 
 preferences, although the micro required for that is _insane_ especially since we've had 
 very little lck manipulating PrepareMeal jobs (at least last i heard)
 
 ( 5/7/25 on immortal-cravings and forcing eat jobs.)
+amade — 5/7/25, 1:17 AM
 https://discord.com/channels/793331351645323264/873014631315148840/1369588977555865662
 Interesting…I just noticed that goblin monster slayers eat by tasking the whole stack of 
 meals to eat (via `immortal-cravings`) instead of taking one meal out of the stack like 
 other citizens/residents. They still only consume one meal out of the whole stack though.
 
 ( 5/15/25 on food selection and fort design.)
+Saint — 5/15/25, 6:16 AM
 https://discord.com/channels/793331351645323264/873014631315148840/1372563194433769674
 Also why are my dwarves eating raw berries when I have over 150 lavish meals?
-(later)
+(later in that discussion)
+amade — 5/15/25, 7:04 AM
 I did some tests, and it appears that if your meals aren't high value enough, they'll 
 go for whatever is closest.  With high value meals, they'll skip any raw food that are 
 closer and go for the meals.
 And of course, they will go for preferred food if available, but not all the time.
 *this was for short distances, with a difference of only a few tiles between the raw 
 food and prepared meals; I didn't test to see how far is too far.
-(later, Quietust formula)
+Quietust — 5/15/25, 3:03 PM
 When choosing meals, the "score" for a given food item starts at its distance (calculated 
 as `max(dx,dy,dz)`) - if it matches a Preference, it cuts the score in half and subtracts 
 30, and if it's recently-eaten (or is a live Vermin) it quadruples the score and adds 100. 
 The item with the lowest score wins.
 If dwarves are preferring berries over prepared meals despite them being further away, 
 then those dwarves probably prefer to eat those berries.
+Quietust — 5/15/25, 3:07 PM
 And something I recently discovered: if your meals only contain one single unique ingredient 
 (e.g. a cow meat roast consisting of well-minced cow meat, finely-minced cow meat, 
 well-minced cow meat, and well-minced cow meat), then dwarves will treat them as if they 
 were **just** that ingredient (e.g. they'll behave as if it's just an ordinary piece of cow 
 meat) and will get tired of eating them.
 
-( 5/18/25 on item lag.)
-https://discord.com/channels/793331351645323264/873014631315148840/1373680216777429023
-so called item lag is mostly caused by stockpiles trying to find an item to fill their 
-empty slots
-So wait, is it the jobs being generated to fill stockpiles causing the lag or just having 
-large unfilled stockpiles even if there aren't any items to fill it?
-the latter
-Huh, more reason to go QSP then
-every so many ticks each stockpile with at least one empty space iterate the entire item 
-list to find the closest item that is not stockpiled already and which matches that 
-stockpiles admit filter
-
-( 6/17/25 on ammo.)
-https://discord.com/channels/793331351645323264/873014631315148840/1384748321972682916
-Another thing that has a similar issue that I'm not sure if they're addressing with the 
-marksman update is quivers. Currently the squad can hold a total of 250 ammo in total, 
-which is *implied* to split between each squad member to 25 ammo each for all 10 members. 
-But if one of them happens to carry a stack of 25 and then a stack of 12, one member will 
-only be able to carry up to 13 ammo (if individual stacks can be found or an exact stack 
-of 13 is available).
-And if multiple cases like that exist within a squad, chances are one member will not be 
-able to pick up any ammo and you'll be pulling your hairs not knowing what's wrong
-This is extremely common if you end up actually using your marksdwarves and over time 
-they start carrying non-standard stacks of ammo
-The solution: make quivers hold a set value amount of ammo and get rid of the squad-wide 
-ammo limit
-I'm aware of that issue, and have in fact made a script to fix it (along with a few other 
-ammo issues). So far it's working well, but it probably won't be needed anymore if Toady 
-does indeed fix the issue.
-https://discord.com/channels/793331351645323264/793331351645323267/1381548462386053212
-
-
 --]==]
 
 
---[=[   Classify ingredient types.
-
-Parsing rules:
-All-uppercase without colons matches an item type, or a creature or plant id.
-If a creature id or plant id is given, any edible part of that creature or plant will match.
-	FISH		matches any item of item type FISH.
-	EGG		matches any item of item type EGG.
-	TALLOW		matches any rendered animal fat.
-	MILL		matches any flour, sugar, or other edible powder.
-	BADGER		matches any edible badger material.  It does not match giant badgers, badger men, 
-			or honey badgers.
-	@@@ creatures
-	@@@ plants
-All-uppercase with one colon exact-matches a creature material or plant material.
-	RAVEN:MUSCLE			matches raven meat.  It does not match giant ravens or raven men.
-	@@@ plant
-All-uppercase with two colons exact-matches a dfhack.matinfo token string (single-string type).
-	CREATURE:GIANT_TOAD:MUSCLE	matches giant toad meat.
-	PLANT:WEED_RAT:STRUCTURAL	matches rat weed plants.
-	PLANT:TWO-GRAIN_WHEAT:MILL	matches two-grain wheat flour.
-	CREATURE:HONEY_BEE:HONEY	matches honeybee honey.  It does not match bumblebee honey.
-All-lowercase matches any part of a material.state.name.Solid or .Liquid, or a creature or plant name.
-	flour		matches any material that contains the word 'flour'.
-  * To use a space, substitute the two characters '%s'.
-	plump%shelmet	matches the plant of that name.
-	wheat%sflour	matches any material containing the words 'wheat flour'.
-	TODO: support quotes?
-  * Only the singular or plural species name is matched.  Matching is done against each word of the 
-    species name.  Full-string matches are required.  Caste (gender) or child names are not tested.
-	deer		matches deer, giant deer, and deer man.  It does not match reindeer.
-	bull		matches bull shark.  It does not match bull.  The species name for that is cow.
-All-lowercase can use symbols used by Lua string.match().
-	a.*k		matches aardvark and angelshark.
-	berry$		matches any food ending in berry. Does not match strawberry plants.
-	@@@
-
-The words 'not', 'and', and 'or' can be used.  The comma symbol ',' is a synonym for 'or'.
-An implciit 'or' is inserted between two lines.
-	elk and not men and not birds
-			matches elk and giant elk.  it does not match elk man and elk bird.
-
-Mixed-case with an equals symbol defines a category.  These can be recursively defined.
-	Fish =		FISH or moghopper	-- TODO Q: moghopper can be a preference; are they edible?
-Mixed-case without the equals sign uses that category.
-
-
-Define: Berries = berry$, GRAPE
--- the $ restricts the match to end in berry, because strawberry plants are edible but not fruit.
--- throw in grapes, they're almost berries.
-
-Define: Sweetener = sugar$ or syrup$ or honey$
--- note: BUMBLEBEE:HONEY cannot be obtained in-game.  TODO is that true?
-
-Define: TreeFruit = TODO
--- does not include OLIVE, all Citrus.
-
-Define: TreeNuts = TODO
-
-Define: Nuts = TreeNuts or BAMBARA_GROUNDNUT or PEANUT:SEED or rock%snut
-
-Define: Citrus = TODO
-
-Define: Fruit
-	Berries
-	TreeFruit
-	MUSKMELON
-	WATERMELON
-	PASSION_FRUIT
-	GRAPE
-	PINEAPPLE
-	@@@
--- does not include bitter melon
-	
-Define: SaladVegetable = ARTICHOKE, ASPARAGUS, BAMBARA_GROUNDNUT, STRING_BEAN, BROAD_BEAN, BEET,
-	BITTER_MELON, CABBAGE, CAPER, WILD_CARROT, CASSAVA, CELERY, CHICKPEA, CHICORY, COWPEA,
-	CUCUMBER, EGGPLANT, GARDEN_CRESS, LEEK, LENTIL, LETTUCE, MUNG_BEAN, MUSKMELON, ONION,
-	PARSNIP, PEA, PEANUT, PEPPER, POTATO, RADISH, RED_BEAN, SOYBEAN, SPINACH, SQUASH, SWEET_POTATO,
-	TARO, TOMATO, TOMATILLO, TURNIP, URAD_BEAN, WATERMELON,
-	BUCKWHEAT, ALFALFA, MAIZE, QUINOA, KANIWA, BITTER_VETCH, amaranth, RED_SPINACH, millet,
-	ROOT_MUCK, TUBER_BLOATED, MUSHROOM_HELMET_PLUMP, BERRIES_STRAW:STRUCTURAL, WEED_RAT, 
-    TODO
-	OLIVE
--- left out GARLIC, HORNED_MELON, RHUBARB, WINTER_MELON, LESSER_YAM, LONG_YAM, PURPLE_YAM, WHITE_YAM
-	
-
-Recipe: FruitSalad	Fruit, Fruit, Citrus or Fruit, optional Fruit, Sweetener
-
-Recipe: Ceviche
-	Fish
-	Citrus
-	optional Alcohol
-	optional ONION
-	optional PEPPER
-	optional TOMATO or CUCUMBER
-	optional AVOCADO or MANGO
--- Alcohol is not traditional, but we need recipes that use alcohol.
-
-Recipe CaesarSalad
-	Leaves
-	optional GARLIC
-	Oil
-	EGG
-	optional Citrus
-	optional FISH_ANCHOVY
-	CHEESE
--- romaine lettuce, garlic croutons, eggs, olive oil, lemon juice, parmesian, anchovies and/or worcestershire sauce.
--- sometimes a bit of raw garlic.  sometimes dijon mustard.
-
-Define: RootVegetable = BEET, TUBER_BLOATED, WILD_CARROT, ROOT_MUCK, ONION, POTATO, SWEET_POTATO, yam
--- left out radish
-
-Define: Leaves = LETTUCE or SPINACH or RED_SPINACH or CABBAGE or leaf or leaves
-
-Define: Vegetable = GardenVegetable or 
-
-Define: Fat = tallow or oil
-
-Define:	PizzaTopping = spinach, artichoke, asparagus, onion, tomato, pineapple, olive
-
-Recipe: Pizza:
-	flour
-	MEAT or PizzaTopping
-	optional MEAT or PizzaTopping or FISH_ANCHOVY
-	optional PizzaTopping
-	CHEESE
-
-]=]
-
-
 --[==[
+
+? +cabbage seeds, +sorghum seeds, -teff seeds, -lentils, -leek seeds, +garlic seeds
+
 CREATURE:GILA_MONSTER:MUSCLE               48 020 167 MEAT           1    0    0    0    0
-CREATURE:FISH_COELACANTH:MUSCLE            48 020 248 MEAT           1    0    5    0    0
+CREATURE:FISH_COELACANTH:MUSCLE            48 020 248 MEAT           1    0   11    0    0
 CREATURE:FISH_COD:MUSCLE                   48 020 252 MEAT           1    0    0    0    0
 CREATURE:FISH_GROUPER_GIANT:MUSCLE         48 020 254 MEAT           1    0    0    0    0
 CREATURE:FISH_TIGERFISH:MUSCLE             48 020 270 MEAT           1    0    0    0    0
+CREATURE:FISH_PIKE:MUSCLE                  48 020 271 MEAT           1    0    0    0    0
 CREATURE:GIANT_ALLIGATOR:MUSCLE            48 020 304 MEAT           1    0    0    0    0
 CREATURE:GIANT_ANOLE:MUSCLE                48 020 490 MEAT           1    0    0    0    0
 CREATURE:GIANT_POND_TURTLE:MUSCLE          48 020 516 MEAT           1    0    0    0    0
-CREATURE:FISH_HERRING:MUSCLE               48 020 546 MEAT           1    0    0    0    0   ??? !!!
-CREATURE:FISH_GLASSEYE:MUSCLE              48 020 552 MEAT           1    0    0    0    0   ??? !!!
-CREATURE:FISH_FLOUNDER:MUSCLE              48 020 555 MEAT           2    0    0    0    0   ??? !!!
-CREATURE:FISH_LUNGFISH:MUSCLE              48 020 561 MEAT           1    0    0    0    0   ??? !!!
-CREATURE:FISH_BULLHEAD_BROWN:MUSCLE        48 020 563 MEAT           1    0    0    0    0   ??? !!!
-CREATURE:FISH_BULLHEAD_YELLOW:MUSCLE       48 020 564 MEAT           3    0    0    0    0   ??? !!!
-CREATURE:FISH_CHAR:MUSCLE                  48 020 567 MEAT           1    0    0    0    0   ??? !!!
-CREATURE:FISH_PERCH:MUSCLE                 48 020 571 MEAT           1    0    0    0    0   ??? !!!
-CREATURE:MONITOR_LIZARD:MUSCLE             48 020 710 MEAT           1    0    0    0    0
-CREATURE:BIRD_CARDINAL:MUSCLE              48 021 008 MEAT           1    0    0    0    0   !!!
-CREATURE:BIRD_GRACKLE:MUSCLE               48 021 011 MEAT           1    0    0    0    0   !!!
+CREATURE:FISH_HERRING:MUSCLE               48 020 546 MEAT           1    0    0    0    0
+CREATURE:FISH_FLOUNDER:MUSCLE              48 020 555 MEAT           2    0    0    0    0
+CREATURE:FISH_LUNGFISH:MUSCLE              48 020 561 MEAT           1    0    0    0    0
+CREATURE:FISH_BULLHEAD_BROWN:MUSCLE        48 020 563 MEAT           1    0    0    0    0
+CREATURE:FISH_BULLHEAD_YELLOW:MUSCLE       48 020 564 MEAT           3    0    0    0    0
+CREATURE:FISH_CHAR:MUSCLE                  48 020 567 MEAT           1    0    0    0    0
+CREATURE:FISH_PERCH:MUSCLE                 48 020 571 MEAT           1    0    0    0    0
+CREATURE:MONITOR_LIZARD:MUSCLE             48 020 710 MEAT           1    0    3    0    0
+CREATURE:BIRD_CARDINAL:MUSCLE              48 021 008 MEAT           1    0    0    0    0
+CREATURE:BIRD_GRACKLE:MUSCLE               48 021 011 MEAT           1    0    0    0    0
 CREATURE:BIRD_RW_BLACKBIRD:MUSCLE          48 021 017 MEAT           1    0    0    0    0
+CREATURE:BIRD_FALCON_PEREGRINE:MUSCLE      48 021 025 MEAT           1    0    0    0    0
 CREATURE:GIANT_SNOWY_OWL:MUSCLE            48 021 048 MEAT           1    0    0    0    0
 CREATURE:BIRD_LORIKEET:MUSCLE              48 021 076 MEAT           2    0    0    0    0
 CREATURE:GIANT_EAGLE:MUSCLE                48 021 108 MEAT           1    0    0    0    0
- CREATURE:BIRD_HORNBILL:MUSCLE              48 021 109 MEAT           1    1    0    5    0
+CREATURE:BIRD_HORNBILL:MUSCLE              48 021 109 MEAT           1    0    2    0    0
 CREATURE:GIANT_MASKED_LOVEBIRD:MUSCLE      48 021 114 MEAT           1    0    0    0    0
 CREATURE:MANTIS:MUSCLE                     48 021 130 MEAT           1    0    0    0    0
 CREATURE:THRIPS:MUSCLE                     48 021 139 MEAT           1    0    0    0    0
- CREATURE:PIG:MUSCLE                        48 021 177 MEAT           1    0    9    5    0
+CREATURE:DONKEY:MUSCLE                     48 021 173 MEAT           1    0  123    0    0
+CREATURE:PIG:MUSCLE                        48 021 177 MEAT           1    0   14    0    0
+CREATURE:WATER_BUFFALO:MUSCLE              48 021 182 MEAT           1   74  106    0    0
+CREATURE:BIRD_GOOSE:MUSCLE                 48 021 184 MEAT           1    0    4    0    0
 CREATURE:GIANT_BUTTERFLY_MONARCH:MUSCLE    48 021 208 MEAT           2    0    0    0    0
+CREATURE:GIANT_DRAGONFLY:MUSCLE            48 021 214 MEAT           1    0    0    0    0
 CREATURE:WALRUS:MUSCLE                     48 021 225 MEAT           1    0    0    0    0
- CREATURE:SHARK_NURSE:MUSCLE                48 021 235 MEAT           1    0    0    5    0
- CREATURE:SHARK_BLUE:MUSCLE                 48 021 242 MEAT           1    0    0    0    0
+CREATURE:SHARK_NURSE:MUSCLE                48 021 235 MEAT           1    0    3    0    0
+CREATURE:SHARK_BLUE:MUSCLE                 48 021 242 MEAT           2    0    0    0    0
 CREATURE:SHARK_ANGEL:MUSCLE                48 021 244 MEAT           1    0    0    0    0
 CREATURE:NARWHAL:MUSCLE                    48 021 262 MEAT           1    0    0    0    0
+CREATURE:GIANT_BEAR_BLACK:MUSCLE           48 021 280 MEAT           2   21    0    0    0
 CREATURE:RACCOON:MUSCLE                    48 021 287 MEAT           1    0    0    0    0
 CREATURE:GIANT_RACCOON:MUSCLE              48 021 289 MEAT           1    0    0    0    0
+CREATURE:BADGER:MUSCLE                     48 021 314 MEAT           1    0    7    0    0
 CREATURE:MOOSE, GIANT:MUSCLE               48 021 319 MEAT           1    0    0    0    0
-CREATURE:ELEPHANT:MUSCLE                   48 021 323 MEAT           1    0    0    0    0
+CREATURE:ELEPHANT:MUSCLE                   48 021 323 MEAT           1    0  111    0    0
+CREATURE:JAGUAR:MUSCLE                     48 021 335 MEAT           1    0    0    0    0
 CREATURE:ORANGUTAN:MUSCLE                  48 021 353 MEAT           1    0    0    0    0
- CREATURE:BIRD_VULTURE:MUSCLE               48 021 372 MEAT           1    0    0    0    0
+CREATURE:GIBBON_BLACK_HANDED:MUSCLE        48 021 356 MEAT           1    0    3    0    0
+CREATURE:BIRD_VULTURE:MUSCLE               48 021 372 MEAT           1    0    3    0    0
 CREATURE:GIANT_RHINOCEROS:MUSCLE           48 021 377 MEAT           1    0    0    0    0
 CREATURE:ARMADILLO:MUSCLE                  48 021 387 MEAT           1    0    0    0    0
 CREATURE:BEAR_POLAR:MUSCLE                 48 021 396 MEAT           1    0    0    0    0
+CREATURE:WOLVERINE:MUSCLE                  48 021 399 MEAT           1    0    0    0    0
 CREATURE:CHINCHILLA:MUSCLE                 48 021 402 MEAT           1    0    0    0    0
-CREATURE:DRUNIAN:MUSCLE                    48 021 406 MEAT           1    0    0    0    0
+CREATURE:DRUNIAN:MUSCLE                    48 021 406 MEAT           1    0    3    0    0
 CREATURE:CREEPING_EYE:MUSCLE               48 021 407 MEAT           1    0    0    0    0
 CREATURE:MAGMA_CRAB:MUSCLE                 48 021 411 MEAT           1    0    0    0    0
-CREATURE:RUTHERER:MUSCLE                   48 021 418 MEAT           1    0    5    0    0
+CREATURE:RUTHERER:MUSCLE                   48 021 418 MEAT           1    0    4    0    0
 CREATURE:BLIND_CAVE_BEAR:MUSCLE            48 021 428 MEAT           1    0    0    0    0
 CREATURE:GIANT_OCTOPUS:MUSCLE              48 021 439 MEAT           1    0    0    0    0
-CREATURE:CRAB:MUSCLE                       48 021 440 MEAT           1    0    4    0    0   ??? !!!
+CREATURE:CRAB:MUSCLE                       48 021 440 MEAT           1    0    3    0    0
 CREATURE:GIANT_SPERM_WHALE:MUSCLE          48 021 460 MEAT           1    0    0    0    0
 CREATURE:GIANT_HARP_SEAL:MUSCLE            48 021 466 MEAT           1    0    0    0    0
 CREATURE:FOXSQUIRREL:MUSCLE                48 021 470 MEAT           2    0    0    0    0
 CREATURE:GIANT_MINK:MUSCLE                 48 021 513 MEAT           1    0    0    0    0
+CREATURE:RAT:MUSCLE                        48 021 517 MEAT           1    0    0    0    0
 CREATURE:GIANT_FLYING_SQUIRREL:MUSCLE      48 021 536 MEAT           1    0    0    0    0
-CREATURE:FISH_LAMPREY_BROOK:MUSCLE         48 021 542 MEAT           1    0    0    0    0    ??? !!!
+CREATURE:FISH_LAMPREY_BROOK:MUSCLE         48 021 542 MEAT           1    0    0    0    0
 CREATURE:FISH_RAY_BAT:MUSCLE               48 021 543 MEAT           1    0    0    0    0
 CREATURE:JELLYFISH_SEA_NETTLE:MUSCLE       48 021 557 MEAT           1    0    0    0    0
 CREATURE:TOAD_GIANT_CAVE:MUSCLE            48 021 606 MEAT           1    0    0    0    0
 CREATURE:OLM_GIANT:MUSCLE                  48 021 607 MEAT           1    0    4    0    0
 CREATURE:IMP_FIRE:MUSCLE                   48 021 614 MEAT           1    0    0    0    0
 CREATURE:OLM:MUSCLE                        48 021 621 MEAT           1    0    0    0    0
+CREATURE:COYOTE:MUSCLE                     48 021 641 MEAT           1    0   11    0    0
+CREATURE:GIANT_KANGAROO:MUSCLE             48 021 646 MEAT           1    0    3    0    0
 CREATURE:GIANT_KOALA:MUSCLE                48 021 649 MEAT           1    0    0    0    0
- CREATURE:BOBCAT:MUSCLE                     48 021 665 MEAT           1    0    0    5    0
+CREATURE:BOBCAT:MUSCLE                     48 021 665 MEAT           1    0   18    0    0
+CREATURE:GIANT_DINGO:MUSCLE                48 021 694 MEAT           1    0    0    0    0
+CREATURE:HYENA:MUSCLE                      48 021 704 MEAT           1   60    2    0    0
 CREATURE:GIANT_HYENA:MUSCLE                48 021 706 MEAT           3    0    0    0    0
+CREATURE:LION_TAMARIN:MUSCLE               48 021 758 MEAT           1    0    0    0    0
 CREATURE:GIANT_LION_TAMARIN:MUSCLE         48 021 760 MEAT           1    0    0    0    0
 CREATURE:STOAT:MUSCLE                      48 021 761 MEAT           1    0    0    0    0
-CREATURE:SPIDER_CAVE_GIANT:MUSCLE          48 022 615 MEAT           1    0    6    0    0
+CREATURE:SPIDER_CAVE_GIANT:MUSCLE          48 022 615 MEAT           1    0    2    0    0
 CREATURE:ANT:MUSCLE                        48 024 205 MEAT           1    0    0    0    0
- CREATURE:DONKEY:EYE                        48 026 173 MEAT           1    0    0    0    0
- CREATURE:SHARK_BLUE:KIDNEY                 48 035 242 MEAT           1    0    0    0    0
-
- CREATURE:CUTTLEFISH                        49 446 -01 FISH           1    0    0   35    0
-CREATURE:NAUTILUS                          49 467 -01 FISH           4    0    0    0    0
+CREATURE:CUTTLEFISH                        49 446 -01 FISH           1    0   12    0    0
+CREATURE:NAUTILUS                          49 467 -01 FISH           4    0    2    0    0
 CREATURE:MOGHOPPER                         49 471 -01 FISH           2    0    0    0    0
- CREATURE:MUSSEL                            49 537 -01 FISH           2    0    0   20    0
- CREATURE:OYSTER                            49 538 -01 FISH           2    0    0   20    0
- CREATURE:FISH_SALMON                       49 539 -01 FISH           2    0   13   30    0
+CREATURE:MUSSEL                            49 537 -01 FISH           2    0   14    0    0
+CREATURE:OYSTER                            49 538 -01 FISH           2    0   15    0    0
+CREATURE:FISH_SALMON                       49 539 -01 FISH           2    0    9    0    0
 CREATURE:FISH_HAGFISH                      49 541 -01 FISH           1    0    0    0    0
- CREATURE:FISH_LAMPREY_BROOK                49 542 -01 FISH           3    0    0   35    0
- CREATURE:FISH_HERRING                      49 546 -01 FISH           1    0    0   35    0
+CREATURE:FISH_LAMPREY_BROOK                49 542 -01 FISH           3    0   11    0    0
+CREATURE:FISH_HERRING                      49 546 -01 FISH           1    0    8    0    0
 CREATURE:FISH_SHAD                         49 547 -01 FISH           2    0    0    0    0
 CREATURE:FISH_ANCHOVY                      49 548 -01 FISH           3    0    0    0    0
-CREATURE:FISH_TROUT_STEELHEAD              49 549 -01 FISH           3    0    0    0    0
+CREATURE:FISH_TROUT_STEELHEAD              49 549 -01 FISH           4    0    0    0    0
 CREATURE:FISH_HAKE                         49 550 -01 FISH           2    0    0    0    0
-CREATURE:FISH_SEAHORSE                     49 551 -01 FISH           2    0    0    0    0
+CREATURE:FISH_SEAHORSE                     49 551 -01 FISH           2    0    9    0    0
 CREATURE:FISH_GLASSEYE                     49 552 -01 FISH           2    0    0    0    0
-CREATURE:FISH_PUFFER_WHITE_SPOTTED         49 553 -01 FISH           1    0    0    0    0
+CREATURE:FISH_PUFFER_WHITE_SPOTTED         49 553 -01 FISH           1    0   14    0    0
 CREATURE:FISH_SOLE                         49 554 -01 FISH           2    0    0    0    0
 CREATURE:FISH_FLOUNDER                     49 555 -01 FISH           1    0    0    0    0
-CREATURE:SQUID                             49 558 -01 FISH           2    0    0    0    0
- CREATURE:FISH_LUNGFISH                     49 561 -01 FISH           2    0    0   60    0
- CREATURE:FISH_LOACH_CLOWN                  49 562 -01 FISH           1    0   15   60    0
-CREATURE:FISH_BULLHEAD_BROWN               49 563 -01 FISH           3    0    1    0    0
-CREATURE:FISH_BULLHEAD_YELLOW              49 564 -01 FISH           1    0    8    0    0
-CREATURE:FISH_BULLHEAD_BLACK               49 565 -01 FISH           4    0    0    0    0
-CREATURE:FISH_KNIFEFISH_BANDED             49 566 -01 FISH           5    0    0   45    0
-CREATURE:FISH_CHAR                         49 567 -01 FISH           2    0    9    0    0
-CREATURE:FISH_TROUT_RAINBOW                49 568 -01 FISH           1    0    5    0    0
-CREATURE:FISH_MOLLY_SAILFIN                49 569 -01 FISH           2    0    0    0    0
- CREATURE:FISH_GUPPY                        49 570 -01 FISH           1    0   17   40    0
-CREATURE:FISH_PERCH                        49 571 -01 FISH           4    0   16    0    0
-CREATURE:FISH_CAVE                         49 617 -01 FISH           2    0    6    0    0
-CREATURE:LOBSTER_CAVE                      49 619 -01 FISH           1    0    7    0    0
-
+CREATURE:SQUID                             49 558 -01 FISH           2    0    6    0    0
+CREATURE:FISH_LUNGFISH                     49 561 -01 FISH           2    0    8    0    0
+CREATURE:FISH_LOACH_CLOWN                  49 562 -01 FISH           1    0   17    0    0
+CREATURE:FISH_BULLHEAD_BROWN               49 563 -01 FISH           3    0   10    0    0
+CREATURE:FISH_BULLHEAD_YELLOW              49 564 -01 FISH           1    0   16    0    0
+CREATURE:FISH_BULLHEAD_BLACK               49 565 -01 FISH           3    0   11    0    0
+CREATURE:FISH_KNIFEFISH_BANDED             49 566 -01 FISH           5    0    0    0    0
+CREATURE:FISH_CHAR                         49 567 -01 FISH           2    0   12    0    0
+CREATURE:FISH_TROUT_RAINBOW                49 568 -01 FISH           1    0   15    0    0
+CREATURE:FISH_MOLLY_SAILFIN                49 569 -01 FISH           2    0   16    0    0
+CREATURE:FISH_PERCH                        49 571 -01 FISH           4    0    7    0    0
+CREATURE:FISH_CAVE                         49 617 -01 FISH           2    0   16    0    0
+CREATURE:LOBSTER_CAVE                      49 619 -01 FISH           1    0    5    0    0
+PLANT:WEED_RAT:SEED                        53 421 185 SEEDS          1    0  100    0    0
+PLANT:BERRIES_FISHER:SEED                  53 421 186 SEEDS          1    0  100    0    0
 PLANT:BAMBARA_GROUNDNUT:SEED               53 422 036 SEEDS          1    0    0    0    0
- PLANT:COWPEA:SEED                          53 422 048 SEEDS          1    0    0    0    0
+PLANT:COWPEA:SEED                          53 422 048 SEEDS          2    0    0    0    0
 PLANT:MUNG_BEAN:SEED                       53 422 057 SEEDS          1    0    0    0    0
+PLANT:RED_BEAN:SEED                        53 422 066 SEEDS          1    0    0    0    0
+PLANT:SOYBEAN:SEED                         53 422 068 SEEDS          1    0   18    0    0
+PLANT:GINKGO:SEED                          53 422 164 SEEDS          1    0   30  115    0
+PLANT:MUSHROOM_HELMET_PLUMP:SEED           53 422 173 SEEDS          1    0  100    0    0
 PLANT:SINGLE-GRAIN_WHEAT:SEED              53 423 000 SEEDS          1    0    0    0    0
- PLANT:SOFT_WHEAT:SEED                      53 423 002 SEEDS          1    0    0    0    0
+PLANT:SOFT_WHEAT:SEED                      53 423 002 SEEDS          1    0    0    0    0
 PLANT:HARD_WHEAT:SEED                      53 423 003 SEEDS          1    0    0    0    0
+PLANT:BARLEY:SEED                          53 423 005 SEEDS          2    0   75    0    0
+PLANT:RICE:SEED                            53 423 011 SEEDS          1    0  100    0    0
+PLANT:MAIZE:SEED                           53 423 012 SEEDS          1    0  100    0    0
+PLANT:PURPLE_AMARANTH:SEED                 53 423 018 SEEDS          2    0   87    0    0
+PLANT:FINGER_MILLET:SEED                   53 423 023 SEEDS          1    0  100    0    0
+PLANT:WILD_CARROT:SEED                     53 423 043 SEEDS          1    0  100    0    0
 PLANT:EGGPLANT:SEED                        53 423 050 SEEDS          1    0    0    0    0
- PLANT:GARLIC:SEED                          53 423 052 SEEDS          1    0    0    0    0
+PLANT:GARLIC:SEED                          53 423 052 SEEDS          1    0    0    0    0
 PLANT:ACACIA:SEED                          53 423 200 SEEDS          1    0    0    0    0
-PLANT:BUCKWHEAT:SEED                       53 424 006 SEEDS          1    0    0    0    0
-
-PLANT:ASPARAGUS:STRUCTURAL                 54 419 035 PLANT          4    0    0   60    0
+PLANT:BUCKWHEAT:SEED                       53 424 006 SEEDS          2    0    0    0    0
+PLANT:SORGHUM:SEED                         53 424 010 SEEDS          1    0   19    0    0
+PLANT:ALFALFA:STRUCTURAL                   54 419 008 PLANT          2    0    6    0    0
+PLANT:ASPARAGUS:STRUCTURAL                 54 419 035 PLANT          4    0    3    0    0
 PLANT:BEET:STRUCTURAL                      54 419 039 PLANT          1    0    0    0    0
- PLANT:GARDEN_CRESS:STRUCTURAL              54 419 051 PLANT          2    0    0   15    0
- PLANT:LETTUCE:STRUCTURAL                   54 419 056 PLANT          3    0    0   30    0
- PLANT:RHUBARB:STRUCTURAL                   54 419 067 PLANT          2    0    3   40    0
+PLANT:WILD_CARROT:STRUCTURAL               54 419 043 PLANT          2    0    8    0    0
+PLANT:CELERY:STRUCTURAL                    54 419 045 PLANT          1   60    5    0    0
+PLANT:CHICORY:STRUCTURAL                   54 419 047 PLANT          1    0    4    0    0
+PLANT:GARDEN_CRESS:STRUCTURAL              54 419 051 PLANT          2    0    6    0    0
+PLANT:LEEK:STRUCTURAL                      54 419 054 PLANT          2    0    6    0    0
+PLANT:LETTUCE:STRUCTURAL                   54 419 056 PLANT          3    0    0    0    0
+PLANT:POTATO:STRUCTURAL                    54 419 064 PLANT          2    0   45    0    0
+PLANT:RADISH:STRUCTURAL                    54 419 065 PLANT          1    0   10    0    0
+PLANT:RHUBARB:STRUCTURAL                   54 419 067 PLANT          2    0   15    0    0
+PLANT:SWEET_POTATO:STRUCTURAL              54 419 071 PLANT          1    0   34    0    0
+PLANT:LONG_YAM:STRUCTURAL                  54 419 080 PLANT          2    0    0    0    0
+PLANT:MUSHROOM_HELMET_PLUMP:STRUCTURAL     54 419 173 PLANT          3    0  132    0    0
+PLANT:BERRIES_PRICKLE:STRUCTURAL           54 419 181 PLANT          2    0   68    0    0
+PLANT:BERRIES_STRAW:STRUCTURAL             54 419 182 PLANT          1    0  111    0    0
 PLANT:BERRY_SUN:STRUCTURAL                 54 419 192 PLANT          2    0    0    0    0
-
- PLANT:BITTER_MELON:LEAF                    56 421 040 PLANT_GROWTH   1    0    0   35    0
- PLANT:BLOOD_AMARANTH:LEAF                  56 422 017 PLANT_GROWTH   1    0    0   20    0
+PLANT:BERRIES_STRAW:FRUIT                  56 420 182 PLANT_GROWTH   1    0   84    0    0
+PLANT:BITTER_MELON:LEAF                    56 421 040 PLANT_GROWTH   1    0   13    0    0
+PLANT:CAPER:BUD                            56 421 042 PLANT_GROWTH   1    0   17    0    0
+PLANT:BITTER_MELON:FRUIT                   56 422 040 PLANT_GROWTH   2    0    0    0    0
 PLANT:CUCUMBER:FRUIT                       56 422 049 PLANT_GROWTH   1    0    0    0    0
-PLANT:FEATHER:EGG                          56 422 213 PLANT_GROWTH   1    0    0    0    0   ??? !!!
-
-CREATURE:HONEY_BEE:MEAD                    69 022 215 DRINK          3    0    0    0    0   !!!
+PLANT:SAGUARO:FRUIT                        56 422 195 PLANT_GROWTH   1    0   32  265    0
+PLANT:FEATHER:EGG                          56 422 213 PLANT_GROWTH   1    0    0    0    0
+PLANT:PALM:NUT                             56 422 224 PLANT_GROWTH   1    0   33  285    0
+PLANT:CRANBERRY:FRUIT                      56 423 085 PLANT_GROWTH   2    0   26    0    0
+PLANT:LIME:FRUIT                           56 423 144 PLANT_GROWTH   1    0   33  270    0
+PLANT:CITRON:FRUIT                         56 423 146 PLANT_GROWTH   1    0   54   25    0
+PLANT:BITTER_ORANGE:FRUIT                  56 423 148 PLANT_GROWTH   1    0   43  255    0
+PLANT:FINGER_LIME:FRUIT                    56 423 149 PLANT_GROWTH   1    0   44  140    0
+PLANT:ROUND_LIME:FRUIT                     56 423 150 PLANT_GROWTH   2    0   54  180    0
+PLANT:KUMQUAT:FRUIT                        56 423 152 PLANT_GROWTH   1    0   99  300    0
+PLANT:DURIAN:FRUIT                         56 424 137 PLANT_GROWTH   1    0   87   65    0
+PLANT:POMEGRANATE:FRUIT                    56 424 158 PLANT_GROWTH   1    0   88   45    0
+PLANT:APRICOT:FRUIT                        56 424 161 PLANT_GROWTH   2    0   73  485    0
+PLANT:CHERRY:FRUIT                         56 424 163 PLANT_GROWTH   2    0   91  700    0
+PLANT:PEACH:FRUIT                          56 424 166 PLANT_GROWTH   1    0   96  630    0
+PLANT:SAND_PEAR:FRUIT                      56 424 171 PLANT_GROWTH   2    0  109  660    0
+PLANT:OLIVE:FRUIT                          56 425 157 PLANT_GROWTH   1    0   91  310    0
+CREATURE:HONEY_BEE:MEAD                    69 022 215 DRINK          3    0    0    0    0
 PLANT:SINGLE-GRAIN_WHEAT:DRINK             69 420 000 DRINK          1    0    0    0    0
- PLANT:SOFT_WHEAT:DRINK                     69 420 002 DRINK          2    0    0   25    0
+PLANT:TWO-GRAIN_WHEAT:DRINK                69 420 001 DRINK          2    0    0    0    0
+PLANT:SOFT_WHEAT:DRINK                     69 420 002 DRINK          2    0    0    0    0
 PLANT:HARD_WHEAT:DRINK                     69 420 003 DRINK          3    0    0    0    0
- PLANT:SPELT:DRINK                          69 420 004 DRINK          2    0   81    0    0
+PLANT:SPELT:DRINK                          69 420 004 DRINK          3    0   68    0    0
+PLANT:BARLEY:DRINK                         69 420 005 DRINK          2    0    3    0    0
 PLANT:BUCKWHEAT:DRINK                      69 420 006 DRINK          2    0    0    0    0
+PLANT:RYE:DRINK                            69 420 009 DRINK          1    0   10    0    0
+PLANT:SORGHUM:DRINK                        69 420 010 DRINK          3    0    0    0    0
+PLANT:MAIZE:DRINK                          69 420 012 DRINK          6    0   30    0    0
+PLANT:QUINOA:DRINK                         69 420 013 DRINK          1    0    0    0    0
 PLANT:KANIWA:DRINK                         69 420 014 DRINK          2    0    0    0    0
- PLANT:FONIO:DRINK                          69 420 025 DRINK          1    0    0   75    0
+PLANT:PENDANT_AMARANTH:DRINK               69 420 016 DRINK          1    0    1    0    0
+PLANT:BLOOD_AMARANTH:DRINK                 69 420 017 DRINK          3    0   36    0    0
+PLANT:PURPLE_AMARANTH:DRINK                69 420 018 DRINK          4    0   37    0    0
+PLANT:PEARL_MILLET:DRINK                   69 420 021 DRINK          3    0    1    0    0
+PLANT:WHITE_MILLET:DRINK                   69 420 022 DRINK          1    0   40    0    0
+PLANT:FINGER_MILLET:DRINK                  69 420 023 DRINK          3    0   36    0    0
+PLANT:FOXTAIL_MILLET:DRINK                 69 420 024 DRINK          5    0   34    0    0
+PLANT:FONIO:DRINK                          69 420 025 DRINK          2    0   14    0    0
 PLANT:TEFF:DRINK                           69 420 026 DRINK          5    0    0    0    0
-PLANT:ARTICHOKE:DRINK                      69 420 034 DRINK          3    0   31    0    0
-PLANT:BEET:DRINK                           69 420 039 DRINK          5    0    0    0    0
+PLANT:ARTICHOKE:DRINK                      69 420 034 DRINK          3    0   37    0    0
+PLANT:BEET:DRINK                           69 420 039 DRINK          4    0    0    0    0
+PLANT:WILD_CARROT:DRINK                    69 420 043 DRINK          2    0   15    0    0
+PLANT:CASSAVA:DRINK                        69 420 044 DRINK          4    0   34    0    0
+PLANT:PARSNIP:DRINK                        69 420 060 DRINK          2    0   10    0    0
+PLANT:POTATO:DRINK                         69 420 064 DRINK          2   60   17    0    0
+PLANT:RADISH:DRINK                         69 420 065 DRINK          3    0   29    0    0
+PLANT:SWEET_POTATO:DRINK                   69 420 071 DRINK          4    0   53    0    0
 PLANT:TOMATO:DRINK                         69 420 073 DRINK          2    0    0    0    0
-PLANT:TURNIP:DRINK                         69 420 075 DRINK          6    0    0   25    0
+PLANT:TOMATILLO:DRINK                      69 420 074 DRINK          3    0   34    0    0
+PLANT:TURNIP:DRINK                         69 420 075 DRINK          6    0    0    0    0
+PLANT:PASSION_FRUIT:DRINK                  69 420 083 DRINK          1    0   72    0    0
+PLANT:GRAPE:DRINK                          69 420 084 DRINK          3    0   32    0    0
+PLANT:CRANBERRY:DRINK                      69 420 085 DRINK          6    0    6    0    0
+PLANT:BILBERRY:DRINK                       69 420 086 DRINK          1    0   40    0    0
+PLANT:BLUEBERRY:DRINK                      69 420 087 DRINK          1    0   44    0    0
+PLANT:BLACKBERRY:DRINK                     69 420 088 DRINK          1    0   99    0    0
+PLANT:RASPBERRY:DRINK                      69 420 089 DRINK          3    0   34    0    0
+PLANT:PINEAPPLE:DRINK                      69 420 090 DRINK          3    0   31    0    0
+PLANT:GRASS_TAIL_PIG:DRINK                 69 420 174 DRINK          3    0   11    0    0
+PLANT:GRASS_WHEAT_CAVE:DRINK               69 420 175 DRINK          1    0    0    0    0
+PLANT:POD_SWEET:DRINK                      69 420 176 DRINK          2    0    7    0    0
+PLANT:ROOT_MUCK:DRINK                      69 420 178 DRINK          3    0    4    0    0
+PLANT:TUBER_BLOATED:DRINK                  69 420 179 DRINK          2    0   37    0    0
+PLANT:GRASS_LONGLAND:DRINK                 69 420 183 DRINK          3    0    0    0    0
+PLANT:WEED_RAT:DRINK                       69 420 185 DRINK          4    0    0    0    0
+PLANT:BERRIES_FISHER:DRINK                 69 420 186 DRINK          3    0   57    0    0
 PLANT:SLIVER_BARB:DRINK                    69 420 191 DRINK          3    0    0    0    0
 PLANT:BERRY_SUN:DRINK                      69 420 192 DRINK          5    0    0    0    0
+PLANT:VINE_WHIP:DRINK                      69 420 193 DRINK          1    0   40    0    0
 PLANT:CARAMBOLA:DRINK                      69 421 134 DRINK          2    0    0    0    0
-PLANT:DURIAN:DRINK                         69 421 137 DRINK          4    0    1    0    0
-PLANT:LYCHEE:DRINK                         69 421 155 DRINK          5    0    0    0    0
+PLANT:DURIAN:DRINK                         69 421 137 DRINK          4    0    4    0    0
+PLANT:GUAVA:DRINK                          69 421 138 DRINK          3    0    4    0    0
+PLANT:RAMBUTAN:DRINK                       69 421 141 DRINK          1    0   37    0    0
+PLANT:CUSTARD-APPLE:DRINK                  69 421 153 DRINK          8    0    1    0    0
+PLANT:DATE_PALM:DRINK                      69 421 154 DRINK          5    0    1    0    0
+PLANT:LYCHEE:DRINK                         69 421 155 DRINK          5    0   28    0    0
+PLANT:POMEGRANATE:DRINK                    69 421 158 DRINK          3    0   23    0    0
+PLANT:APPLE:DRINK                          69 421 160 DRINK          2    0   34    0    0
+PLANT:APRICOT:DRINK                        69 421 161 DRINK          1    0   31    0    0
+PLANT:BAYBERRY:DRINK                       69 421 162 DRINK          1    0   34    0    0
+PLANT:CHERRY:DRINK                         69 421 163 DRINK          3   74    6    0    0
+PLANT:PEAR:DRINK                           69 421 167 DRINK          2    0    0    0    0
+PLANT:PERSIMMON:DRINK                      69 421 169 DRINK          3    0   27    0    0
+PLANT:PLUM:DRINK                           69 421 170 DRINK          3    0   36    0    0
+PLANT:SAND_PEAR:DRINK                      69 421 171 DRINK          2    0   10    0    0
+PLANT:MUSHROOM_HELMET_PLUMP:DRINK          69 421 173 DRINK          2    0   11    0    0
+PLANT:BERRIES_STRAW:DRINK                  69 421 182 DRINK          4    0   33    0    0
 PLANT:MANGO:DRINK                          69 424 221 DRINK          4    0    0    0    0
-
+PLANT:OATS:MILL                            70 420 007 POWDER_MISC    1    0    0    0    0
 PLANT:SINGLE-GRAIN_WHEAT:MILL              70 421 000 POWDER_MISC    3    0    0    0    0
-PLANT:TWO-GRAIN_WHEAT:MILL                 70 421 001 POWDER_MISC    1    0    0    0    0
+PLANT:TWO-GRAIN_WHEAT:MILL                 70 421 001 POWDER_MISC    1    0   10    0    0
+PLANT:SOFT_WHEAT:MILL                      70 421 002 POWDER_MISC    1   21    0    0    0
 PLANT:HARD_WHEAT:MILL                      70 421 003 POWDER_MISC    1    0    0    0    0
+PLANT:SPELT:MILL                           70 421 004 POWDER_MISC    2    0    0    0    0
+PLANT:BARLEY:MILL                          70 421 005 POWDER_MISC    2    0   21    0    0
 PLANT:BUCKWHEAT:MILL                       70 421 006 POWDER_MISC    1    0    0    0    0
+PLANT:RYE:MILL                             70 421 009 POWDER_MISC    1    0   23    0    0
+PLANT:SORGHUM:MILL                         70 421 010 POWDER_MISC    2    0   10    0    0
+PLANT:RICE:MILL                            70 421 011 POWDER_MISC    5    0    0    0    0
+PLANT:PENDANT_AMARANTH:MILL                70 421 016 POWDER_MISC    1    0    0    0    0
+PLANT:BLOOD_AMARANTH:MILL                  70 421 017 POWDER_MISC    1    0    0    0    0
+PLANT:PURPLE_AMARANTH:MILL                 70 421 018 POWDER_MISC    1    0   10    0    0
+PLANT:PEARL_MILLET:MILL                    70 421 021 POWDER_MISC    4    0    7    0    0
+PLANT:WHITE_MILLET:MILL                    70 421 022 POWDER_MISC    1   74    0    0    0
+PLANT:FINGER_MILLET:MILL                   70 421 023 POWDER_MISC    2    0   20    0    0
 PLANT:TEFF:MILL                            70 421 026 POWDER_MISC    1    0    0    0    0
- PLANT:FLAX:MILL                            70 422 027 POWDER_MISC    3    0    0   10    0
-
+PLANT:GRASS_WHEAT_CAVE:MILL                70 421 175 POWDER_MISC    1    0   80    0    0
+PLANT:POD_SWEET:MILL                       70 421 176 POWDER_MISC    1    0  110    0    0
+PLANT:GRASS_LONGLAND:MILL                  70 421 183 POWDER_MISC    1    0   10    0    0
+PLANT:FLAX:MILL                            70 422 027 POWDER_MISC    3    0   20    0    0
 CREATURE:MAGGOT_PURRING:CHEESE             71 042 625 CHEESE         2    0    0    0    0
-CREATURE:LLAMA:CHEESE                      71 046 186 CHEESE         1    0    5   45    0
-CREATURE:CAMEL_1_HUMP:CHEESE               71 046 363 CHEESE         1    0    6    0    0
+CREATURE:LLAMA:CHEESE                      71 046 186 CHEESE         1    0   19    0    0
+CREATURE:CAMEL_1_HUMP:CHEESE               71 046 363 CHEESE         1    0   17    0    0
 CREATURE:GIANT_CAMEL_1_HUMP:CHEESE         71 046 365 CHEESE         2    0    0    0    0
-CREATURE:GIANT_KANGAROO:CHEESE             71 046 646 CHEESE         1    0    0    0    0
-CREATURE:TAPIR:CHEESE                      71 046 749 CHEESE         3    0    0   30    0
+CREATURE:GIANT_KANGAROO:CHEESE             71 046 646 CHEESE         1    0   18    0    0
+CREATURE:TAPIR:CHEESE                      71 046 749 CHEESE         3    0    9    0    0
 CREATURE:GIANT_TAPIR:CHEESE                71 046 751 CHEESE         2    0    0    0    0
-CREATURE:DONKEY:CHEESE                     71 047 173 CHEESE         2    0   13   50    0
-CREATURE:WATER_BUFFALO:CHEESE              71 048 182 CHEESE         1    0   13   35    0
-CREATURE:YAK:CHEESE                        71 048 185 CHEESE         1    0    0   85    0
-
+CREATURE:DONKEY:CHEESE                     71 047 173 CHEESE         2    0   15    0    0
+CREATURE:COW:CHEESE                        71 048 175 CHEESE         1    0   15    0    0
+CREATURE:GOAT:CHEESE                       71 048 178 CHEESE         3    0    2    0    0
+CREATURE:WATER_BUFFALO:CHEESE              71 048 182 CHEESE         1    0   14    0    0
+CREATURE:YAK:CHEESE                        71 048 185 CHEESE         1    0   16    0    0
 CREATURE:BUMBLEBEE:ROYAL_JELLY             73 020 216 LIQUID_MISC    1    0    0    0    0
-
-CREATURE:MAGGOT_PURRING:MILK               73 041 625 LIQUID_MISC    2    0    0    0    0
- CREATURE:LLAMA:MILK                        73 045 186 LIQUID_MISC    1    0    0   10    0
- CREATURE:CAMEL_2_HUMP:MILK                 73 045 366 LIQUID_MISC    1    0    0   20    0
+CREATURE:MAGGOT_PURRING:MILK               73 041 625 LIQUID_MISC    2    0   20    0    0
+CREATURE:LLAMA:MILK                        73 045 186 LIQUID_MISC    1    0   20    0    0
+CREATURE:CAMEL_2_HUMP:MILK                 73 045 366 LIQUID_MISC    1    0   20    0    0
 CREATURE:GIANT_CAMEL_2_HUMP:MILK           73 045 368 LIQUID_MISC    1    0    0    0    0
-CREATURE:KANGAROO:MILK                     73 045 644 LIQUID_MISC    2    0    0    0    0
- CREATURE:TAPIR:MILK                        73 045 749 LIQUID_MISC    2    0    0    0    0
- CREATURE:PIG:MILK                          73 046 177 LIQUID_MISC    3    0   10   10    0
- CREATURE:COW:MILK                          73 047 175 LIQUID_MISC    1    0    0    0    0
-
- PLANT:FLAX:OIL                             73 420 027 LIQUID_MISC    3    0    0    0    0
+CREATURE:KANGAROO:MILK                     73 045 644 LIQUID_MISC    2    0   20    0    0
+CREATURE:GIANT_KANGAROO:MILK               73 045 646 LIQUID_MISC    3    0    0    0    0
+CREATURE:TAPIR:MILK                        73 045 749 LIQUID_MISC    2    0    0    0    0
+CREATURE:PIG:MILK                          73 046 177 LIQUID_MISC    3    0   30    0    0
+CREATURE:COW:MILK                          73 047 175 LIQUID_MISC    1    0   20    0    0
+CREATURE:GOAT:MILK                         73 047 178 LIQUID_MISC    1    0   20    0    0
+CREATURE:REINDEER:MILK                     73 047 183 LIQUID_MISC    1   13    1    0    0
+PLANT:FLAX:OIL                             73 420 027 LIQUID_MISC    3    0    0    0    0
 PLANT:HEMP:OIL                             73 420 029 LIQUID_MISC    1    0    0    0    0
 PLANT:COTTON:OIL                           73 420 030 LIQUID_MISC    1    0    0    0    0
 PLANT:KENAF:OIL                            73 420 032 LIQUID_MISC    2    0    0    0    0
 PLANT:BUSH_QUARRY:OIL                      73 420 177 LIQUID_MISC    1    0    0    0    0
 PLANT:POD_SWEET:EXTRACT                    73 422 176 LIQUID_MISC    1    0  120    0    0
-
-
 ]==]
+
+--[=[ copy-paste to Lua console: preload clipboard with desired drinks, this prints the associated fruits.
+DM=dfhack.matinfo;IO=df.global.world.items.other
+function P(mdef,c) print(string.format("%-25s  %d",DM.getToken(mdef),c));end
+function M(item,mdef)return(mdef ~= nil and item.mat_type==mdef.type and item.mat_index==mdef.index);end
+function Z(s)local m=DM.find(s);local c=0;for _,i in ipairs(IO.PLANT_GROWTH)do if M(i,m)and not i.flags.trader then c=c+i:getStackSize();end;end;P(m,c);end
+for _,s in ipairs(dfhack.internal.getClipboardTextCp437Multiline())do s=s:trim():gsub("(PLANT:[%w%-_]+:%a+)%s+%d+%s+%d+.*","%1"):gsub(":DRINK",":FRUIT");Z(s);end
+]=]
+
