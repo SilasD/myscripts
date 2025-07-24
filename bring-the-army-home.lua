@@ -1,3 +1,4 @@
+--@module  = false	-- TODO is running as a module even useful?
 --@enabled = false
 
 --[====[
@@ -58,7 +59,7 @@ Stop running the script, if previously started.
 -- When Messengers return, they trigger a 301 announcement, with
 --   "have returned" text.  It's handled just like an army return.
 
--- TODO When messengers return with a worker who happens to be a
+-- DONE When messengers return with a worker who happens to be a
 --   merchant, that worker cannot be assigned to the military,
 --   and seemingly isn't a full member of the fort in other ways.
 
@@ -102,7 +103,7 @@ Stop running the script, if previously started.
 --	A: NO.  Probably 10.
 -- However, there are not necessarily 100 ticks between the first unit to enter, and the next wave.
 
--- TODO NEW ISSUE: Babies should not be removed from their mothers.
+-- DONE (testing): Babies should not be removed from their mothers.
 --	Mother 11046 Thikut Uz, SQ4 ; Baby 17054 Rith Laz.
 --	On-map, active babies have flags1.rider set.
 --	They also have relationship_ids.RiderMount == their mother's id.
@@ -398,13 +399,22 @@ end
 -- TODO it would be better to deal with entrypos == nil in assign_incoming_units_to_tiles() .
 --
 ---@param unit df.unit
----@param entrypos coord?
----@param acceptable_tiles coord[]
-local function teleport_unit_to_a_random_incoming_tile(unit, entrypos, acceptable_tiles)
+---@param entrypos coord?	# where are they coming from?
+---@param acceptable_tiles coord[] # what tiles are valid incoming tiles?  (in our zone and on the edge.)
+---@param targetpos coord?	# (HACK) move the unit to a specific (instantiated) tile in the map.
+--				#   only used for riders (i.e. babies) -> their ridden (i.e. mother's) tile.
+local function teleport_unit_to_a_random_incoming_tile(unit, entrypos, acceptable_tiles, targetpos)
 
-    -- making entrypos a valid coord that is not on the map simplifies processing.
-    local had_an_entrypos = (entrypos ~= nil)
-    if entrypos == nil then entrypos = xyz2pos(-30000, -30000, -30000); end
+    -- warn about inconsistency in targetpos param, but don't try to deal with it.
+    if unit.flags1.rider and targetpos == nil then
+	dprintf("WARNING: unit.flags1.rider and targetpos == nil.")
+    elseif not unit.flags1.rider and targetpos ~= nil then
+	dprintf("WARNING: not unit.flags1.rider and targetpos ~= nil.")
+    end
+
+    -- making a nil entrypos into a valid coord that is not on the map simplifies processing.
+    local had_an_entrypos = (entrypos ~= nil)	-- currently only used for debugging.
+    entrypos = entrypos or xyz2pos(-30000, -30000, -30000)
 
     ---@type coord
     local oldpos = xyz2pos(dfhack.units.getPosition(unit))
@@ -427,6 +437,7 @@ local function teleport_unit_to_a_random_incoming_tile(unit, entrypos, acceptabl
     --     later: probably the unit had moved away from the entrypos before the script ran.
     --     even later: or the unit got double-processed because entrypos was in the acceptable tiles,
     --       and two armies returned at nearly the same time.
+    -- converted to just a debugging notification.
     if had_an_entrypos and not same_xyz(entrypos, oldpos) then
 	dprintf("NOTICE: Unit %d is is at (%s), not on the entrypos (%s).  So that does happen.",
 		unit.id, pos2str(oldpos), pos2str(entrypos))
@@ -447,24 +458,33 @@ local function teleport_unit_to_a_random_incoming_tile(unit, entrypos, acceptabl
 	pos = acceptable_tiles[ math.random(#acceptable_tiles) ]
     until not same_xyz(entrypos, pos)
 
-    dprintf("Teleporting %s unit %d to arrive at (%s)",
-	    unit.flags1.inactive and 'inactive' or 'active', unit.id, pos2str(pos) )
+    -- however, (HACK) override the chosen location.  used for riders (i.e. babies).
+    pos = targetpos or pos
+
+    dprintf("%sTeleporting %s unit %d to arrive at (%s)",
+	    (unit.flags1.rider) and 'NOTICE: RIDER!  ' or '',
+	    (unit.flags1.inactive) and 'inactive' or 'active',
+	    unit.id,
+	    pos2str(pos) )
 
     -- .flags1.inactive units are assigned a map tile, but do not yet occupy it.
     -- the teleport sets the occupancy flags per the normal case of an active unit.
     -- we need to undo that.
+    -- .flags1.rider doesn't interfere with .flags1.inactive.
 
     local occ = dfhack.maps.getTileBlock(pos).occupancy[pos.x % 16][pos.y % 16]
     local old_occ_unit = occ.unit
     local old_occ_unit_grounded = occ.unit_grounded
 
-    if (unit.flags1.inactive and unit.flags1.on_ground) then 
+    if (unit.flags1.inactive and unit.flags1.on_ground) then
+	-- I think this only happens when a unit is double-processed.
 	dprintf("NOTICE: Before teleport, inactive unit %d had flags1.on_ground set.", unit.id)
     end
 
     local success = dfhack.units.teleport(unit, pos)
 
     if (unit.flags1.inactive and unit.flags1.on_ground) then
+	-- this happens fairly often, and is harmless.
 	dprintf("NOTICE: After teleport, inactive unit %d has flags1.on_ground set.", unit.id)
     end
 
@@ -480,7 +500,7 @@ local function teleport_unit_to_a_random_incoming_tile(unit, entrypos, acceptabl
 	drop_and_forbid_spoils(unit)
 
     else
-	dprintf("Teleport failed! Unit %d oldpos %s target %s", unit.id, pos2str(oldpos), pos2str(pos))
+	dprintf("WARNING: Teleport failed! Unit %d oldpos %s target %s", unit.id, pos2str(oldpos), pos2str(pos))
     end
 end
 
@@ -538,8 +558,9 @@ local function assign_incoming_units_to_tiles(entrypos)
     --   it would get rid of some special-case handling and nested or convoluted logic.
 
     -- debug logging, chasing an issue.  kind of slow, but only if debugging, so it's okay.
+    -- (later) I think I've resolved this; turning off debug logging.
     for _,unit in ipairs(df.global.world.units.active) do
-	if not debugging then break; end
+	if (true) or (not debugging) then break; end
 	if (not dfhack.units.isKilled(unit) and unit.flags1.inactive and unit.flags1.on_ground) then
 	    dprintf("NOTICE: Before any teleports, inactive unit %d has flags1.on_ground set.", unit.id)
 	    dprintf("    isFortControlled=%s  %s", 
@@ -548,8 +569,9 @@ local function assign_incoming_units_to_tiles(entrypos)
 	end
     end
     -- debug logging, chasing an issue.  slow, but only if debugging, so it's okay.
+    -- (later) I think I've resolved this; turning off debug logging.
     for _, pos in ipairs(acceptable_tiles) do
-	if not debugging then break; end
+	if (true) or (not debugging) then break; end
 	local occ = dfhack.maps.getTileBlock(pos).occupancy[pos.x % 16][pos.y % 16]
 	if occ.unit_grounded then 
 	    dprintf("NOTICE: Before any teleports, tile (%s) has occ.unit_grounded set.", pos2str(pos))
@@ -570,6 +592,7 @@ local function assign_incoming_units_to_tiles(entrypos)
     end
 
     local processed = 0
+    local riders = {}	-- (HACK) teleport riders last.
 
     for _,unit in ipairs(df.global.world.units.active) do
 
@@ -587,9 +610,23 @@ local function assign_incoming_units_to_tiles(entrypos)
 		and dfhack.units.isFortControlled(unit) )
 	    or ( (entrypos) and same_xyz(xyz2pos(dfhack.units.getPosition(unit)), entrypos) )
 	then
-	    teleport_unit_to_a_random_incoming_tile(unit, entrypos, acceptable_tiles)
+	    if unit.flags1.rider then		-- (HACK) do riders last.
+		dprintf("NOTICE: unit %d has .flags1.rider set, delaying processing", unit.id)
+		table.insert(riders, unit)
+	    else
+		teleport_unit_to_a_random_incoming_tile(unit, entrypos, acceptable_tiles)
 
-	    processed = processed + 1
+		-- (HACK) if an arriving unit is a Merchant, make them an Administrator instead.
+		-- This is because if a newly-arriving unit is a Merchant, they cannot be assigned
+		--   to the military and seemingly aren't a full member of the fort in other ways.
+		-- Administrator chosen semi-arbitrarily as a profession that won't interfere with
+		--   work assignments and will be overridden upon leveling a different skill.
+		if unit.profession == df.profession.MERCHANT then
+		    unit.profession = df.profession.ADMINISTRATOR
+		end
+
+		processed = processed + 1
+	    end
 	end
     end
 
@@ -598,9 +635,26 @@ local function assign_incoming_units_to_tiles(entrypos)
 	move_items_to_a_random_incoming_tile( get_items_on_this_tile(entrypos), acceptable_tiles )
     end
 
+    -- (HACK) special-case move riders (babies) to their ridden unit's (mother's) new tile.
+    --   teleport them to mother even if mother's location is not in acceptable_tiles.
+    for _, unit in ipairs(riders) do
+	dprintf("NOTICE: Working on rider unit %d", unit.id)
+	local targetunit = df.unit.find( unit.relationship_ids.RiderMount )
+	dprintf("NOTICE: ridden unit is %d", (targetunit) and targetunit.id or -1)
+	if not targetunit then dprintf("WARNING: could not find ridden unit!"); end
+	local targetpos = (targetunit) and dfhack.units.getPosition(targetunit) or nil
+	if not targetpos then dprintf("WARNING: ridden unit has no targetpos."); end
+	if targetpos then
+	    dprintf("NOTICE: teleporting rider unit to %s.", pos2str(targetpos))
+	    teleport_unit_to_a_random_incoming_tile(unit, entrypos, acceptable_tiles, targetpos)
+	end
+	processed = processed + 1
+    end
+
     -- debug logging, chasing an issue.  kind of slow, but only if debugging, so it's okay.
+    -- (later) I think I've resolved this; turning off debug logging.
     for _,unit in ipairs(df.global.world.units.active) do
-	if not debugging then break; end
+	if (true) or (not debugging) then break; end
 	if (not dfhack.units.isKilled(unit) and unit.flags1.inactive and unit.flags1.on_ground) then
 	    dprintf("NOTICE: After all teleports, inactive unit %d has flags1.on_ground set.", unit.id)
 	    dprintf("    isFortControlled=%s  %s", 
@@ -609,8 +663,9 @@ local function assign_incoming_units_to_tiles(entrypos)
 	end
     end
     -- debug logging, chasing an issue.  slow, but only if debugging, so it's okay.
+    -- (later) I think I've resolved this; turning off debug logging.
     for _, pos in ipairs(acceptable_tiles) do
-	if not debugging then break; end
+	if (true) or (not debugging) then break; end
 	local occ = dfhack.maps.getTileBlock(pos).occupancy[pos.x % 16][pos.y % 16]
 	if occ.unit_grounded then 
 	    dprintf("NOTICE: After all teleports, tile (%s) has occ.unit_grounded set.", pos2str(pos))
@@ -657,14 +712,18 @@ local function check_for_our_announcement()
 	if report.id > last_announcement_id then
 
 	    last_announcement_id = report.id
-	    if false and debugging then
+	    if (false) and (debugging) then
 		dprintf("new announcement: id %d  year %d  tick %d  type %s  text %s", 
 			report.id, report.year, report.time, df.announcement_type[report.type],
 			report.text)
 	    end
 
 	    if report.type == df.announcement_type.GUEST_ARRIVAL then
-		dprintf('Found a new GUEST_ARRIVAL announcement!')
+		if (true) and (debugging) then
+		    dprintf("announcement: id %d  year %d  tick %d  type %s  text %s", 
+			report.id, report.year, report.time, df.announcement_type[report.type],
+			report.text)
+		end
 
 		-- note: even the singular case gets plural text: "Squad1 have returned."
 		--   however, the text " has returned." is in the binary, so better safe than sorry.
@@ -690,13 +749,13 @@ end
 
 
 catch_newunits_enabled = catch_newunits_enabled or false	-- global, persistant.
+local frequency = 10
 
 
 local debugging_modulus = 0
 local function catch_newunits(unit_id)
 
     if (debugging) then
-	local frequency = 10
 	local current_modulus = (dfhack.world.ReadCurrentTick() % frequency)
 	if current_modulus ~= 0 and current_modulus ~= debugging_modulus then
 	    dprintf("NOTICE: ticks modulo %d is not 0; value is %d; suppressing further reports.",
@@ -741,7 +800,7 @@ local function catch_newunits(unit_id)
 	dfhack.world.SetPauseState(true)
 	print("\a")	-- ring the bell
 
-	-- TODO this would be the place to check that all squad members arrived safely.
+	-- TODO this would be the place to check that all squad members arrived home safely.
 	--   (or, you know, were legitimately killed horribly by a demon....)
 
 	-- DONE should we redo find_acceptable_tiles() on each arrival?
@@ -761,8 +820,6 @@ end
 local bring_the_army_home_KEY = dfhack.current_script_name()	-- must be globally unique in all scripts.
 local synchronization_timer_id = nil
 local function start_catching_newunits()
-
-    local frequency = 10
 
     -- DONE: we don't need to check every tick; we just need to do our stuff before the
     --   first-to-arrive unit (i.e. already active on the map) takes their first step.
