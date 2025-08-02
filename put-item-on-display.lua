@@ -276,6 +276,9 @@ end
 
 
 -- TODO consider catching SC_WORLD_UNLOADED and invalidating buildingid.
+--    (later) Why?  How?  We're not running in the background.
+--    What we _should_ do is check that the world, civ, fort, and building x,y,z are all the same.
+
 
 --[[ An example PutItemOnDisplay job:
 job:
