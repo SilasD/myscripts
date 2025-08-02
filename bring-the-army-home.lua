@@ -316,6 +316,9 @@ end
 -- DONE: what happens if a miner/woodcutter/hunter is used as a site messenger?
 --	Does their equipment count as squad-owned?  I bet not.  RESOLVED: found how to check this.
 --
+-- TODO: Sometimes a returning squaddie's equipment NO LONGER tests as isSquadEquipment().
+--	In this case, if the item is ALSO named, the item has .artifact set, so is considered spoils.
+--
 ---@param  unit df.unit
 local function drop_and_forbid_spoils(unit)
 
@@ -409,7 +412,7 @@ local function teleport_unit_to_a_random_incoming_tile(unit, entrypos, acceptabl
     if unit.flags1.rider and targetpos == nil then
 	dprintf("WARNING: unit.flags1.rider and targetpos == nil.")
     elseif not unit.flags1.rider and targetpos ~= nil then
-	dprintf("WARNING: not unit.flags1.rider and targetpos ~= nil.")
+	dprintf("NOTICE: not unit.flags1.rider and targetpos ~= nil.")
     end
 
     -- making a nil entrypos into a valid coord that is not on the map simplifies processing.
