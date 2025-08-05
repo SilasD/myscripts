@@ -418,15 +418,16 @@ local function purge_ip_by_cmpfn(ip_list, cmpfn)
 end
 
 
--- hacky
----@param f (df.item|df.item.id|integer)[]
-local function make_specific_prepared_meal(f)
-    if type(f) ~= "table" or #f == 0 then qerror('no ingredients'); end
+-- hacky -- edits an existing job instead of creating a new job.
+---@param items (df.item|df.item.id|integer)[]
+local function make_specific_prepared_meal(items)
+    if type(items) ~= "table" or #items == 0 then qerror('no ingredients'); end
 
-    for ii, item in ipairs(f) do  -- sanity/safety checks
+    for ii, item in ipairs(items) do  -- sanity/safety checks
 	item = (math.type(item) == "integer") and df.item.find(item) or item
 	if not df.item:is_instance(item) then qerror('not an item!'); end
-	local i = utils.binsearch(df.global.world.items.other.ANY_COOKABLE,item.id,'id')
+	local i = utils.binsearch(df.global.world.items.other.ANY_COOKABLE,item.id,'id')  -- i should == item.
+	-- TODO make sure that .ANY_COOKABLE includes barrels, bags, buckets, jugs.
 	if not i then qerror(ii ..' ingredient not cookable: ' .. dfhack.items.getReadableDescription(item)); end
 	if i.flags.in_job then qerror(ii .. ' ingredient in job: ' .. dfhack.items.getReadableDescription(item)); end
     end
@@ -439,8 +440,9 @@ local function make_specific_prepared_meal(f)
 	if jj.job_type == 114 and #jj.items == 0 then j = jj; print('editing job ' .. i); break; end
     end
     if not j then qerror('did not find a cooking job without assigned ingredients'); end
+    -- TODO abort if the job has a worker assigned.
 
-    for ii, item in ipairs(f) do
+    for ii, item in ipairs(items) do
 	item = (type(item) == "number") and df.item.find(item) or item
 	dfhack.job.attachJobItem(j,item,df.job_role_type.Hauled,(ii==1) and 0 or 1, (ii-1));
     end
@@ -455,7 +457,7 @@ local function isPreferenceFor(item)
 end
 
 
--- overly simplistic; returns the first match in the list.  fragile.
+-- overly simplistic; currently returns the first match in the list.  fragile.
 local function find_ingredient(item_type)
 
     for i,item in ipairs(df.global.world.items.other.ANY_COOKABLE) do
