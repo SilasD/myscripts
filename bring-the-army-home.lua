@@ -199,37 +199,6 @@ local function pos2str(pos)
 end
 
 
--- This should be static-local inside is_on_map_edge() .  I wish we had a way to make static local variables.
---   (Q: can closures do this?  A: no, you still need a variable in an outer scope.  so there's no gain.)
---
----@type { [string]: boolean }	# dictionary, i.e. a table<strpos, true>.
---  				# If the key exists, the strpos is on the (surface) map edge.
-local is_on_map_edge_list = {}
-
-
----@param  x integer|coord|df.coord
----@param  y integer?
----@param  z integer?
----@return boolean
-local function is_on_map_edge(x,y,z)
-
-    if y == nil and z == nil then x,y,z = pos2xyz(x); end
-
-    -- build the table, only once.
-    if #is_on_map_edge_list == 0 then
-	local source = plotinfo.map_edge
-
-	-- unfortunately, can't use builtin get_path_xyz() because the data is not set up as a path.
-	for i = 0, #source.surface_x-1 do
-	    local xx, yy, zz = source.surface_x[i], source.surface_y[i], source.surface_z[i]
-	    is_on_map_edge_list[xyz2str(xx,yy,zz)] = true
-	end
-    end
-
-    return ( is_on_map_edge_list[xyz2str(x,y,z)] == true )
-end
-
-
 -- returns a list of all of the tiles which are actually in the building, considering extents.
 --
 -- note: only tested with building type df.building_civzonest .
@@ -256,29 +225,45 @@ end
 ---@return coord[]	# a (possibly-empty) list of coords of teleportation targets.
 local function find_acceptable_tiles()
 
+    ---@type { [string]: boolean }	-- dictionary, i.e. a table<strpos, true>.
+    local is_on_map_edge_list = {}	-- If the key exists, the strpos is on the (surface) map edge.
+
+    ---@param  x integer|coord|df.coord
+    ---@param  y integer?
+    ---@param  z integer?
+    ---@return boolean
+    local function is_on_map_edge(x,y,z)
+
+	if y == nil and z == nil then x,y,z = pos2xyz(x); end
+
+	-- build the table, only once.
+	if #is_on_map_edge_list == 0 then
+	    local source = plotinfo.map_edge
+
+	    -- unfortunately, can't use builtin get_path_xyz() because the data is not set up as a path.
+	    for i = 0, #source.surface_x-1 do
+		local xx, yy, zz = source.surface_x[i], source.surface_y[i], source.surface_z[i]
+		is_on_map_edge_list[xyz2str(xx,yy,zz)] = true
+	    end
+	end
+
+	return ( is_on_map_edge_list[xyz2str(x,y,z)] == true )
+    end
+
+
     ---@type coord[]
     local acceptable_tiles = {}			-- note: we do not cache this because e.g. trees
 						--   can grow or buildings can be constructed.
 
     for _,zone in ipairs( df.global.world.buildings.other.ZONE_FISHING_AREA ) do
 
-	if not df.building_civzonest:is_instance(zone) then 
-	    qerror('ERR: not a zone!')  -- can't happen.
-	end
-
 	acceptable_tiles = {}
 
 	for _, pos in ipairs(get_all_building_tiles(zone)) do
 
-	    if false and debugging then
-		dprintf("%s, %s, %d, %s", pos2str(pos), is_on_map_edge(pos),
-			dfhack.maps.getWalkableGroup(pos),
-			dfhack.buildings.checkFreeTiles(pos,{x=1,y=1},nil,false,true))
-	    end
-
 	    if is_on_map_edge(pos) == true
 		    and dfhack.maps.getWalkableGroup(pos) > 0
-		    and dfhack.buildings.checkFreeTiles(pos,{x=1,y=1},nil,false,true) == true
+		    and dfhack.buildings.checkFreeTiles(pos,{x=1,y=1},nil,false,true) == true	-- redundant?
 	    then
 		table.insert(acceptable_tiles, pos)
 	    end
@@ -304,23 +289,33 @@ local function isMinerWoodcutterHunterEquipment(item)
 end
 
 
--- Drop and forbid an incoming unit's spoils.  Spoils are determined with these tests:
---	* Not squad equipment.
---	* Not fort-produced.
---	* The carry mode is .Hauled (for active units) or .Weapons (for inactive units).
---
--- Spoils tests that are not performed are:
---	* Not owned by the unit.  For some reason, returning soldiers don't own anything at all.  Bug!
---	* Spoils item(s) are expected to be the last item(s) in the inventory.
---
--- DONE: what happens if a miner/woodcutter/hunter is used as a site messenger?
---	Does their equipment count as squad-owned?  I bet not.  RESOLVED: found how to check this.
---
--- TODO: Sometimes a returning squaddie's equipment NO LONGER tests as isSquadEquipment().
---	In this case, if the item is ALSO named, the item has .artifact set, so is considered spoils.
---
 ---@param  unit df.unit
 local function drop_and_forbid_spoils(unit)
+
+    -- Spoils tests that are not performed are:
+    --	* Not owned by the unit.  For some reason, returning soldiers don't own anything at all.  Bug!
+    --	* Spoils item(s) are expected to be the last item(s) in the inventory.
+    --
+    ---@param  unit df.unit
+    ---@param  invitem df.unit_inventory_item
+    local function invitem_is_spoils(unit, invitem)
+	local item = invitem.item
+
+	if item:hasWriting() then return true; end  -- for some reason, foreign books may not be tagged .foreign.
+	if not item.flags.foreign then return false; end
+
+	if     dfhack.units.isActive(unit) and invitem.mode ~= df.inv_item_role_type.Hauled then return false; end
+	if not dfhack.units.isActive(unit) and invitem.mode ~= df.inv_item_role_type.Weapon then return false; end
+
+	if dfhack.items.isSquadEquipment(item) then return false; end
+	if isMinerWoodcutterHunterEquipment(item) then return false; end	-- could happen for Messengers.
+
+	return true
+    end
+
+
+
+
 
     ---@type coord
     local unitpos = xyz2pos(dfhack.units.getPosition(unit))
@@ -328,42 +323,29 @@ local function drop_and_forbid_spoils(unit)
     local items_to_drop = {}
 
     -- collector.
-    for i, invitem in ipairs(unit.inventory) do
+    for idx, invitem in ipairs(unit.inventory) do
 	local item = invitem.item
 
-	-- Unfortunately, a returning soldier doesn't own any of their inventory items.
-	-- That has to be a bug; I should extend preserve-rooms to deal with that.
-	-- But this script just has to deal.
-
-	if  (      invitem.mode == df.inv_item_role_type.Hauled	-- if unit is active.
-	        or invitem.mode == df.inv_item_role_type.Weapon	-- if unit is inactive.
-	    )
-	    and ( item.flags.foreign				-- NOT ALWAYS TRUE OF SPOILS!  some artifacts
-								--   (books, at least) don't have .foreign.
-		or item.flags.artifact )			-- so let's try this alternative.
-	    and not dfhack.items.isSquadEquipment(item)		-- expensive
-	    and not isMinerWoodcutterHunterEquipment(item)
-	    -- note: it can happen that an arriving active unit is hauling their squad equipment;
-	    -- I saw one example of hauling a squad-assigned flask to the flask stockpile.
-	then
-	    if (true) and (i ~= #unit.inventory-1) then
-		-- This happens when a unit both looted an artifact or book, and looted a
-		--   "Loot other items" such as a crutch or a nest box.
-		dprintf("NOTICE: Unit %d spoils item %d is not the last inventory item.  " .. 
-			"So that happens.", unit.id, item.id)
+	if invitem_is_spoils(unit, invitem) then
+	    -- This happens when a unit both looted an artifact or book, and looted a
+	    --   "Loot other items" such as a crutch or a nest box.
+	    if (true) and (idx ~= #unit.inventory-1) then
+		dprintf("NOTICE: Unit %d %s spoils item %d %s is not the last inventory item.  " .. 
+			"So that happens.", unit.id, dfhack.units.getReadableName(unit),
+			item.id, dfhack.items.getReadableDescription(item) )
 	    end
 	    table.insert(items_to_drop, item)
 	end
     end
 
     -- processor.
-    for _, item in ipairs(items_to_drop) do
-	if (false) and (#items_to_drop > 1) then
+    for idx, item in ipairs(items_to_drop) do
+	if (true) and (#items_to_drop > 1) then
 	    -- This happens when a unit both looted an artifact or book, and also looted a
 	    --   "Loot other items" such as a crutch or a nest box.
-	    dprintf("NOTICE: A unit was carrying more than one spoils item.  Probably a bug.  " .. 
-		    "unit %d %s, item %d %s",
-	    	    unit.id, dfhack.units.getReadableName(unit),
+	    dprintf("NOTICE: Unit %d %s was carrying %d spoils items: item #%d %d %s.",
+		    unit.id, dfhack.units.getReadableName(unit),
+		    #items_to_drop, idx,
 		    item.id, dfhack.items.getReadableDescription(item) )
 	end
 	local sref = dfhack.items.getSpecificRef(item, df.specific_ref_type.JOB)
@@ -373,7 +355,7 @@ local function drop_and_forbid_spoils(unit)
 		    sref.data.job.id, df.job_type[sref.data.job.job_type] )
 	end
 	if (true) and (item.flags.in_job ~= (sref ~= nil)) then
-	    dprintf("NOTICE: Spoils item %d %s: the job data is out of sync: .flags.in_job=%s, sref=%s",
+	    dprintf("WARNING: Spoils item %d %s: the job data is out of sync: .flags.in_job=%s, sref=%s",
 		    item.id, dfhack.items.getReadableDescription(item),
 		    (item.flags.in_job) and 'true' or 'false',
 		    (sref) and 'exists' or 'nil' )
@@ -385,8 +367,11 @@ local function drop_and_forbid_spoils(unit)
 		    dfhack.items.getReadableDescription(item))
 	end
 	local success = dfhack.items.moveToGround(item, unitpos)
-	dprintf("Dropping and forbidding spoils item %d at (%s)%s.", item.id,
-		pos2str(unitpos), (success) and '' or '  FAILED!' )
+	if (true) or (not success) then
+	    dprintf("Dropping and forbidding spoils item %d %s at (%s)%s.", 
+		    item.id, dfhack.items.getReadableDescription(item),
+		    pos2str(unitpos), (success) and '' or '  FAILED!' )
+ 	end
 	if item.flags.on_ground then
 	    item.flags.forbid = true
 	end
@@ -479,14 +464,14 @@ local function teleport_unit_to_a_random_incoming_tile(unit, entrypos, acceptabl
     local old_occ_unit = occ.unit
     local old_occ_unit_grounded = occ.unit_grounded
 
-    if (unit.flags1.inactive and unit.flags1.on_ground) then
+    if (false) and (unit.flags1.inactive and unit.flags1.on_ground) then
 	-- I think this only happens when a unit is double-processed.
 	dprintf("NOTICE: Before teleport, inactive unit %d had flags1.on_ground set.", unit.id)
     end
 
     local success = dfhack.units.teleport(unit, pos)
 
-    if (unit.flags1.inactive and unit.flags1.on_ground) then
+    if (false) and (unit.flags1.inactive and unit.flags1.on_ground) then
 	-- this happens fairly often, and is harmless.
 	dprintf("NOTICE: After teleport, inactive unit %d has flags1.on_ground set.", unit.id)
     end
