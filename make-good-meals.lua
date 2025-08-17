@@ -778,6 +778,97 @@ https://discord.com/channels/793331351645323264/873014631315148840/1349486149436
 {lots and lots of subsequent discussion}
 
 
+This is a very long and good discussion:
+https://discord.com/channels/793331351645323264/873014631315148840/1348739871161978981
+Thyrus — 3/10/25, 12:30 PM
+Am I the only one who is basically unable to satisfy the EatGoodMeal need in the latest patch:
+                Need  Strength  Focus Impact  Frequency  Num. Unfettered -> Badly distracted
+                ----  --------  ------------  ---------  -----------------------------------
+         EatGoodMeal        43       -161855         30      0    0    0    8   16    6    0
+       AcquireObject        37       -145467         27      1    0    0    7   14    5    0
+      PrayOrMeditate       350       -144239         75      6    2    8   31   24    4    0
+I'm about a year and a half into a new fort, and this is now the least fulfilled need. 
+Before the recent nerf to prepared meals, I don't think I have ever seen that. I think 
+this solves the question whether the reduced meal value will have an impact in fulfilling 
+dwarven needs. Can we fix this?
+Ozzatron
+[CLAM]
+ — 3/10/25, 2:48 PM
+I bet this is exactly related to the meal value nerf, because arbitrary meal value checkpoints 
+in the mood satisfaction checks are unedited.
+rome of oxtrot — 3/10/25, 2:56 PM
+that's a fair point, the definition of "good meal" probably wasn't nerfed correspondingly
+{...lots...}
+rome of oxtrot — 3/11/25, 8:41 AM
+in 50.15, to count as a "good meal", the meal has have a base value of at least 20 or a 
+personal value (based on "liked foods") of at least 1, and the base value plus 4 times the 
+personal value has to exceed 4
+so eating liked foods will almost always be enough to count, but the base value nerf 
+definitely makes it a lot harder without catering to preferences. expect toady to consider 
+this "a desired consequence"
+found same function in 51.06
+Thyrus — 3/11/25, 8:50 AM
+Will dwarves actually seek out prepared meals with ingredients they like? I thought this 
+would only trigger if, by accident, they chose a meal containing ingredients they like.
+{...}
+Quietust — 3/11/25, 8:52 AM
+The locatefood function checks if the unit "likes" the meal in question, and it gives the 
+food a major priority boost.
+And the like function checks ingredients inside prepared meals.
+{...lots more good discussion AND reverse-engineered code...}
+Quietust — 3/11/25, 8:59 AM
+If you want to get valuable prepared meals, you need to start using valuable ingredients, 
+not just 1-value meat.
+{...}
+Ozzatron — 3/11/25, 9:02 AM
+"making food preferences actually matter" sounds great, if dwarves had like 12 food 
+preferences so it was even possible
+{...even more discussion...}
+Quietust — 3/11/25, 9:20 AM
+And actually, the like bonus isn't actually used directly when choosing meals to eat - 
+all it does is boost the item's priority if it's greater than zero (and also make it 
+exempt from "eating the same food lately" thoughts).
+The game takes the "chessboard" distance (i.e. max(abs(dx),abs(dy),abs(dz)))between the 
+unit and the food item, and if there's at least one preference match, it divides that 
+value by 2 and subtracts 30.
+Though I'm not sure what happens when that causes the "score" to go negative - I think 
+it'll still work, since it looks like it's doing signed comparisons. 
+Oh, and if the food has been eaten recently, it multiplies the score by 4 and adds 100.
+Granted, I'm looking at the logic from 0.28.181.40d right now (since the decompilation 
+is easier to read), but I expect this part still works exactly the same.
+{...and more...}
+tmPreston — 3/11/25, 9:51 AM
+The way i see it, i would be fine with a tool that scans a fort wide list of preferences 
+and then marks all meals (not ingredients, due to other uses) that don't include any for 
+sale
+However, one thing in this whole convo leaves me slightly confused. Let's say a dwarf 
+likes oranges. Will eating them raw be pretty much the same as an 
+orange+tallow+meat+booze meal?
+Quietust — 3/11/25, 9:54 AM
+Yes, it is. 
+However, you can bake 1 orange and a hundreds other ingredients into 101 meals which 
+will all make that dwarf happy.
+tmPreston — 3/11/25, 9:54 AM
+Yeah
+Stops being relevant if i have 500 oranges, but some ingredients are hard to come by
+myk002 — 3/11/25, 9:55 AM
+that's a mechanic I'd like to see changed as well
+Quietust — 3/11/25, 9:55 AM
+Prepared meals only store the type/material information for their ingredients, not the 
+quantity used.
+myk002 — 3/11/25, 9:56 AM
+I'd like to see the stack sizes of ingredients be equal, and the number of meals prepared 
+equal the size of an ingredient stack
+e.g. 1 orange, one tallow, one booze, one quarry bush leaf -> 1 lavish meal
+{...}
+Quietust — 3/11/25, 10:00 AM
+If you're using more valuable ingredients like flour, dwarven sugar, quarry bush leaves, 
+and cheese, then you'll get more valuable meals.
+Or even if you use the meat of more valuable creatures - alligators instead of cows, for 
+example.
+rome of oxtrot — 3/11/25, 10:01 AM
+balancing argues that more proecssed ingreients should generate more or more valuable meals
+
 --]==]
 
 
