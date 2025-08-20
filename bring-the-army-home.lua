@@ -118,6 +118,10 @@ Stop running the script, if previously started.
 --	    birth_year 514, birth_time 10284, relationship_ids.RiderMount mother's unit_id,
 --	    mount_type 1 CARRIED, 3 owned items (somehow).
 
+-- TODO Babies.  It turns out that riders (including babies) are handled by dfhack.units.teleport().
+--   no wonder I couldn't ever get my rider code to trigger.
+--   remove my special-handling rider code.  find out what needs to happen, if anything.
+
 -- TODO maybe: it turns out that eventful.onUnitNewActive is pretty slow, because it scans
 --   the entire active units vector every n ticks (based on frequency of course).
 --   Consider switching back to a report-based trigger.
