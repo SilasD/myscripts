@@ -1,3 +1,11 @@
+-- TODO: artifact claims are also tracked in world.family_info.family[].claims[] (sorted by hfid)
+-- TODO: entity claims are tracked in world.entities.all[].artifact_claims[]
+-- TODO: chase down remote claims, if there is such a list.
+-- TODO: also track down where df.artifact_claim are kept, if anywhere.
+--   there's no associated .find() vector.
+-- type df.family_artifact_claim is not a subclass of type df.artifact_claim .
+
+
 -- 'item {item.id}'
 -- 'book {item.id}
 -- 'writing {written_content.id}
