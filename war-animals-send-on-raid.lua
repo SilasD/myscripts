@@ -10,6 +10,12 @@ squad's exit location.  See if it sticks or is overridden.
 TODO: now that I know how, inspect all jobs to see if they are chaining, caging, or pasturing
 a relevant war animal.
 
+DONE: I just found unit.enemy.animal_pre_bond_unid and .animal_pre_bond_count, are they relevant?
+The soldier I inspected had a link to one assigned war animal.
+A: no.  Inspecting a different soldier who has an assigned war horn beetle, the only link was to
+a skilfully trained boar.  Maybe these fields are about choosing pets?  Or recording what animals
+this unit has trained?
+
 ]====]
 
 local verbose = false
