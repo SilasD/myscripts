@@ -1,8 +1,7 @@
-
-local utils = require('utils')
-
 local debugging = true
 
+
+local utils = require('utils')
 
 -- note: unlike normal printf, this ends the line even if '\n' is not used.
 local function printf(...)
@@ -917,6 +916,8 @@ Mixed-case with an equals symbol defines a category.  These can be recursively d
 	Fish =		FISH or moghopper	-- TODO Q: moghopper can be a preference; are they edible?
 Mixed-case without the equals sign uses that category.
 
+TODO differentiate pressed cake and pastes.  can pastes be edible?  can slurries be edible?  are slurries pastes?
+
 
 Define: Berries = berry$, GRAPE
 -- the $ restricts the match to end in berry, because strawberry plants are edible but not fruit.
@@ -955,7 +956,7 @@ Define: SaladVegetable = ARTICHOKE, ASPARAGUS, BAMBARA_GROUNDNUT, STRING_BEAN, B
     TODO
 	OLIVE
 -- left out GARLIC, HORNED_MELON, RHUBARB, WINTER_MELON, LESSER_YAM, LONG_YAM, PURPLE_YAM, WHITE_YAM
-	
+
 
 Recipe: FruitSalad	Fruit, Fruit, Citrus or Fruit, optional Fruit, Sweetener
 
