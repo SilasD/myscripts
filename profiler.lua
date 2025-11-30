@@ -108,6 +108,22 @@ local DEFAULT_FILTERED_FUNC = 1
 local DEFAULT_MISSING_FUNC = 3
 
 
+local function os_clock()
+    if false then
+        local filename = "zz_profiler_helper.txt"
+        -- TODO how slow is open/remove?  would keeping the file open and using :write():flush() be faster?
+        io.open(filename, 'w'):write("This file can be deleted.\nThis file was used by the pepperfish profiler.\n"):close()
+        -- resolution on Windows is hundred microseconds  -- TODO what does Linux return?
+        local time = dfhack.filesystem.mtime(filename)
+        os.remove(filename)
+        time = time / 10000000  -- convert to seconds  -- TODO what to do for Linux?
+        return time
+    else
+        return os.clock()
+    end
+end
+
+
 --
 -- newProfiler() creates a new profiler object for managing
 -- the profiler and storing state.  Note that only one profiler
@@ -149,6 +165,8 @@ function _profiler.stop(self)
   debug.sethook()
   _profiler.running = nil
 end
+
+
 local function get_stats(rawstats, prevented_functions, func, depth)
     if prevented_functions[func] then
       return nil
@@ -187,14 +205,14 @@ end
 -- be calling this directly. Duplicated to reduce overhead.
 --
 local function _profiler_hook_wrapper_by_call(action)
-  local entry = os.clock()
+  local entry = os_clock()
   local self = _profiler.running
   local depth, stack = self.depth, self.stack
   if action == "call" then
     local parent = stack[depth]
     if parent and parent.should_not_profile > 0 then
       parent.should_not_profile = parent.should_not_profile + 1
-      parent.profile_time = parent.profile_time + (os.clock() - entry)
+      parent.profile_time = parent.profile_time + (os_clock() - entry)
       return
     end
     local ci = debug.getinfo(2,"f")
@@ -217,7 +235,7 @@ local function _profiler_hook_wrapper_by_call(action)
       this.stats = stats
       this.clock_start = entry
     end
-    this.profile_time = (os.clock() - entry)
+    this.profile_time = (os_clock() - entry)
   else
     if depth == 0 then
       return
@@ -231,10 +249,10 @@ local function _profiler_hook_wrapper_by_call(action)
         if parent then
           local time = entry - this.start_time - this.profile_time
           parent.stats.anon_child_time = parent.stats.anon_child_time + time
-          parent.profile_time = parent.profile_time + this.profile_time + (os.clock() - entry)
+          parent.profile_time = parent.profile_time + this.profile_time + (os_clock() - entry)
         end
       else
-        this.profile_time = this.profile_time + (os.clock() - entry)
+        this.profile_time = this.profile_time + (os_clock() - entry)
       end
       return
     end
@@ -263,13 +281,13 @@ local function _profiler_hook_wrapper_by_call(action)
       parent_stats.children[func] = ch + 1
       parent_stats.children_time[func] = parent_stats.children_time[func] + time
     end
-    parent.profile_time = parent.profile_time + this.profile_time + (os.clock() - entry)
+    parent.profile_time = parent.profile_time + this.profile_time + (os_clock() - entry)
   end
 end
 
 local function _profiler_hook_wrapper_by_time()
   local self = _profiler.running
-  local timetaken = os.clock() - self.lastclock
+  local timetaken = os_clock() - self.lastclock
   local rawstats = self.rawstats
   local prevented = self.prevented_functions
   local depth = 2
@@ -324,7 +342,7 @@ local function _profiler_hook_wrapper_by_time()
     depth = depth + 1
     caller = debug.getinfo(depth, 'f')
   end
-  self.lastclock = os.clock()
+  self.lastclock = os_clock()
 end
 
 
@@ -343,7 +361,7 @@ function _profiler.start(self)
   self.stack = {}
   self.depth = 0
   if self.variant == "time" then
-    self.lastclock = os.clock()
+    self.lastclock = os_clock()
     debug.sethook( _profiler_hook_wrapper_by_time, "", self.sampledelay )
   elseif self.variant == "call" then
     debug.sethook( _profiler_hook_wrapper_by_call, "cr" )
@@ -351,6 +369,34 @@ function _profiler.start(self)
     error("Profiler method must be 'time' or 'call'.")
   end
 end
+
+
+-- TODO maybe support nesting?
+function _profiler.suspend(self)  -- based on _profiler.stop()
+  if _profiler.running ~= self then
+    return
+  end
+  -- suspend the profiler.
+  debug.sethook()
+end
+
+
+-- TODO maybe support nesting?
+function _profiler.resume(self)  -- based on _profiler.start()
+  if _profiler.running then
+    return
+  end
+  -- resume the profiler.
+  if self.variant == "time" then
+    self.lastclock = os_clock()
+    debug.sethook( _profiler_hook_wrapper_by_time, "", self.sampledelay )
+  elseif self.variant == "call" then
+    debug.sethook( _profiler_hook_wrapper_by_call, "cr" )
+  else
+    error("Profiler method must be 'time' or 'call'.")
+  end
+end
+
 
 --
 -- This writes a profile report to the output file object.  If
@@ -639,12 +685,14 @@ end
 _profiler.prevented_functions = {
   [_profiler.start] = true,
   [_profiler.stop] = true,
+  [_profiler.suspend] = true,
+  [_profiler.resume] = true,
   [_profiler_hook_wrapper_by_time] = true,
   [_profiler_hook_wrapper_by_call] = true,
   [_profiler.prevent] = true,
   [_profiler.report] = true,
   [_profiler.lua_report] = true,
-  [_profiler._pretty_name] = true
+  [_profiler._pretty_name] = true,
 }
 
 return _ENV
