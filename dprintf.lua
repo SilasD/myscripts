@@ -1,19 +1,32 @@
 --- To use this module, load it in this nonstandard way:
---- `local dprintf = reqscript('dprintf').dprintf`
+--- `local dprintf = reqscript("dprintf").dprintf`
+--- `local debugging = true`
 --- or
---- `local dprintf = reqscript('dprintf').Dprintf`
+--- `local dprintf = reqscript("dprintf").Dprintf`
+---
+--- If you are not sure if the dprintf module is available, load it like this:
+--- `local dprintf = pcall(reqscript,"dprintf") and reqscript("dprintf").dprintf or function()end`
+--- `local debugging = true`
+
 --@module = true
 
--- testing require module
-local _ENV = mkmodule('dprintf')
+
+-- local _ENV = mkmodule('dprintf')  -- testing require module
+-- notes on making this a true require-able module:
+--   it works, but ONLY if the module file is put into hack/lua/ or the DF directory.
+--   not tested: putting it in a scripts_modactive directory.  error message:
+--      [lua]# ~require("dprintf")
+--      (interactive):1: module 'dprintf' not found:
+--          no field package.preload['dprintf']
+--          no file 'C:\GAMES\DWARF FORTRESS\Z5308\hack\lua\dprintf.lua'
+--          no file 'C:\GAMES\DWARF FORTRESS\Z5308\hack\lua\dprintf\init.lua'
+--          no file '.\dprintf.lua'
+--          no file 'C:\GAMES\DWARF FORTRESS\Z5308\dprintf.dll'
+--          no file '.\dprintf.dll'
+-- what DOES work is adding the path to `package.path` .
+--   not tested: whether that affects everything or just the require'ing script.
 
 local function weak_key_table_factory()
---[[
-    local weak_key_metatable = { __mode = "k", }
-    local t = {}
-    setmetatable(t, weak_key_metatable)
-    return t
---]]
     return setmetatable( {}, { __mode = "k", } )
 end
 
@@ -85,7 +98,7 @@ local function find_debugging_var_setting()
         if info == nil then return false; end
         -- ran into the standard spawn-script function?  fail.
         if info.func == dfhack.run_script_with_env then return false; end
-        -- search all parameters and locals for debugging or _ENV; it can be in any slot.
+        -- search all parameters and locals for debugging; it can be in any slot.
         local i = 1
         repeat
             local name, val = debug.getlocal(level, i)
@@ -107,7 +120,7 @@ local function find_debugging_var_setting()
             end
             i = i + 1
         until name == nil
-        -- search all upvalues for _ENV; it can be in any slot.
+        -- search all upvalues for _ENV; it can be in any upvalue slot.
         for i = 1,info.nups do
             local name, val = debug.getupvalue(info.func, i)
             if name == nil then break; end  -- can't happen.
@@ -206,5 +219,4 @@ function Dprintf(format, ...)
     io.stderr:write(message):write('\n')
 end
 
--- testing require module
-return _ENV
+-- return _ENV  -- testing require module
