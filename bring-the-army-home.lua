@@ -1,6 +1,10 @@
 --@module  = false	-- TODO is running as a module even useful?
 --@enabled = false
 
+local do_profile = "time"   -- can be nil, false, "time", or "call".  "call" is slow, potentially very slow.
+local debugging = true
+
+
 --[====[
 
 bring-the-army-home
@@ -42,7 +46,7 @@ Stop running the script, if previously started.
 --]====]
 
 
--- TODO when dropping items, first remove any job.  Store in stockpile/bookcase can be active.
+-- DONE when dropping items, first remove any job.  Store in stockpile/bookcase can be active.
 
 -- TODO generalize to other report types (migrants).
 
@@ -131,54 +135,80 @@ Stop running the script, if previously started.
 --   what can be done about that?
 
 
-eventful = require('plugins.eventful')
-
-local plotinfo = (df.global._fields.plotinfo ~= nil) and df.global.plotinfo or df.global.ui
+local eventful = require('plugins.eventful')
 
 
-local debugging = true
 
 
--- note: unlike normal printf, this ends the line even if '\n' is not used.
+-- profiling requires my modified version of the Pepperfish profiler that has suspend/resume.
+if profiler then
+    profiler:stop()
+    profiler = nil
+end
+if do_profile then
+    profiler = require('profiler').newProfiler(do_profile)
+else
+    profiler = {
+	start = function() end,
+	stop = function() end,
+	suspend = function() end,
+	resume = function() end,
+	report = function() end,
+    }
+end
+
+
+local plotinfo = pcall(function() return df.global.plotinfo end) and df.global.plotinfo or df.global.ui
+
+
+-- note: unlike normal C-style printf, this ends the line.
 local function printf(...)
     print(string.format(...))
 end
 
 
--- This is basically debug-printf.
+-- This is basically debug-printf().
 -- If a global or top-level local variable 'debugging' is false or does not exist, there is no output.
 -- If 'debugging' is true, this uses dfhack.printerr() to both print to the console (in red),
---   and log to the stderr.log file.  
+--	and log to the stderr.log file.
 -- The debug library is used to find both the filename and the function name.
 --
-local current_script_name = dfhack.current_script_name():match( '([^/]*)$' )
-local function dprintf(format, ...)
+--         note: we need to cache this because dfhack.current_script_name() doesn't work inside callbacks.
+local dprintf_current_script_name = (type(dfhack.current_script_name()) == "string")
+	and dfhack.current_script_name():match( '([^/]*)$' ) or ""
+function dprintf(format, ...)
     if not debugging then return; end
     -- unfortunately, even if we're not debugging, the script wastes time collecting
     --   all of the info that would be printed.  So don't do anything too slow.
 
     -- Lua 5.3 Reference Manual 4.9 lua_Debug and lua_getinfo.
-    --   2 = immediate caller's frame, n = name info, t = istailcall.
-    local info = debug.getinfo(2, "nt")
-	    or { namewhat = "{no debug info}", name = "{no debug info}", istailcall = false, }
+    --   2 = immediate caller's frame, n = name info, t = istailcall, l = currentline.
+    local info = debug.getinfo(2, "ntl")
+	    or { namewhat = "{no debug info}", name = "{no debug info}", istailcall = false, currentline = 0 }
+
     -- we assume that info always contains details about a function, because that's what we asked for.
     -- Lua 5.3 Reference Manual 3.4.10:
     --   "However, a tail call erases any debug information about the calling function."
     info.name = info.name or ( (info.istailcall) and "{tail call}" or "{no function}" )
-    -- I'm not sure we care about namewhat; 'global' or 'local' function doesn't really matter.
-    --if info.namewhat == "upvalue" then info.namewhat = "local"; end	-- make things look familiar.
-    dfhack.printerr(string.format("%s %s(): " .. format, current_script_name, info.name, ...))
+
+    local message = string.format("%s:%d %s(): " .. format, dprintf_current_script_name, info.currentline, info.name, ...)
+    local oldcolor = dfhack.color(COLOR_LIGHTCYAN)
+    print(message)
+    dfhack.color(oldcolor)
+    io.stderr:write(message):write('\n')
 end
 
 
-local stop_catching_newunits	-- declared here, defined as a function near the end of the script.
+local stop_catching_newunits		-- declared here, defined as a function near the end of the script.
 
 
--- does not return!
-local function qerror(msg, lvl)
+qerror = dfhack.BASE_G.qerror		-- "global" to this script (but not require'd modules, be careful!)
+local function __qerror(msg, lvl)
+    qerror = dfhack.BASE_G.qerror	-- 
     stop_catching_newunits()
     dfhack.BASE_G.qerror(msg, lvl)	-- voodoo, call the original global qerror()
 end
+qerror = __qerror
 
 
 ---@alias coord {x=integer, y=integer, z=integer}	# coercible into a df.coord .
@@ -678,8 +708,7 @@ local function assign_incoming_units_to_tiles(entrypos)
     end
 
     if processed > 0 then 
-	printf("%s: processed %d incoming %s.", current_script_name, processed, 
-		(processed == 1) and 'unit' or 'units')
+	dprintf("processed %d incoming %s.", processed, (processed == 1) and 'unit' or 'units')
     end
     return processed
 end
@@ -745,7 +774,8 @@ local frequency = 10
 
 
 local debugging_modulus = 0
-local function catch_newunits(unit_id)
+local function catch_newunits(unit_id)  --asynchronous callback
+    profiler:resume()
 
     if (debugging) then
 	local current_modulus = (dfhack.world.ReadCurrentTick() % frequency)
@@ -804,15 +834,17 @@ local function catch_newunits(unit_id)
 	    -- TODO somehow report if any teleports failed?
 	end
     end
+
+    profiler:suspend()
 end
 
 
 -- note: onUnitNewActive is UNDOCUMENTED.
 --
-local bring_the_army_home_KEY = dfhack.current_script_name()	-- must be globally unique in all scripts.
+local current_script_name = dfhack.current_script_name()
+local bring_the_army_home_KEY = current_script_name	-- globally unique across all scripts.
 local synchronization_timer_id = nil
 local function start_catching_newunits()
-
     -- DONE: we don't need to check every tick; we just need to do our stuff before the
     --   first-to-arrive unit (i.e. already active on the map) takes their first step.
     --   (however, consider the fastdwarf module.)
@@ -820,6 +852,7 @@ local function start_catching_newunits()
     --
     -- DONE: it looks like arrivals only happen on ticks where ticks % 10 == 0.  Needs more testing.
     --   DONE: looks true, so synchronize ourself to a 10-tick boundary.
+    -- TODO: we're losing synchronization for unknown reasons, should we re-sync in catch_newunits?  how?
 
     dprintf("on entry, current tick is %d; tick modulo frequency is %d.",
 	    dfhack.world.ReadCurrentTick(), (dfhack.world.ReadCurrentTick() % frequency) )
@@ -843,6 +876,9 @@ local function start_catching_newunits()
 	    function(unit_id) catch_newunits(unit_id); end
 
     catch_newunits_enabled = true
+
+    profiler:start()
+    profiler:suspend()
 end
 
 
@@ -853,6 +889,7 @@ end
     -- https://stackoverflow.com/questions/12291203/lua-how-to-call-a-function-prior-to-it-being-defined
 
     -- note: this routine MUST not call qerror(), because it is called by my replacement qerror().
+
 
     -- DONE Q: how to disable?
     --     A: apparently you disable the callback by setting the key to nil.
@@ -865,6 +902,19 @@ end
     synchronization_timer_id = nil
 
     catch_newunits_enabled = false
+
+    profiler:resume()
+    profiler:stop()
+
+    if do_profile then
+	-- TODO it would be best to use the script's full path.  But we don't know its base path.
+	local outfile = io.open( current_script_name:match( '([^/]*)$' ) .. ".txt", "w+" )
+	success, err = pcall( function() profiler:report( outfile );end )
+	if not success then
+	    dprintf("Error calling profiler:report()\n%s", err)
+	end
+	outfile:close()
+    end
 end
 
 
