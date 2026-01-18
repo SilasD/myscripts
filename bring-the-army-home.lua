@@ -1,6 +1,7 @@
 --@module  = false	-- TODO is running as a module even useful?
 --@enabled = false
 
+local utils = require('utils')
 local eventful = require('plugins.eventful')
 
 local do_profile = nil   -- can be nil, false, "time", or "call".  "call" is slow, potentially very slow.
@@ -181,7 +182,7 @@ end
 --
 --         note: we need to cache this because dfhack.current_script_name() doesn't work inside callbacks.
 local dprintf_current_script_name = (type(dfhack.current_script_name()) == "string")
-	and dfhack.current_script_name():match( '([^/]*)$' ) or ""
+        and dfhack.current_script_name():match( '([^/]*)$' ) or ""
 function dprintf(format, ...)
     if not debugging then return; end
     -- unfortunately, even if we're not debugging, the script wastes time collecting
@@ -205,44 +206,42 @@ function dprintf(format, ...)
 end
 
 
-local stop_catching_newunits		-- declared here, defined as a function near the end of the script.
+local stop_catching_newunits            -- declared here, defined as a function near the end of the script.
 
 
-qerror = dfhack.BASE_G.qerror		-- global to this script (but not require'd modules, be careful!)
+qerror = dfhack.BASE_G.qerror           -- global to this script (but not require'd modules, be careful!)
 local function __qerror(msg, lvl)
-    qerror = dfhack.BASE_G.qerror	-- 
+    qerror = dfhack.BASE_G.qerror
     stop_catching_newunits()
-    dfhack.BASE_G.qerror(msg, lvl)	-- voodoo, call the original global qerror()
+    dfhack.BASE_G.qerror(msg, lvl)      -- voodoo, call the original global qerror()
 end
 qerror = __qerror
 
+---@alias   coord {x=integer, y=integer, z=integer}  # coercible into a df.coord .
+---@alias   strpos string  # x,y,z coords formatted as a string: "12,34,56"
 
----@alias coord {x=integer, y=integer, z=integer}	# coercible into a df.coord .
-
-
----@param  x integer
----@param  y integer
----@param  z integer
----@return string
+---@param   x integer
+---@param   y integer
+---@param   z integer
+---@return  strpos
 local function xyz2str(x,y,z)
     x = math.tointeger(x); y = math.tointeger(y); z = math.tointeger(z)
     if not x or not y or not z then
-	qerror("not enough parameters, or a parameter could not be converted to an integer.")
+        qerror("not enough parameters, or a parameter could not be converted to an integer.")
     end
     return(string.format("%d,%d,%d",x,y,z))
 end
 
-
----@param pos coord
+---@param   pos coord
+---@return  strpos
 local function pos2str(pos)
     return xyz2str(pos2xyz(pos))
 end
 
-
--- returns a list of all of the tiles which are actually in the building, considering extents.
---
--- note: only tested with building type df.building_civzonest .
---
+---returns a list of all of the tiles which are actually in the building, considering extents.
+---
+---note: only tested with building type df.building_civzonest .
+---
 ---@param  building df.building
 ---@return coord[]
 local function get_all_building_tiles(building)
@@ -251,83 +250,71 @@ local function get_all_building_tiles(building)
 
     local z = building.z
     for x = building.x1, building.x2 do
-	for y = building.y1, building.y2 do
-
-	    if dfhack.buildings.containsTile(building, x, y) then
-		table.insert(tiles, xyz2pos(x,y,z))
-	    end
-	end
+        for y = building.y1, building.y2 do
+            if dfhack.buildings.containsTile(building, x, y) then
+                table.insert(tiles, xyz2pos(x,y,z))
+            end
+        end
     end
     return tiles
 end
 
-
 ---@return coord[]	# a (possibly-empty) list of coords of teleportation targets.
 local function find_acceptable_tiles()
-
-    ---@type { [string]: boolean }	-- dictionary, i.e. a table<strpos, true>.
-    local is_on_map_edge_list = {}	-- If the key exists, the strpos is on the (surface) map edge.
+    ---@type { [string]: boolean }      -- dictionary, i.e. a table<strpos, true>.
+    local is_on_map_edge_list = {}      -- If the key exists, the strpos is on the (surface) map edge.
 
     ---@param  x integer|coord|df.coord
     ---@param  y integer?
     ---@param  z integer?
     ---@return boolean
     local function is_on_map_edge(x,y,z)
+        if y == nil and z == nil then x,y,z = pos2xyz(x); end
 
-	if y == nil and z == nil then x,y,z = pos2xyz(x); end
+        -- build the table, only once.
+        if #is_on_map_edge_list == 0 then
+            local source = plotinfo.map_edge
 
-	-- build the table, only once.
-	if #is_on_map_edge_list == 0 then
-	    local source = plotinfo.map_edge
+            -- unfortunately, can't use builtin get_path_xyz() because the data is not set up as a path.
+            for i = 0, #source.surface_x-1 do
+                local xx, yy, zz = source.surface_x[i], source.surface_y[i], source.surface_z[i]
+                is_on_map_edge_list[xyz2str(xx,yy,zz)] = true
+            end
+        end
 
-	    -- unfortunately, can't use builtin get_path_xyz() because the data is not set up as a path.
-	    for i = 0, #source.surface_x-1 do
-		local xx, yy, zz = source.surface_x[i], source.surface_y[i], source.surface_z[i]
-		is_on_map_edge_list[xyz2str(xx,yy,zz)] = true
-	    end
-	end
-
-	return ( is_on_map_edge_list[xyz2str(x,y,z)] == true )
+        return ( is_on_map_edge_list[xyz2str(x,y,z)] == true )
     end
 
-
     ---@type coord[]
-    local acceptable_tiles = {}			-- note: we do not cache this because e.g. trees
-						--   can grow or buildings can be constructed.
+    local acceptable_tiles = {}
+    -- note: we do not cache this because e.g. trees can grow or buildings can be constructed.
 
     for _,zone in ipairs( df.global.world.buildings.other.ZONE_FISHING_AREA ) do
-
-	acceptable_tiles = {}
-
-	for _, pos in ipairs(get_all_building_tiles(zone)) do
-
-	    if is_on_map_edge(pos) == true
-		    and dfhack.maps.getWalkableGroup(pos) > 0
-		    and dfhack.buildings.checkFreeTiles(pos,{x=1,y=1},nil,false,true) == true	-- redundant?
-	    then
-		table.insert(acceptable_tiles, pos)
-	    end
-	end
-	if #acceptable_tiles > 0 then break; end
+        acceptable_tiles = {}
+        for _, pos in ipairs(get_all_building_tiles(zone)) do
+            if is_on_map_edge(pos) == true
+                and dfhack.maps.getWalkableGroup(pos) > 0
+                and dfhack.buildings.checkFreeTiles(pos,{x=1,y=1},nil,false,true) == true  -- redundant?
+            then
+                table.insert(acceptable_tiles, pos)
+            end
+        end
+        if #acceptable_tiles > 0 then break; end
     end
 
     return acceptable_tiles
 end
 
-
--- returns whether an item is assigned to a miner, woodcutter, or hunter.
--- essentially works like dfhack.items.isSquadEquipment() .
---
+---returns whether an item is assigned to a miner, woodcutter, or hunter.
+---essentially works like dfhack.items.isSquadEquipment() .
+---
 ---@param  item df.item
 ---@return boolean
 local function isMinerWoodcutterHunterEquipment(item)
     -- actually this was not hard to check.  nice.
-    for _, id in ipairs(plotinfo.equipment.work_weapons) do
-	if id == item.id then return true; end
-    end
-    return false
+    return utils.linear_index(plotinfo.equipment.work_weapons, item.id) ~= nil
+        or utils.linear_index(plotinfo.equipment.ammo_items, item.id) ~= nil
 end
-
 
 ---@param  unit df.unit
 local function drop_and_forbid_spoils(unit)
@@ -339,23 +326,19 @@ local function drop_and_forbid_spoils(unit)
     ---@param  unit df.unit
     ---@param  invitem df.unit_inventory_item
     local function invitem_is_spoils(unit, invitem)
-	local item = invitem.item
+        local item = invitem.item
 
-	if item:hasWriting() then return true; end  -- for some reason, foreign books may not be tagged .foreign.
-	if not item.flags.foreign then return false; end
+        if item:hasWriting() then return true; end  -- for some reason, foreign books may not be tagged .foreign.
+        if not item.flags.foreign then return false; end
 
-	if     dfhack.units.isActive(unit) and invitem.mode ~= df.inv_item_role_type.Hauled then return false; end
-	if not dfhack.units.isActive(unit) and invitem.mode ~= df.inv_item_role_type.Weapon then return false; end
+        if     dfhack.units.isActive(unit) and invitem.mode ~= df.inv_item_role_type.Hauled then return false; end
+        if not dfhack.units.isActive(unit) and invitem.mode ~= df.inv_item_role_type.Weapon then return false; end
 
-	if dfhack.items.isSquadEquipment(item) then return false; end
-	if isMinerWoodcutterHunterEquipment(item) then return false; end	-- could happen for Messengers.
+        if dfhack.items.isSquadEquipment(item) then return false; end
+        if isMinerWoodcutterHunterEquipment(item) then return false; end        -- could happen for Messengers.
 
-	return true
+        return true
     end
-
-
-
-
 
     ---@type coord
     local unitpos = xyz2pos(dfhack.units.getPosition(unit))
@@ -364,70 +347,70 @@ local function drop_and_forbid_spoils(unit)
 
     -- collector.
     for idx, invitem in ipairs(unit.inventory) do
-	local item = invitem.item
+        local item = invitem.item
 
-	if invitem_is_spoils(unit, invitem) then
-	    -- This happens when a unit both looted an artifact or book, and looted a
-	    --   "Loot other items" such as a crutch or a nest box.
-	    if (true) and (idx ~= #unit.inventory-1) then
-		dprintf("NOTICE: Unit %d %s spoils item %d %s is not the last inventory item.  " .. 
-			"So that happens.", unit.id, dfhack.units.getReadableName(unit),
-			item.id, dfhack.items.getReadableDescription(item) )
-	    end
-	    table.insert(items_to_drop, item)
-	end
+        if invitem_is_spoils(unit, invitem) then
+            -- This happens when a unit both looted an artifact or book, and looted a
+            --   "Loot other items" such as a crutch or a nest box.
+            if (true) and (idx ~= #unit.inventory-1) then
+                dprintf("NOTICE: Unit %d %s spoils item %d %s is not the last inventory item.  " .. 
+                        "So that happens.", unit.id, dfhack.units.getReadableName(unit),
+                        item.id, dfhack.items.getReadableDescription(item) )
+            end
+            table.insert(items_to_drop, item)
+        end
     end
 
     -- processor.
     for idx, item in ipairs(items_to_drop) do
-	if (true) and (#items_to_drop > 1) then
-	    -- This happens when a unit both looted an artifact or book, and also looted a
-	    --   "Loot other items" such as a crutch or a nest box.
-	    dprintf("NOTICE: Unit %d %s was carrying %d spoils items: item #%d %d %s.",
-		    unit.id, dfhack.units.getReadableName(unit),
-		    #items_to_drop, idx,
-		    item.id, dfhack.items.getReadableDescription(item) )
-	end
-	local sref = dfhack.items.getSpecificRef(item, df.specific_ref_type.JOB)
-	if (true) and (sref) then
-	    dprintf("NOTICE: Spoils item %d %s was in job %d, type %s",
-		    item.id, dfhack.items.getReadableDescription(item),
-		    sref.data.job.id, df.job_type[sref.data.job.job_type] )
-	end
-	if (true) and (item.flags.in_job ~= (sref ~= nil)) then
-	    dprintf("WARNING: Spoils item %d %s: the job data is out of sync: .flags.in_job=%s, sref=%s",
-		    item.id, dfhack.items.getReadableDescription(item),
-		    (item.flags.in_job) and 'true' or 'false',
-		    (sref) and 'exists' or 'nil' )
-	end
-	if (sref) then dfhack.job.removeJob(sref.data.job); end
-	local sref = dfhack.items.getSpecificRef(item, df.specific_ref_type.JOB)
-	if (true) and (sref) then
-	    dprintf("WARNING: Failed to remove job for spoils item %d %s", item.id,
-		    dfhack.items.getReadableDescription(item))
-	end
-	local success = dfhack.items.moveToGround(item, unitpos)
-	if (true) or (not success) then
-	    dprintf("Dropping and forbidding spoils item %d %s at (%s)%s.", 
-		    item.id, dfhack.items.getReadableDescription(item),
-		    pos2str(unitpos), (success) and '' or '  FAILED!' )
- 	end
-	if item.flags.on_ground then
-	    item.flags.forbid = true
-	end
+        if (true) and (#items_to_drop > 1) then
+            -- This happens when a unit both looted an artifact or book, and also looted a
+            --   "Loot other items" such as a crutch or a nest box.
+            dprintf("NOTICE: Unit %d %s was carrying %d spoils items: invitem #%d id %d %s.",
+                    unit.id, dfhack.units.getReadableName(unit),
+                    #items_to_drop, idx,
+                    item.id, dfhack.items.getReadableDescription(item) )
+        end
+        local sref = dfhack.items.getSpecificRef(item, df.specific_ref_type.JOB)
+        if (true) and (sref) then
+            dprintf("NOTICE: Spoils item id %d %s was in job %d, type %s",
+                    item.id, dfhack.items.getReadableDescription(item),
+                    sref.data.job.id, df.job_type[sref.data.job.job_type] )
+        end
+        if (true) and (item.flags.in_job ~= (sref ~= nil)) then
+            dprintf("WARNING: Spoils item id %d %s: the job data is out of sync: .flags.in_job=%s, sref=%s",
+                    item.id, dfhack.items.getReadableDescription(item),
+                    (item.flags.in_job) and 'true' or 'false',
+                    (sref) and 'exists' or 'nil' )
+        end
+        if (sref) then dfhack.job.removeJob(sref.data.job); end
+        local sref = dfhack.items.getSpecificRef(item, df.specific_ref_type.JOB)
+        if (true) and (sref) then
+            dprintf("WARNING: Failed to remove job for spoils item id %d %s", item.id,
+                    dfhack.items.getReadableDescription(item))
+        end
+        local success = dfhack.items.moveToGround(item, unitpos)
+        if (true) or (not success) then
+            dprintf("Dropping and forbidding spoils item id %d %s at (%s)%s.", 
+                    item.id, dfhack.items.getReadableDescription(item),
+                    pos2str(unitpos), (success) and '' or '  FAILED!' )
+         end
+        if item.flags.on_ground then
+            item.flags.forbid = true
+        end
     end
 end
 
 
--- Teleport a unit to the special zone.  The unit can be active (alive & on the map) or inactive.
--- The unit's alive/dead status is not considered; this has not been tested with dead units.
---
--- The unit should be in world.units.active[]; this is not tested.
---
+---Teleport a unit to the special zone.  The unit can be active (alive & on the map) or inactive.
+---The unit's alive/dead status is not considered; this has not been tested with dead units.
+---
+---The unit should be in world.units.active[]; this is not tested.
+---
 -- TODO it would be better to deal with entrypos == nil in assign_incoming_units_to_tiles() .
 --
 ---@param unit df.unit
----@param entrypos coord?	# where are they coming from?
+---@param entrypos coord?       # where are they coming from?
 ---@param acceptable_tiles coord[] # what tiles are valid incoming tiles?  (in our zone and on the edge.)
 ---@param targetpos coord?	# (HACK) move the unit to a specific (instantiated) tile in the map.
 --				#   only used for riders (i.e. babies) -> their ridden (i.e. mother's) tile.
