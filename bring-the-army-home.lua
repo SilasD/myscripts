@@ -1,12 +1,12 @@
 --@module  = false	-- TODO is running as a module even useful?
 --@enabled = false
 
-local do_profile = "time"   -- can be nil, false, "time", or "call".  "call" is slow, potentially very slow.
+local eventful = require('plugins.eventful')
+
+local do_profile = nil   -- can be nil, false, "time", or "call".  "call" is slow, potentially very slow.
 local debugging = true
 
-
 --[====[
-
 bring-the-army-home
 ===================
 After a raid, returning soldiers will enter the map quickly instead 
@@ -60,12 +60,13 @@ Stop running the script, if previously started.
 -- Messengers get an army when they leave the map.  The army links
 --   to the relevant army_controller, has one member and no squads,
 --   and the army.flags are all false.
--- When Messengers return, they trigger a 301 announcement, with
+-- When messengers return, they trigger a 301 announcement, with
 --   "have returned" text.  It's handled just like an army return.
 
 -- DONE When messengers return with a worker who happens to be a
 --   merchant, that worker cannot be assigned to the military,
 --   and seemingly isn't a full member of the fort in other ways.
+-- Removed because makeown fixes it.
 
 -- TODO When messengers return with workers, the _workers_ do not
 --   own the clothing they're wearing.  Fix that.
@@ -131,13 +132,18 @@ Stop running the script, if previously started.
 --   Consider switching back to a report-based trigger.
 --   (OTOH, so many reports come in that that's slow as well.)
 
+-- TODO histfig.info.whereabouts.year and .year_tick.  verify that this is valid on army return,
+--   then use it to catch units which entered and moved away from the entry tile.
+
+-- TODO should we be watching armies / army controllers?  to get the histfigs out of them?
+--   we could report missing units.
+--   rome wrote a plugin to do that, just use it instead.
+
 -- TODO catch_newunits() is getting out of sync; it drifts from the preferred 10-tick boundary.
 --   what can be done about that?
 
-
-local eventful = require('plugins.eventful')
-
-
+-- TODO instead of intercepting qerror(), run the entire script inside a dfhack.pcall(),
+--   catch errors, stop_catching_newunits(), and re-throw it using error().  or qerror()?
 
 
 -- profiling requires my modified version of the Pepperfish profiler that has suspend/resume.
@@ -158,7 +164,7 @@ else
 end
 
 
-local plotinfo = pcall(function() return df.global.plotinfo end) and df.global.plotinfo or df.global.ui
+local plotinfo = (function(a,b)for k,_ in pairs(df.global) do if k == a or k == b then return df.global[k]; end; end; error(); end)("ui", "plotinfo")
 
 
 -- note: unlike normal C-style printf, this ends the line.
@@ -202,7 +208,7 @@ end
 local stop_catching_newunits		-- declared here, defined as a function near the end of the script.
 
 
-qerror = dfhack.BASE_G.qerror		-- "global" to this script (but not require'd modules, be careful!)
+qerror = dfhack.BASE_G.qerror		-- global to this script (but not require'd modules, be careful!)
 local function __qerror(msg, lvl)
     qerror = dfhack.BASE_G.qerror	-- 
     stop_catching_newunits()
@@ -637,7 +643,7 @@ local function assign_incoming_units_to_tiles(entrypos)
 		table.insert(riders, unit)
 	    else
 		teleport_unit_to_a_random_incoming_tile(unit, entrypos, acceptable_tiles)
-
+--[[ removed because makeown does this.
 		-- (HACK) if an arriving unit is a Merchant, make them an Administrator instead.
 		-- This is because if a newly-arriving unit is a Merchant, they cannot be assigned
 		--   to the military and seemingly aren't a full member of the fort in other ways.
@@ -646,7 +652,7 @@ local function assign_incoming_units_to_tiles(entrypos)
 		if unit.profession == df.profession.MERCHANT then
 		    unit.profession = df.profession.ADMINISTRATOR
 		end
-
+--]]
 		processed = processed + 1
 	    end
 	end
@@ -923,7 +929,6 @@ end
 -- unless we're caching stuff that should be reset.  which we are.  so do catch it.
 --
 local function catch_events(event_id)
-
     if event == SC_MAP_UNLOADED then
 	dprintf("handling SC_MAP_UNLOADED.")
 	stop_catching_newunits()
@@ -933,6 +938,7 @@ local function catch_events(event_id)
 end
 
 
+-- TODO function setEnabled(boolean)
 enabled = enabled or false
 function isEnabled()
     return enabled
