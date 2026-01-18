@@ -259,7 +259,11 @@ local function get_all_building_tiles(building)
     return tiles
 end
 
----@return coord[]	# a (possibly-empty) list of coords of teleportation targets.
+---returns a list of the acceptable coordinates for incoming units to be teleported to.
+---these coordinates are found from the first fishing zone which has tiles on the map edge.
+---
+---@return coord[]      # a (possibly-empty) list of coords of teleportation targets.
+---                     # for reasons, there must be more than one target tile.
 local function find_acceptable_tiles()
     ---@type { [string]: boolean }      -- dictionary, i.e. a table<strpos, true>.
     local is_on_map_edge_list = {}      -- If the key exists, the strpos is on the (surface) map edge.
@@ -302,6 +306,9 @@ local function find_acceptable_tiles()
         if #acceptable_tiles > 0 then break; end
     end
 
+    -- this is necessary because we need to remove entrypos from the list if it overlaps,
+    --   so we need to have more than one acceptable target tile.
+    if #acceptable_tiles == 1 then acceptable_tiles = {}; end
     return acceptable_tiles
 end
 
@@ -320,8 +327,8 @@ end
 local function drop_and_forbid_spoils(unit)
 
     -- Spoils tests that are not performed are:
-    --	* Not owned by the unit.  For some reason, returning soldiers don't own anything at all.  Bug!
-    --	* Spoils item(s) are expected to be the last item(s) in the inventory.
+    --  * Not owned by the unit.  For some reason, returning soldiers don't own anything at all.  Bug!
+    --  * Spoils item(s) are expected to be the last item(s) in the inventory.
     --
     ---@param  unit df.unit
     ---@param  invitem df.unit_inventory_item
@@ -412,19 +419,15 @@ end
 ---@param unit df.unit
 ---@param entrypos coord?       # where are they coming from?
 ---@param acceptable_tiles coord[] # what tiles are valid incoming tiles?  (in our zone and on the edge.)
----@param targetpos coord?	# (HACK) move the unit to a specific (instantiated) tile in the map.
---				#   only used for riders (i.e. babies) -> their ridden (i.e. mother's) tile.
-local function teleport_unit_to_a_random_incoming_tile(unit, entrypos, acceptable_tiles, targetpos)
+local function teleport_unit_to_a_random_incoming_tile(unit, entrypos, acceptable_tiles)
 
-    -- warn about inconsistency in targetpos param, but don't try to deal with it.
-    if unit.flags1.rider and targetpos == nil then
-	dprintf("WARNING: unit.flags1.rider and targetpos == nil.")
-    elseif not unit.flags1.rider and targetpos ~= nil then
-	dprintf("NOTICE: not unit.flags1.rider and targetpos ~= nil.")
+    if unit.flags1.rider then
+        dprintf("attempted to teleport a rider: %d %s", unit.id, Name(unit))
+        return
     end
 
     -- making a nil entrypos into a valid coord that is not on the map simplifies processing.
-    local had_an_entrypos = (entrypos ~= nil)	-- currently only used for debugging.
+    local had_an_entrypos = (entrypos ~= nil)  -- currently only used for debugging.
     entrypos = entrypos or xyz2pos(-30000, -30000, -30000)
 
     ---@type coord
@@ -434,13 +437,13 @@ local function teleport_unit_to_a_random_incoming_tile(unit, entrypos, acceptabl
     -- note that if the unit is on entrypos, and entrypos happens to be in acceptable_tiles, 
     --   we do not skip the teleport.
     if not (same_xyz(oldpos, entrypos)) then
-	for _, atile in ipairs(acceptable_tiles) do
-	    if same_xyz(oldpos, atile) then
-		dprintf("NOTICE: unit %d 's current position is already in acceptable_tiles; " .. 
-			"skipping teleport.", unit.id)
-		return
-	    end
-	end
+        for _, atile in ipairs(acceptable_tiles) do
+            if same_xyz(oldpos, atile) then
+                dprintf("NOTICE: unit %d 's current position is already in acceptable_tiles; " .. 
+                        "skipping teleport.", unit.id)
+                return
+            end
+        end
     end
 
     -- handle the case where the unit is not actually on the entrypos.
@@ -450,8 +453,8 @@ local function teleport_unit_to_a_random_incoming_tile(unit, entrypos, acceptabl
     --       and two armies returned at nearly the same time.
     -- converted to just a debugging notification.
     if had_an_entrypos and not same_xyz(entrypos, oldpos) then
-	dprintf("NOTICE: Unit %d is is at (%s), not on the entrypos (%s).  So that does happen.",
-		unit.id, pos2str(oldpos), pos2str(entrypos))
+        dprintf("NOTICE: Unit %d is is at (%s), not on the entrypos (%s).  So that does happen.",
+                unit.id, pos2str(oldpos), pos2str(entrypos))
     end
 
     ---@type coord
@@ -466,52 +469,46 @@ local function teleport_unit_to_a_random_incoming_tile(unit, entrypos, acceptabl
     -- TODO: the way to TEST this would be to force acceptable_tiles[] to contain the entrypos
     --     and one other tile.
     repeat
-	pos = acceptable_tiles[ math.random(#acceptable_tiles) ]
+        pos = acceptable_tiles[ math.random(#acceptable_tiles) ]
     until not same_xyz(entrypos, pos)
 
-    -- however, (HACK) override the chosen location.  used for riders (i.e. babies).
-    pos = targetpos or pos
-
-    dprintf("%sTeleporting %s unit %d to arrive at (%s)",
-	    (unit.flags1.rider) and 'NOTICE: RIDER!  ' or '',
-	    (unit.flags1.inactive) and 'inactive' or 'active',
-	    unit.id,
-	    pos2str(pos) )
+    dprintf("%sTeleporting %s unit %d to arrive at (%s)", (unit.flags1.inactive) and 'inactive' or 'active',
+            unit.id, pos2str(pos) )
 
     -- .flags1.inactive units are assigned a map tile, but do not yet occupy it.
     -- the teleport sets the occupancy flags per the normal case of an active unit.
     -- we need to undo that.
-    -- .flags1.rider doesn't interfere with .flags1.inactive.
 
+    ---@type df.tile_occupancy
     local occ = dfhack.maps.getTileBlock(pos).occupancy[pos.x % 16][pos.y % 16]
     local old_occ_unit = occ.unit
     local old_occ_unit_grounded = occ.unit_grounded
 
     if (false) and (unit.flags1.inactive and unit.flags1.on_ground) then
-	-- I think this only happens when a unit is double-processed.
-	dprintf("NOTICE: Before teleport, inactive unit %d had flags1.on_ground set.", unit.id)
+        -- I think this only happens when a unit is double-processed.
+        dprintf("NOTICE: Before teleport, inactive unit %d had flags1.on_ground set.", unit.id)
     end
 
     local success = dfhack.units.teleport(unit, pos)
 
     if (false) and (unit.flags1.inactive and unit.flags1.on_ground) then
-	-- this happens fairly often, and is harmless.
-	dprintf("NOTICE: After teleport, inactive unit %d has flags1.on_ground set.", unit.id)
+        -- this happens fairly often, and is harmless.
+        dprintf("NOTICE: After teleport, inactive unit %d has flags1.on_ground set.", unit.id)
     end
 
     if success then
 
-	-- restore the tile's unit occupancy flags, if necessary.
-	if unit.flags1.inactive then
-	    occ.unit = old_occ_unit
-	    occ.unit_grounded = old_occ_unit_grounded
-	    unit.flags1.on_ground = false
-	end
+        -- restore the tile's unit occupancy flags, if necessary.
+        if unit.flags1.inactive then
+            occ.unit = old_occ_unit
+            occ.unit_grounded = old_occ_unit_grounded
+            unit.flags1.on_ground = false
+        end
 
-	drop_and_forbid_spoils(unit)
+        drop_and_forbid_spoils(unit)
 
     else
-	dprintf("WARNING: Teleport failed! Unit %d oldpos %s target %s", unit.id, pos2str(oldpos), pos2str(pos))
+        dprintf("WARNING: Teleport failed! Unit %d oldpos %s target %s", unit.id, pos2str(oldpos), pos2str(pos))
     end
 end
 
@@ -525,10 +522,10 @@ local function get_items_on_this_tile(pos)
     if not (block) then return {}; end
 
     for _, id in ipairs(block.items) do
-	local item = df.item.find(id)
-	if (item) and same_xyz(xyz2pos(dfhack.items.getPosition(item)), pos) then
-	    table.insert(itemlist, item)
-	end
+        local item = df.item.find(id)
+        if (item) and same_xyz(xyz2pos(dfhack.items.getPosition(item)), pos) then
+            table.insert(itemlist, item)
+        end
     end
     return itemlist
 end
@@ -541,27 +538,28 @@ local function move_items_to_a_random_incoming_tile(itemlist, acceptable_tiles)
     local pos = acceptable_tiles[ math.random(#acceptable_tiles) ]
 
     for _, item in ipairs(itemlist) do
-	local oldpos = xyz2pos(dfhack.items.getPosition(item))
-	local success = dfhack.items.moveToGround(item, pos)
-	dprintf("Moving and forbidding just-dropped item %d at (%s) to (%s).%s",
-		item.id, pos2str(oldpos), pos2str(pos), (success) and '' or '  FAILED!' )
-	-- TODO maybe, consider it: only forbid if it's not a fort-created item.
-	if item.flags.on_ground then item.flags.forbid = true; end
+        local oldpos = xyz2pos(dfhack.items.getPosition(item))
+        local success = dfhack.items.moveToGround(item, pos)
+        dprintf("Moving and forbidding just-dropped item %d at (%s) to (%s).%s",
+                item.id, pos2str(oldpos), pos2str(pos), (success) and '' or '  FAILED!' )
+        -- TODO maybe, consider it: only forbid if it's not a fort-created item.
+        if item.flags.on_ground then item.flags.forbid = true; end
     end
 end
 
 
----@param entrypos coord?	# the original entrance location, parsed from the announcement.
----@return integer		# the number of units which were teleported.
+---@param entrypos coord?  # the original entrance location, parsed from the announcement.
+---@return integer         # the number of units which were teleported.
+---                        # does not count babies and other riders.
 local function assign_incoming_units_to_tiles(entrypos)
 
     local acceptable_tiles = find_acceptable_tiles()
     if #acceptable_tiles == 0 then
-	dprintf("find_acceptable_tiles() returned 0 tiles.")
-	printf("bring-the-army-home could not locate any tiles to place the returning army on!")
-	printf("Please create a Fishing Zone on the edge of the map, in the location where the")
-	printf("army should return.  (The Fishing Zone can be disabled to prevent fishing jobs.)")
-	return 0
+        dprintf("find_acceptable_tiles() returned 0 tiles.")
+        printf("bring-the-army-home could not locate any tiles to place the returning army on!")
+        printf("Please create a Fishing Zone on the edge of the map, in the location where the")
+        printf("army should return.  (The Fishing Zone can be disabled to prevent fishing jobs.)")
+        return 0
     end
 
     -- TODO maybe: there are issues when the entrypos is a member of the acceptable_tiles set.
@@ -571,139 +569,119 @@ local function assign_incoming_units_to_tiles(entrypos)
     -- debug logging, chasing an issue.  kind of slow, but only if debugging, so it's okay.
     -- (later) I think I've resolved this; turning off debug logging.
     for _,unit in ipairs(df.global.world.units.active) do
-	if (true) or (not debugging) then break; end
-	if (not dfhack.units.isKilled(unit) and unit.flags1.inactive and unit.flags1.on_ground) then
-	    dprintf("NOTICE: Before any teleports, inactive unit %d has flags1.on_ground set.", unit.id)
-	    dprintf("    isFortControlled=%s  %s", 
-		    dfhack.units.isFortControlled(unit) and 'true ' or 'false', 
-		    dfhack.units.getReadableName(unit))
-	end
+        if (true) or (not debugging) then break; end
+        if (not dfhack.units.isKilled(unit) and unit.flags1.inactive and unit.flags1.on_ground) then
+            dprintf("NOTICE: Before any teleports, inactive unit %d has flags1.on_ground set.", unit.id)
+            dprintf("    isFortControlled=%s  %s", 
+                    dfhack.units.isFortControlled(unit) and 'true ' or 'false', 
+                    dfhack.units.getReadableName(unit))
+        end
     end
     -- debug logging, chasing an issue.  slow, but only if debugging, so it's okay.
     -- (later) I think I've resolved this; turning off debug logging.
     for _, pos in ipairs(acceptable_tiles) do
-	if (true) or (not debugging) then break; end
-	local occ = dfhack.maps.getTileBlock(pos).occupancy[pos.x % 16][pos.y % 16]
-	if occ.unit_grounded then 
-	    dprintf("NOTICE: Before any teleports, tile (%s) has occ.unit_grounded set.", pos2str(pos))
-	    local a, ang, ag = 0, 0, 0
-	    for _, unit in ipairs(df.global.world.units.active) do
-		local unitpos = xyz2pos(dfhack.units.getPosition(unit))
-		if same_xyz(unitpos, pos) then
-		    dprintf("\tUnit %d is on this tile.  .flags1.inactive = %s, .flags1.on_ground = %s.",
-			unit.id, (unit.flags1.inactive) and 'true ' or 'false',
-			(unit.flags1.on_ground) and 'true ' or 'false' )
-		end
-		a = a + ((not unit.flags1.inactive) and 1 or 0)
-		ang = ang + ((not unit.flags1.inactive and not unit.flags1.on_ground) and 1 or 0)
-		ag = ag + ((not unit.flags1.inactive and unit.flags1.on_ground) and 1 or 0)
-	    end
-	    dprintf("\tThis tile had %d active, %d nongrounded, %d grounded units.", a, ang, ag)
-	end
+        if (true) or (not debugging) then break; end
+        local occ = dfhack.maps.getTileBlock(pos).occupancy[pos.x % 16][pos.y % 16]
+        if occ.unit_grounded then 
+            dprintf("NOTICE: Before any teleports, tile (%s) has occ.unit_grounded set.", pos2str(pos))
+            local a, ang, ag = 0, 0, 0
+            for _, unit in ipairs(df.global.world.units.active) do
+                local unitpos = xyz2pos(dfhack.units.getPosition(unit))
+                if same_xyz(unitpos, pos) then
+                    dprintf("\tUnit %d is on this tile.  .flags1.inactive = %s, .flags1.on_ground = %s.",
+                        unit.id, (unit.flags1.inactive) and 'true ' or 'false',
+                        (unit.flags1.on_ground) and 'true ' or 'false' )
+                end
+                a = a + ((not unit.flags1.inactive) and 1 or 0)
+                ang = ang + ((not unit.flags1.inactive and not unit.flags1.on_ground) and 1 or 0)
+                ag = ag + ((not unit.flags1.inactive and unit.flags1.on_ground) and 1 or 0)
+            end
+            dprintf("\tThis tile had %d active, %d nongrounded, %d grounded units.", a, ang, ag)
+        end
     end
 
     local processed = 0
-    local riders = {}	-- (HACK) teleport riders last.
 
     for _,unit in ipairs(df.global.world.units.active) do
 
-	-- okay, as a catch-all, we're going to process all .incoming, .inactive,
-	--     not .killed, fort-controlled units (whether or not they're at entrypos),
-	-- TODO maybe: remove this catch-all case?  it causes double-teleporting when two
-	--     arrivals occur in quick succession.
-	-- and ALSO all units at entrypos (if given),
-	--     even if they're on the map and active (i.e. the first unit to enter),
-	--     even if they're not fort-controlled (e.g. freed prisoners).
-	--
-	-- we do NOT care about military squad.  war animals don't have a squad.
-	--
-	if ( unit.flags1.incoming and unit.flags1.inactive and not unit.flags2.killed
-		and dfhack.units.isFortControlled(unit) )
-	    or ( (entrypos) and same_xyz(xyz2pos(dfhack.units.getPosition(unit)), entrypos) )
-	then
-	    if unit.flags1.rider then		-- (HACK) do riders last.
-		dprintf("NOTICE: unit %d has .flags1.rider set, delaying processing", unit.id)
-		table.insert(riders, unit)
-	    else
-		teleport_unit_to_a_random_incoming_tile(unit, entrypos, acceptable_tiles)
+        -- okay, as a catch-all, we're going to process all .incoming, .inactive,
+        --     not .killed, fort-controlled units (whether or not they're at entrypos),
+        -- TODO maybe: remove this catch-all case?  it causes double-teleporting when two
+        --     arrivals occur in quick succession.
+        -- and ALSO all units at entrypos (if given),
+        --     even if they're on the map and active (i.e. the first unit to enter),
+        --     even if they're not fort-controlled (e.g. freed prisoners).
+        --
+        -- we do NOT care about military squad.  war animals don't have a squad.
+        --
+        if ( unit.flags1.incoming and unit.flags1.inactive and not unit.flags2.killed
+                and dfhack.units.isFortControlled(unit) )
+            or ( (entrypos) and same_xyz(xyz2pos(dfhack.units.getPosition(unit)), entrypos) )
+        then
+            if not unit.flags1.rider then  -- dfhack.units.teleport deals with riders.
+                teleport_unit_to_a_random_incoming_tile(unit, entrypos, acceptable_tiles)
 --[[ removed because makeown does this.
-		-- (HACK) if an arriving unit is a Merchant, make them an Administrator instead.
-		-- This is because if a newly-arriving unit is a Merchant, they cannot be assigned
-		--   to the military and seemingly aren't a full member of the fort in other ways.
-		-- Administrator chosen semi-arbitrarily as a profession that won't interfere with
-		--   work assignments and will be overridden upon leveling a different skill.
-		if unit.profession == df.profession.MERCHANT then
-		    unit.profession = df.profession.ADMINISTRATOR
-		end
+                -- (HACK) if an arriving unit is a Merchant, make them an Administrator instead.
+                -- This is because if a newly-arriving unit is a Merchant, they cannot be assigned
+                --   to the military and seemingly aren't a full member of the fort in other ways.
+                -- Administrator chosen semi-arbitrarily as a profession that won't interfere with
+                --   work assignments and will be overridden upon leveling a different skill.
+                if unit.profession == df.profession.MERCHANT then
+                    unit.profession = df.profession.ADMINISTRATOR
+                end
 --]]
-		processed = processed + 1
-	    end
-	end
+                processed = processed + 1
+            end
+        end
     end
 
     -- special case: soldiers who already entered the map may have already dropped their spoils.
     if (entrypos) then
-	move_items_to_a_random_incoming_tile( get_items_on_this_tile(entrypos), acceptable_tiles )
-    end
-
-    -- (HACK) special-case move riders (babies) to their ridden unit's (mother's) new tile.
-    --   teleport them to mother even if mother's location is not in acceptable_tiles.
-    for _, unit in ipairs(riders) do
-	dprintf("NOTICE: Working on rider unit %d", unit.id)
-	local targetunit = df.unit.find( unit.relationship_ids.RiderMount )
-	dprintf("NOTICE: ridden unit is %d", (targetunit) and targetunit.id or -1)
-	if not targetunit then dprintf("WARNING: could not find ridden unit!"); end
-	local targetpos = (targetunit) and dfhack.units.getPosition(targetunit) or nil
-	if not targetpos then dprintf("WARNING: ridden unit has no targetpos."); end
-	if targetpos then
-	    dprintf("NOTICE: teleporting rider unit to %s.", pos2str(targetpos))
-	    teleport_unit_to_a_random_incoming_tile(unit, entrypos, acceptable_tiles, targetpos)
-	end
-	processed = processed + 1
+        move_items_to_a_random_incoming_tile( get_items_on_this_tile(entrypos), acceptable_tiles )
     end
 
     -- debug logging, chasing an issue.  kind of slow, but only if debugging, so it's okay.
     -- (later) I think I've resolved this; turning off debug logging.
     for _,unit in ipairs(df.global.world.units.active) do
-	if (true) or (not debugging) then break; end
-	if (not dfhack.units.isKilled(unit) and unit.flags1.inactive and unit.flags1.on_ground) then
-	    dprintf("NOTICE: After all teleports, inactive unit %d has flags1.on_ground set.", unit.id)
-	    dprintf("    isFortControlled=%s  %s", 
-		    dfhack.units.isFortControlled(unit) and 'true ' or 'false', 
-		    dfhack.units.getReadableName(unit))
-	end
+        if (true) or (not debugging) then break; end
+        if (not dfhack.units.isKilled(unit) and unit.flags1.inactive and unit.flags1.on_ground) then
+            dprintf("NOTICE: After all teleports, inactive unit %d has flags1.on_ground set.", unit.id)
+            dprintf("    isFortControlled=%s  %s", 
+                    dfhack.units.isFortControlled(unit) and 'true ' or 'false', 
+                    dfhack.units.getReadableName(unit))
+        end
     end
     -- debug logging, chasing an issue.  slow, but only if debugging, so it's okay.
     -- (later) I think I've resolved this; turning off debug logging.
     for _, pos in ipairs(acceptable_tiles) do
-	if (true) or (not debugging) then break; end
-	local occ = dfhack.maps.getTileBlock(pos).occupancy[pos.x % 16][pos.y % 16]
-	if occ.unit_grounded then 
-	    dprintf("NOTICE: After all teleports, tile (%s) has occ.unit_grounded set.", pos2str(pos))
-	    local a, ang, ag = 0, 0, 0
-	    for _, unit in ipairs(df.global.world.units.active) do
-		local unitpos = xyz2pos(dfhack.units.getPosition(unit))
-		if same_xyz(unitpos, pos) then
-		    dprintf("\tUnit %d is on this tile.  .flags1.inactive = %s, .flags1.on_ground = %s.",
-			unit.id, (unit.flags1.inactive) and 'true ' or 'false',
-			(unit.flags1.on_ground) and 'true ' or 'false' )
-		end
-		a = a + ((not unit.flags1.inactive) and 1 or 0)
-		ang = ang + ((not unit.flags1.inactive and not unit.flags1.on_ground) and 1 or 0)
-		ag = ag + ((not unit.flags1.inactive and unit.flags1.on_ground) and 1 or 0)
-	    end
-	    dprintf("\tThis tile had %d active, %d nongrounded, %d grounded units.", a, ang, ag)
-	end
+        if (true) or (not debugging) then break; end
+        local occ = dfhack.maps.getTileBlock(pos).occupancy[pos.x % 16][pos.y % 16]
+        if occ.unit_grounded then 
+            dprintf("NOTICE: After all teleports, tile (%s) has occ.unit_grounded set.", pos2str(pos))
+            local a, ang, ag = 0, 0, 0
+            for _, unit in ipairs(df.global.world.units.active) do
+                local unitpos = xyz2pos(dfhack.units.getPosition(unit))
+                if same_xyz(unitpos, pos) then
+                    dprintf("\tUnit %d is on this tile.  .flags1.inactive = %s, .flags1.on_ground = %s.",
+                        unit.id, (unit.flags1.inactive) and 'true ' or 'false',
+                        (unit.flags1.on_ground) and 'true ' or 'false' )
+                end
+                a = a + ((not unit.flags1.inactive) and 1 or 0)
+                ang = ang + ((not unit.flags1.inactive and not unit.flags1.on_ground) and 1 or 0)
+                ag = ag + ((not unit.flags1.inactive and unit.flags1.on_ground) and 1 or 0)
+            end
+            dprintf("\tThis tile had %d active, %d nongrounded, %d grounded units.", a, ang, ag)
+        end
     end
 
     if processed > 0 then 
-	dprintf("processed %d incoming %s.", processed, (processed == 1) and 'unit' or 'units')
+        dprintf("processed %d incoming %s.", processed, (processed == 1) and 'unit' or 'units')
     end
     return processed
 end
 
 
-last_announcement_id = last_announcement_id or -1	-- global, persistant.
+last_announcement_id = last_announcement_id or -1  -- global, persistant.
 
 
 -- in the case of a NEW announcement type GUEST_ARRIVAL subtype "have returned.",
@@ -1092,6 +1070,8 @@ but his unit-id is not in units.all, much less units.active.
 Unfortunately, this happened so long ago that I don't have a save WITHOUT the issue.
 
 Maybe the same bug.
+
+(much later: it's fine that his unit isn't in .units.all, it was just paged out to disk.
 
 --]]
 
