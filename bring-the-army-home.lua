@@ -1,150 +1,160 @@
---@module  = false	-- TODO is running as a module even useful?
+--Speeds up map entry returning from missions. Requires setup.
+--@module  = false        -- TODO
 --@enabled = false
 
 local utils = require('utils')
 local eventful = require('plugins.eventful')
 
 local do_profile = nil   -- can be nil, false, "time", or "call".  "call" is slow, potentially very slow.
+                         -- profiling requires my fork of the Pepperfish profiler,
 local debugging = true
 
---[====[
+local help = [====[
 bring-the-army-home
 ===================
-After a raid, returning soldiers will enter the map quickly instead 
-of trickling in one at a time.
+
+*Tags:* fort | auto | gameplay | military
+
+After a raid, returning soldiers will enter the map quickly
+instead of trickling in one at a time.
 
 In addition, all spoils items will be dropped and forbidden.
 
-This script requires a Fishing Zone with tiles on the edge of the map.
+This script requires a Fishing Zone with tiles on the edge
+of the map.
 
-Recommended: make the zone as big as 1x20 or even 1x30, on the map edge.
+Make the zone as big as 1x20 or even 1x30, on the map edge.
 The zone can be disabled to prevent fishing jobs.
 
-Only the earliest-created Fishing Zone with tiles on the map edge will 
-be used.
+Only the earliest-created Fishing Zone with tiles on the map
+edge will be used.
 
-After a raid, squad members who have not yet entered the map will have 
+When squads return from a mission, squad members will have
 their entry point set to a random location in the zone.
 
 Usage:
 
     bring-the-army-home
 
-For manual use.  Run this immediately after the 
-"Squad Name and others have returned." announcement.
-
+For manual use.  Run this immediately after the "Squad Name
+and others have returned." announcement.
 
     bring-the-army-home start
 
-The activation is new-unit and notification-based: Every time a new unit 
-is added to the map, the announcement queue is checked for a "Squad Name 
-and others have returned." announcement.  This triggers the script.
+The activation is new-unit and notification-based: Every
+time a new unit is added to the map, the announcement queue
+is checked for a "Squad Name and others have returned."
+announcement.  This triggers the script.
 
     bring-the-army-home stop
 
 Stop running the script, if previously started.
 ]====]
 
+--[==[
 
--- DONE when dropping items, first remove any job.  Store in stockpile/bookcase can be active.
+DONE when dropping items, first remove any job.  Store in stockpile/bookcase can be active.
 
--- TODO generalize to other report types (migrants).
+TODO generalize to other report types (migrants).
 
--- DONE find out what happens with messengers.
---   Messengers get an army_controller with goal type 19,
---   with data containing the hfids of the workers being requested.
---   The army_controller does not have squads, but does have an
---   entity id (to our group) and an 'epp id' (into our group's
---   historical_entity.positions.assignments[], which also has a 
---   backlink to the army_controller).
--- Messengers get an army when they leave the map.  The army links
---   to the relevant army_controller, has one member and no squads,
---   and the army.flags are all false.
--- When messengers return, they trigger a 301 announcement, with
---   "have returned" text.  It's handled just like an army return.
+DONE find out what happens with messengers.
+  Messengers get an army_controller with goal type 19,
+  with data containing the hfids of the workers being requested.
+  The army_controller does not have squads, but does have an
+  entity id (to our group) and an 'epp id' (into our group's
+  historical_entity.positions.assignments[], which also has a 
+  backlink to the army_controller).
+Messengers get an army when they leave the map.  The army links
+  to the relevant army_controller, has one member and no squads,
+  and the army.flags are all false.
+When messengers return, they trigger a 301 announcement, with
+  "have returned" text.  It's handled just like an army return.
 
--- DONE When messengers return with a worker who happens to be a
---   merchant, that worker cannot be assigned to the military,
---   and seemingly isn't a full member of the fort in other ways.
--- Removed because makeown fixes it.
+DONE When messengers return with a worker who happens to be a
+  merchant, that worker cannot be assigned to the military,
+  and seemingly isn't a full member of the fort in other ways.
+Removed because makeown fixes it.
 
--- TODO When messengers return with workers, the _workers_ do not
---   own the clothing they're wearing.  Fix that.
---   (later) same for the messengers, at least sometimes.
---   it's all similar to the handling of squaddies.
---   It's more obvious for the workers, as they immediately drop
---   all their clothing and walk naked to the new clothes they choose.
+TODO When messengers return with workers, the _workers_ do not
+  own the clothing they're wearing.  Fix that.
+  (later) same for the messengers, at least sometimes.
+  it's all similar to the handling of squaddies.
+  It's more obvious for the workers, as they immediately drop
+  all their clothing and walk naked to the new clothes they choose.
 
--- TODO When messengers return with a former site occupier, that
---   site occupier's weapon and shield are dropped and forbidden.
---   (Other former uniform items are handled normally by the game.)
---   (Sometimes.  TODO more research.)
+TODO When messengers return with a former site occupier, that
+  site occupier's weapon and shield are dropped and forbidden.
+  (Other former uniform items are handled normally by the game.)
+  (Sometimes.  TODO more research.)
 
--- DONE catch map load / unload.
+DONE catch map load / unload.
 
--- TODO maybe: Instead of random, equal units per tile ?
+TODO maybe: Instead of random, equal units per tile ?
 
--- DONT: keep a cache of already-processed unit-ids and tick time, and don't double-process them.
---   I dealt with this issue in a different way.
+DONT: keep a cache of already-processed unit-ids and tick time, and don't double-process them.
+  I dealt with this issue in a different way.
 
--- TODO maybe: I just found that squad_order_raid_sitest is where the exit point is defined.
---   could override that on close of the world map?  to force the army to exit on our zone.
+TODO maybe: I just found that squad_order_raid_sitest is where the exit point is defined.
+  could override that on close of the world map?  to force the army to exit on our zone.
 
--- note: squad return event is 301 GUEST_ARRIVAL
+note: squad return event is 301 GUEST_ARRIVAL
 
--- note: found out there are NO TICKS between the incoming units being placed
---   into units.active, and the announcement, and the first unit entering the map:
---	announcement GUEST_ARRIVAL at year 507 tick 77210
---	Squad4 and others have returned.
---	Triggered at tick 77210
---	At tick 77210, #units.active changed from 699 to 719
---	At this point, the squad leader was already on the map at the announcement.pos location.
--- (later) I also found that this is when the army is deleted.  likely the army_controller too.
---   so you can't study the army/army_controller to cross-check the incoming units.
---   (could grab any relevant info on every trigger.)
+note: found out there are NO TICKS between the incoming units being placed
+  into units.active, and the announcement, and the first unit entering the map:
+    announcement GUEST_ARRIVAL at year 507 tick 77210
+    Squad4 and others have returned.
+    Triggered at tick 77210
+    At tick 77210, #units.active changed from 699 to 719
+    At this point, the squad leader was already on the map at the announcement.pos location.
+(later) I also found that this is when the army is deleted.  likely the army_controller too.
+  so you can't study the army/army_controller to cross-check the incoming units.
+  (could grab any relevant info on every trigger.)
 
--- There are 100 ticks between waves, that is, attempts to enter.
---   DONE: could frequency be set as low as 100?  Is the 100 aligned to a boundary?
---	A: NO.  Probably 10.
--- However, there are not necessarily 100 ticks between the first unit to enter, and the next wave.
+There are 100 ticks between waves, that is, attempts to enter.
+  DONE: could frequency be set as low as 100?  Is the 100 aligned to a boundary?
+    A: NO.  Probably 10.
+However, there are not necessarily 100 ticks between the first unit to enter, and the next wave.
 
--- DONE (testing): Babies should not be removed from their mothers.
---	Mother 11046 Thikut Uz, SQ4 ; Baby 17054 Rith Laz.
---	On-map, active babies have flags1.rider set.
---	They also have relationship_ids.RiderMount == their mother's id.
---	mount_type == 1 (CARRIED).
---	TODO check if that is still true of .inactive babies.
---	On-map, active units being 'ridden' have flags1.ridden set.
---	No specific-ref, no general-ref.  No relationship_id for being ridden.
---   So if a unit has .rider, move them to the same square as their mount, I think.
---   Okay, another chance to resolve this.  Bembul Nil, SQ4 has a baby, Lorbam Erith.
---	Bembul: flags1.ridden true.
---	Lorbam: profession 104 Baby, profession2 104 Baby, flags1.rider true, mood 8 Baby,
---	    birth_year 514, birth_time 10284, relationship_ids.RiderMount mother's unit_id,
---	    mount_type 1 CARRIED, 3 owned items (somehow).
+DONE (testing): Babies should not be removed from their mothers.
+    Mother 11046 Thikut Uz, SQ4 ; Baby 17054 Rith Laz.
+    On-map, active babies have flags1.rider set.
+    They also have relationship_ids.RiderMount == their mother's id.
+    mount_type == 1 (CARRIED).
+    TODO check if that is still true of .inactive babies.
+    On-map, active units being 'ridden' have flags1.ridden set.
+    No specific-ref, no general-ref.  No relationship_id for being ridden.
+  So if a unit has .rider, move them to the same square as their mount, I think.
+  Okay, another chance to resolve this.  Bembul Nil, SQ4 has a baby, Lorbam Erith.
+    Bembul: flags1.ridden true.
+    Lorbam: profession 104 Baby, profession2 104 Baby, flags1.rider true, mood 8 Baby,
+        birth_year 514, birth_time 10284, relationship_ids.RiderMount mother's unit_id,
+        mount_type 1 CARRIED, 3 owned items (somehow).
 
--- TODO Babies.  It turns out that riders (including babies) are handled by dfhack.units.teleport().
---   no wonder I couldn't ever get my rider code to trigger.
---   remove my special-handling rider code.  find out what needs to happen, if anything.
+DONE Babies.  It turns out that riders (including babies) are handled by dfhack.units.teleport().
+  no wonder I couldn't ever get my rider code to trigger.
+  remove my special-handling rider code.  find out what needs to happen, if anything.
 
--- TODO maybe: it turns out that eventful.onUnitNewActive is pretty slow, because it scans
---   the entire active units vector every n ticks (based on frequency of course).
---   Consider switching back to a report-based trigger.
---   (OTOH, so many reports come in that that's slow as well.)
+TODO maybe: it turns out that eventful.onUnitNewActive is pretty slow, because it scans
+  the entire active units vector every n ticks (based on frequency of course).
+  Consider switching back to a report-based trigger.
+  (OTOH, so many reports come in that that's slow as well.)
+  flat-out callback every 10 ticks, and quickly check world.status.announcements?
 
--- TODO histfig.info.whereabouts.year and .year_tick.  verify that this is valid on army return,
---   then use it to catch units which entered and moved away from the entry tile.
+TODO possibility: histfig.info.whereabouts.year and .year_tick.
+  verify that this is valid on army return, then use it to catch the arriving units which
+  have already entered and moved away from the entry tile.
 
--- TODO should we be watching armies / army controllers?  to get the histfigs out of them?
---   we could report missing units.
---   rome wrote a plugin to do that, just use it instead.
+TODO should we be watching armies / army controllers?  to get the histfigs out of them?
+  we could report missing units.
+  rome wrote a plugin to do that, just use it instead.
 
--- TODO catch_newunits() is getting out of sync; it drifts from the preferred 10-tick boundary.
---   what can be done about that?
+TODO catch_newunits() is getting out of sync; it drifts from the preferred 10-tick boundary.
+  what can be done about that?
 
--- TODO instead of intercepting qerror(), run the entire script inside a dfhack.pcall(),
---   catch errors, stop_catching_newunits(), and re-throw it using error().  or qerror()?
+TODO instead of intercepting qerror(), run the entire script inside a dfhack.pcall(),
+  catch errors, stop_catching_newunits(), and re-throw it using error().  or qerror()?
 
+--]==]
 
 -- profiling requires my modified version of the Pepperfish profiler that has suspend/resume.
 if profiler then
@@ -155,11 +165,11 @@ if do_profile then
     profiler = require('profiler').newProfiler(do_profile)
 else
     profiler = {
-	start = function() end,
-	stop = function() end,
-	suspend = function() end,
-	resume = function() end,
-	report = function() end,
+        start = function() end,
+        stop = function() end,
+        suspend = function() end,
+        resume = function() end,
+        report = function() end,
     }
 end
 
@@ -176,7 +186,7 @@ end
 -- This is basically debug-printf().
 -- If a global or top-level local variable 'debugging' is false or does not exist, there is no output.
 -- If 'debugging' is true, this uses dfhack.printerr() to both print to the console (in red),
---	and log to the stderr.log file.
+--    and log to the stderr.log file.
 -- The debug library is used to find both the filename and the function name.
 --
 --         note: we need to cache this because dfhack.current_script_name() doesn't work inside callbacks.
@@ -190,7 +200,7 @@ function dprintf(format, ...)
     -- Lua 5.3 Reference Manual 4.9 lua_Debug and lua_getinfo.
     --   2 = immediate caller's frame, n = name info, t = istailcall, l = currentline.
     local info = debug.getinfo(2, "ntl")
-	    or { namewhat = "{no debug info}", name = "{no debug info}", istailcall = false, currentline = 0 }
+            or { namewhat = "{no debug info}", name = "{no debug info}", istailcall = false, currentline = 0 }
 
     -- we assume that info always contains details about a function, because that's what we asked for.
     -- Lua 5.3 Reference Manual 3.4.10:
@@ -216,7 +226,7 @@ local function __qerror(msg, lvl)
 end
 qerror = __qerror
 
----@alias   coord {x=integer, y=integer, z=integer}  # coercible into a df.coord .
+---@alias   coord {x:integer, y:integer, z:integer}  # coercible into a `df.coord`.
 ---@alias   strpos string  # x,y,z coords formatted as a string: "12,34,56"
 
 ---@param   x integer
@@ -231,6 +241,8 @@ local function xyz2str(x,y,z)
     return(string.format("%d,%d,%d",x,y,z))
 end
 
+---accepts true `df.coord`s or any table with x, y, z fields.
+---
 ---@param   pos coord
 ---@return  strpos
 local function pos2str(pos)
@@ -239,7 +251,7 @@ end
 
 ---returns a list of all of the tiles which are actually in the building, considering extents.
 ---
----note: only tested with building type df.building_civzonest .
+---note: only tested with building type `df.building_civzonest`.
 ---
 ---@param  building df.building
 ---@return coord[]
@@ -279,6 +291,7 @@ local function find_acceptable_tiles()
             local source = plotinfo.map_edge
 
             -- unfortunately, can't use builtin get_path_xyz() because the data is not set up as a path.
+            -- TODO: this would be a good use case for ipairs3() or ipairsN() (when I write it).
             for i = 0, #source.surface_x-1 do
                 local xx, yy, zz = source.surface_x[i], source.surface_y[i], source.surface_z[i]
                 is_on_map_edge_list[xyz2str(xx,yy,zz)] = true
@@ -313,6 +326,8 @@ end
 
 ---returns whether an item is assigned to a miner, woodcutter, or hunter.
 ---essentially works like dfhack.items.isSquadEquipment() .
+--   TODO: Actually, isSquadEquipment() just checks plotinfo.equipment.items_assigned[][].
+--     so this entire function is redundant.
 ---
 ---@param  item df.item
 ---@return boolean
@@ -340,6 +355,8 @@ local function drop_and_forbid_spoils(unit)
         if     dfhack.units.isActive(unit) and invitem.mode ~= df.inv_item_role_type.Hauled then return false; end
         if not dfhack.units.isActive(unit) and invitem.mode ~= df.inv_item_role_type.Weapon then return false; end
 
+        -- TODO: see comment above re isSquadEquipment in defintion for isMinerWoodcutterHunterEquipment.
+        --   It would be much better to check the entire squad, or this soldier, to see if the item is assigned.
         if dfhack.items.isSquadEquipment(item) then return false; end
         if isMinerWoodcutterHunterEquipment(item) then return false; end        -- could happen for Messengers.
 
@@ -681,6 +698,7 @@ end
 
 
 last_announcement_id = last_announcement_id or -1  -- global, persistant.
+-- TODO this needs to be cleared on fort-unload.
 
 
 -- in the case of a NEW announcement type GUEST_ARRIVAL subtype "have returned.",
@@ -692,92 +710,96 @@ local function check_for_our_announcement()
 
     -- scan through all announcements, starting from the bottom.
     --   we expect that there are very few announcements, so no performance hit.
+    -- TODO consider scanning backwards until we hit last_announcement_id,
+    --   then forward from the id after that.
 
     for _, report in ipairs(df.global.world.status.announcements) do
 
-	-- have we ever seen this report before?
-	if report.id > last_announcement_id then
+        -- have we ever seen this report before?
+        if report.id > last_announcement_id then
 
-	    last_announcement_id = report.id
-	    if (false) and (debugging) then
-		dprintf("new announcement: id %d  year %d  tick %d  type %s  text %s", 
-			report.id, report.year, report.time, df.announcement_type[report.type],
-			report.text)
-	    end
+            last_announcement_id = report.id
+            if (false) and (debugging) then
+                dprintf("new announcement: id %d  year %d  tick %d  type %s  text %s", 
+                        report.id, report.year, report.time, df.announcement_type[report.type],
+                        report.text)
+            end
 
-	    if report.type == df.announcement_type.GUEST_ARRIVAL then
-		if (true) and (debugging) then
-		    dprintf("announcement: id %d  year %d  tick %d  type %s  text %s", 
-			report.id, report.year, report.time, df.announcement_type[report.type],
-			report.text)
-		end
+            if report.type == df.announcement_type.GUEST_ARRIVAL then
+                if (true) and (debugging) then
+                    dprintf("announcement: id %d  year %d  tick %d  type %s  text %s", 
+                        report.id, report.year, report.time, df.announcement_type[report.type],
+                        report.text)
+                end
 
-		-- note: even the singular case gets plural text: "Squad1 have returned."
-		--   however, the text " has returned." is in the binary, so better safe than sorry.
-		-- aha, it does happen, when a single unit returns.
-		-- DONE: what happens with messengers?  A: treated just the same as an army return.
-		if string.match(report.text, "has returned.$")
-		    or string.match(report.text, "have returned.$")
-		then
-		    ---@type coord
-		    local pos = report.pos
-		    dprintf("It is an army return!  at (%s)  tick %d", pos2str(pos), report.time)
-		    if (report.time % 10) ~= 0 then
-			-- test a hypothesis:
-			dprintf("NOTICE: the announcement's time is not divisible by 10.  So that happens.")
-		    end
-		    return pos
-		end
-	    end
-	end
+                -- note: even the singular case gets plural text: "Squad1 have returned."
+                --   however, the text " has returned." is in the binary, so better safe than sorry.
+                -- aha, it does happen, when a single unit returns.
+                -- DONE: what happens with messengers?  A: treated just the same as an army return.
+                if string.match(report.text, "has returned.$")
+                    or string.match(report.text, "have returned.$")
+                then
+                    ---@type coord
+                    local pos = report.pos
+                    dprintf("It is an army return!  at (%s)  tick %d", pos2str(pos), report.time)
+                    if (report.time % 10) ~= 0 then
+                        -- test a hypothesis:
+                        dprintf("NOTICE: the announcement's time is not divisible by 10.  So that happens.")
+                    end
+                    return pos
+                end
+            end
+        end
     end
     return nil
 end
 
 
-catch_newunits_enabled = catch_newunits_enabled or false	-- global, persistant.
+catch_newunits_enabled = catch_newunits_enabled or false        -- global, persistant.
 local frequency = 10
 
 
 local debugging_modulus = 0
 local function catch_newunits(unit_id)  --asynchronous callback
+    local _ENV = _ENV                   -- pull in to ensure access to globals.
+    local debugging = debugging         -- pull in to support dprintf.
     profiler:resume()
 
     if (debugging) then
-	local current_modulus = (dfhack.world.ReadCurrentTick() % frequency)
-	if current_modulus ~= 0 and current_modulus ~= debugging_modulus then
-	    dprintf("NOTICE: ticks modulo %d is not 0; value is %d; suppressing further reports.",
-		frequency, current_modulus)
-	    debugging_modulus = current_modulus
-	end
+        local current_modulus = (dfhack.world.ReadCurrentTick() % frequency)
+        if current_modulus ~= 0 and current_modulus ~= debugging_modulus then
+            dprintf("NOTICE: ticks modulo %d is not 0; value is %d; suppressing further reports.",
+                frequency, current_modulus)
+            debugging_modulus = current_modulus
+        end
     end
 
     -- TODO counting for status reporting.
 
     -- TODO I don't think it's worth testing these.
     if not catch_newunits_enabled then
-	stop_catching_newunits()
-	dprintf("unexpectedly triggered with catch_newunits_enabled==false")
-	return
+        stop_catching_newunits()
+        dprintf("unexpectedly triggered with catch_newunits_enabled==false")
+        return
     end
     if not dfhack.isWorldLoaded() then
-	stop_catching_newunits()
-	dprintf("unexpectedly triggered without a world loaded.")
-	return
+        stop_catching_newunits()
+        dprintf("unexpectedly triggered without a world loaded.")
+        return
     end
     if not dfhack.isMapLoaded() then
-	stop_catching_newunits()
-	dprintf("unexpectedly triggered without a map loaded.")
-	return
+        stop_catching_newunits()
+        dprintf("unexpectedly triggered without a map loaded.")
+        return
     end
     if not dfhack.isSiteLoaded() then
-	stop_catching_newunits()
-	dprintf("unexpectedly triggered without a player fort loaded.")
-	return
+        stop_catching_newunits()
+        dprintf("unexpectedly triggered without a player fort loaded.")
+        return
     end
 
     if (false) and (debugging) then
-	dprintf("Caught a new unit: id %d  tick %d", unit_id, dfhack.world.ReadCurrentTick())
+        dprintf("Caught a new unit: id %d  tick %d", unit_id, dfhack.world.ReadCurrentTick())
     end
 
     ---@type df.coord?
@@ -785,20 +807,20 @@ local function catch_newunits(unit_id)  --asynchronous callback
 
     -- if not nil, then we should trigger.
     if (pos) then
-	dfhack.world.SetPauseState(true)
-	print("\a")	-- ring the bell
+        dfhack.world.SetPauseState(true)
+        print("\a")        -- ring the bell
 
-	-- TODO this would be the place to check that all squad members arrived home safely.
-	--   (or, you know, were legitimately killed horribly by a demon....)
+        -- TODO this would be the place to check that all squad members arrived home safely.
+        --   (or, you know, were legitimately killed horribly by a demon....)
 
-	-- DONE should we redo find_acceptable_tiles() on each arrival?
-	--   in case of new constructions, bridges, newly-grown trees, etc....
-	--   yes, did this in assign_incoming_units_to_tiles()
+        -- DONE should we redo find_acceptable_tiles() on each arrival?
+        --   in case of new constructions, bridges, newly-grown trees, etc....
+        --   yes, did this in assign_incoming_units_to_tiles()
 
-	if assign_incoming_units_to_tiles(pos) == 0 then
-	    -- TODO report that no units could be teleported?
-	    -- TODO somehow report if any teleports failed?
-	end
+        if assign_incoming_units_to_tiles(pos) == 0 then
+            -- TODO report that no units could be teleported?
+            -- TODO somehow report if any teleports failed?
+        end
     end
 
     profiler:suspend()
@@ -808,7 +830,7 @@ end
 -- note: onUnitNewActive is UNDOCUMENTED.
 --
 local current_script_name = dfhack.current_script_name()
-local bring_the_army_home_KEY = current_script_name	-- globally unique across all scripts.
+local bring_the_army_home_KEY = current_script_name        -- globally unique across all scripts.
 local synchronization_timer_id = nil
 local function start_catching_newunits()
     -- DONE: we don't need to check every tick; we just need to do our stuff before the
@@ -821,25 +843,25 @@ local function start_catching_newunits()
     -- TODO: we're losing synchronization for unknown reasons, should we re-sync in catch_newunits?  how?
 
     dprintf("on entry, current tick is %d; tick modulo frequency is %d.",
-	    dfhack.world.ReadCurrentTick(), (dfhack.world.ReadCurrentTick() % frequency) )
+            dfhack.world.ReadCurrentTick(), (dfhack.world.ReadCurrentTick() % frequency) )
 
-    if (dfhack.world.ReadCurrentTick() % frequency) ~= 0 then	-- skip a bit, brother.
-	local delay = frequency - (dfhack.world.ReadCurrentTick() % frequency)
-	dprintf("setting a timeout to call this function again in %d ticks.", delay)
-	synchronization_timer_id = dfhack.timeout( delay, 'ticks', 
-		function() start_catching_newunits(); end )
-	return
+    if (dfhack.world.ReadCurrentTick() % frequency) ~= 0 then        -- skip a bit, brother.
+        local delay = frequency - (dfhack.world.ReadCurrentTick() % frequency)
+        dprintf("setting a timeout to call this function again in %d ticks.", delay)
+        synchronization_timer_id = dfhack.timeout( delay, 'ticks', 
+                function() start_catching_newunits(); end )
+        return
     end
 
-    synchronization_timer_id = nil	-- if we reach this point, either we never invoked a timer
-					--   or the timer just triggered and therefore expired.
+    synchronization_timer_id = nil        -- if we reach this point, either we never invoked a timer
+                                        --   or the timer just triggered and therefore expired.
 
     -- 2nd parameter is frequency.  1 == every tick, 16 == every 16 ticks.
     --   16 ticks is too many; we can miss the first incoming unit.
     eventful.enableEvent(eventful.eventType.UNIT_NEW_ACTIVE, frequency)
 
     eventful['onUnitNewActive'][bring_the_army_home_KEY] = 
-	    function(unit_id) catch_newunits(unit_id); end
+            function(unit_id) catch_newunits(unit_id); end
 
     catch_newunits_enabled = true
 
@@ -873,13 +895,13 @@ end
     profiler:stop()
 
     if do_profile then
-	-- TODO it would be best to use the script's full path.  But we don't know its base path.
-	local outfile = io.open( current_script_name:match( '([^/]*)$' ) .. ".txt", "w+" )
-	success, err = pcall( function() profiler:report( outfile );end )
-	if not success then
-	    dprintf("Error calling profiler:report()\n%s", err)
-	end
-	outfile:close()
+        -- TODO it would be best to use the script's full path.  But we don't know its base path.
+        local outfile = io.open( current_script_name:match( '([^/]*)$' ) .. ".txt", "w+" )
+        success, err = pcall( function() profiler:report( outfile );end )
+        if not success then
+            dprintf("Error calling profiler:report()\n%s", err)
+        end
+        outfile:close()
     end
 end
 
@@ -890,10 +912,10 @@ end
 --
 local function catch_events(event_id)
     if event == SC_MAP_UNLOADED then
-	dprintf("handling SC_MAP_UNLOADED.")
-	stop_catching_newunits()
-	dfhack.onStateChange[GLOBAL_KEY] = nil
-	last_announcement_id = -1
+        dprintf("handling SC_MAP_UNLOADED.")
+        stop_catching_newunits()
+        dfhack.onStateChange[GLOBAL_KEY] = nil
+        last_announcement_id = -1
     end
 end
 
@@ -910,17 +932,17 @@ local function main(...)
     -- TODO real parsing.
     local cmd = ...
 
-    if cmd == 'stop' then		-- TODO after module-izing, this will be redundant.
-	stop_catching_newunits()
+    if cmd == 'stop' then                -- TODO after module-izing, this will be redundant.
+        stop_catching_newunits()
 
     elseif cmd == 'start' then
-	start_catching_newunits()
+        start_catching_newunits()
 
     else
-	local pos = check_for_our_announcement()		-- may return nil
-	if assign_incoming_units_to_tiles(pos) == 0 then	-- if pos is nil?  run it anyway.
-	    print('There were no incoming units!')
-	end
+        local pos = check_for_our_announcement()                -- may return nil
+        if assign_incoming_units_to_tiles(pos) == 0 then        -- if pos is nil?  run it anyway.
+            print('There were no incoming units!')
+        end
     end
 end
 
@@ -969,65 +991,65 @@ I sent 10 squads on a mission; about 95 units.  No war animals.
 5 did not return.  Exploring this with DFHack:
 A returner's HF has
     .info.whereabouts:
-	.state		1 Settler
-	.site_id	1851		my site
-	.subregion_id	-1
-	.feature_layer_id -1
-	.army_id	-1
-	.cz_id		(some world_object_data, all 0's)
-	.cz_bld_num	-1
-	.abs_smm_x	1504		this is presumably in my fort.
-	.abs_smm_y	1969
-	.flags
-	    .XY_LOCATION_SMM_LEVEL false
-	.flags
-	    .XY_LOCATION_IN_SUL false
-	.body_state	0 (Active)
-	.body_state_id	-1
-	.body_state_sub_id -1
-	.year		508		current year.
-	.year_tick	153920		this was the tick of the 'has returned' message.
+        .state          1 Settler
+        .site_id        1851            my site
+        .subregion_id   -1
+        .feature_layer_id -1
+        .army_id        -1
+        .cz_id          (some world_object_data, all 0's)
+        .cz_bld_num     -1
+        .abs_smm_x      1504            this is presumably in my fort.
+        .abs_smm_y      1969
+        .flags
+            .XY_LOCATION_SMM_LEVEL false
+        .flags
+            .XY_LOCATION_IN_SUL false
+        .body_state     0 (Active)
+        .body_state_id  -1
+        .body_state_sub_id -1
+        .year           508             current year.
+        .year_tick      153920          this was the tick of the 'has returned' message.
 
 A non-returner's HF has:
     .info.whereabouts:
-	.state		1 Settler
-	.site_id	1851
-	.subregion_id	-1
-	.feature_layer_id -1
-	.army_id	-1
-	.cz_id		1362742 (some world_object_data, all 0's)
-	.cz_bld_num	-1
-	.abs_smm_x	1504		this is presumably in my fort.
-	.abs_smm_y	1969
-	.flags
-	    .XY_LOCATION_SMM_LEVEL false
-	.flags
-	    .XY_LOCATION_IN_SUL false
-	.body_state	0 (Active)
-	.body_state_id	-1
-	.body_state_sub_id -1
-	.year		508		current year.
-	.year_tick	153920		this was the tick of the 'has returned' message.
+        .state          1 Settler
+        .site_id        1851
+        .subregion_id   -1
+        .feature_layer_id -1
+        .army_id        -1
+        .cz_id          1362742 (some world_object_data)
+        .cz_bld_num     -1
+        .abs_smm_x      1504            this is presumably in my fort.
+        .abs_smm_y      1969
+        .flags
+            .XY_LOCATION_SMM_LEVEL false
+        .flags
+            .XY_LOCATION_IN_SUL false
+        .body_state      0 (Active)
+        .body_state_id   -1
+        .body_state_sub_id -1
+        .year           508             current year.
+        .year_tick      153920          this was the tick of the 'has returned' message.
 
 So exactly the same.
 
 The same non-returner's unit has:
-	.pos		(0, 60, 43)	This was the army-return entry location.
-	.idle_area	same
-	.path		none
-	.flags1
-	    .inactive	true
-	    .incoming	true
-	    .on_ground	true
+        .pos            (0, 60, 43)     This was the army-return entry location.
+        .idle_area      same
+        .path           none
+        .flags1
+            .inactive   true
+            .incoming   true
+            .on_ground  true
 
 This unit IS in units.active.  That really surprised me.
 
 Another stuck incomer spot-checked at the same data.
 
 The map tile.occupancy for the entry point has:
-	.building	0
-	.unit		true		(THIS IS WRONG!)
-	.unit_grounded	false
+        .building       0
+        .unit           true            (THIS IS WRONG!)
+        .unit_grounded  false
 
 Manually toggling block[0%16][60%16].occupancy.unit to false let a unit enter.
 The unit appeared to crawl in.
@@ -1096,14 +1118,14 @@ Its .members is populated as units leave the map;
     so it can't be directly used to detect if all units have left the map.
     I really don't see a 'units which are leaving for this army' list.
     I guess you can
-	(a) consult army->controller.assigned_squads to see if any members are still in units.active,
-	(b) walk units.active looking for war animals with .PetOwner of those squad members are 
-		still in units.active.
-	note that you can't test flags1.inactive; it is set false even when units are not on the map.
-	note that as a war animal leaves the map, .relationship_ids.PetOwner is set to -1,
-		and .owner_type gets set to .DEAD_OWNER.
-	ah ha, a war animal's histfig has a .histfig_links pf type histfig_hf_link_pet_ownerst.
-	the owner's histfig.histfig_links doesn't have a back-link.
+        (a) consult army->controller.assigned_squads to see if any members are still in units.active,
+        (b) walk units.active looking for war animals with .PetOwner of those squad members are 
+                still in units.active.
+        note that you can't test flags1.inactive; it is set false even when units are not on the map.
+        note that as a war animal leaves the map, .relationship_ids.PetOwner is set to -1,
+                and .owner_type gets set to .DEAD_OWNER.
+        ah ha, a war animal's histfig has a .histfig_links pf type histfig_hf_link_pet_ownerst.
+        the owner's histfig.histfig_links doesn't have a back-link.
 
 note: it seems that army.members is sorted by .nemesis_id, not by just appending entries as they leave.
 
@@ -1129,20 +1151,20 @@ crazy, except that they're looking for the situation where the army doesn't have
 
 
     army_controller.data[union type goal.SITE_INVASION].goal_site_invasion.camp_profile[*] ->
-	army_camp_profile.army_id
+        army_camp_profile.army_id
 is sometimes valid, sometimes nonexistant.  also fix/stuck_squads implies it's sometimes a
-	sub-army_controller with .master_id -> a different army_controller ?  haven't seen that.
+        sub-army_controller with .master_id -> a different army_controller ?  haven't seen that.
 
 There's only ~3000 armies, that can be searched occasionally.  not every tick, obviously.
 
 Given an arbitrary army, how do you figure out if it's one of our armies?
     army.squads is empty.
     army.members[*] -> army_nemesisst.nemesis_id -> nemesis_record.unit (not nil) -> 
-	unit.military.squad_id
-	    matches one of plotinfo.group_id -> historical_entity.squads
+        unit.military.squad_id
+            matches one of plotinfo.group_id -> historical_entity.squads
   or
     army.controller -> army_controller.assigned_squads[] 
-	    matches one of plotinfo.group_id -> historical_entity.squads
+            matches one of plotinfo.group_id -> historical_entity.squads
   or
     army.controller (not nil) -> army_controller.entity_id == plotinfo.group_id
   that one looks best.
