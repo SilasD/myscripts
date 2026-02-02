@@ -43,8 +43,7 @@ and others have returned." announcement.  This triggers the script.
     bring-the-army-home stop
 
 Stop running the script, if previously started.
-
---]====]
+]====]
 
 
 -- DONE when dropping items, first remove any job.  Store in stockpile/bookcase can be active.
@@ -472,7 +471,7 @@ local function teleport_unit_to_a_random_incoming_tile(unit, entrypos, acceptabl
         pos = acceptable_tiles[ math.random(#acceptable_tiles) ]
     until not same_xyz(entrypos, pos)
 
-    dprintf("%sTeleporting %s unit %d to arrive at (%s)", (unit.flags1.inactive) and 'inactive' or 'active',
+    dprintf("Teleporting %s unit %d to arrive at (%s)", (unit.flags1.inactive) and 'inactive' or 'active',
             unit.id, pos2str(pos) )
 
     -- .flags1.inactive units are assigned a map tile, but do not yet occupy it.
