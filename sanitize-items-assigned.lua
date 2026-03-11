@@ -1,13 +1,26 @@
-local fix = ({...})[1] == 'fix'		-- TODO use real command-line parameters
 
-local utils=require('utils')
+-- TODO I believe this does NOT take into account the fact that items can be assigned
+-- to unoccupied positions' uniforms.
+
+local check_assigned_items = true	-- sanity-check squad_position.equipment.assigned_items ?
+local fix_items_assigned = ({...})[1] == 'fix'		-- TODO use real command-line parameters
+
+local utils = require('utils')
 local world = df.global.world
 local plotinfo = (df.global._fields.plotinfo ~= nil) and df.global.plotinfo or df.global.ui
 
 
-
 local function printf(...)
     print(string.format(...))
+end
+
+
+local stats = {}
+
+---@param stat string
+---@param delta integer?
+local function record(stat, delta)
+    stats[stat] = (stats[stat] or 0) + (delta or 1)
 end
 
 
@@ -18,7 +31,7 @@ end
 ---@return df.squad[]
 function get_filtered_squads(test)
     ---@type (df.squad.id|integer)[]
-    local squad_ids = df.historical_entity.find(plotinfo.group_id).squads
+    local squad_ids = plotinfo.main.fortress_entity.squads
     ---@type df.squad[]
     local squads = {}
 
@@ -56,9 +69,8 @@ end
 --   It should return true iff the unit should be included in the returned list.
 --   The callback is only called for valid, existing units.
 --
--- Caution!  This will happily return units that are not in world.units.active, i.e.
---   not on the map.  If you only want active units, you must check e.g. .isActive()
---   in your test callback.
+-- Caution!  This will happily return units that are not in the fort / not on the map.
+--   If you only want active units, you must check e.g. .isActive() in your test callback.
 --
 ---@param  squad df.squad
 ---@param  test fun(squad:df.squad, position:df.squad_position, unit:df.unit):boolean
@@ -80,18 +92,31 @@ end
 
 
 --------------------------------------------------------------------------------------------------------
--- Given a squad, returns a list of all soldiers in that squad,
+-- Given a squad, returns a list of all soldiers in that squad who are present in the fort,
 --   and a corresponding list of their positions.
 --
 ---@param  squad df.squad
 ---@return df.unit[], df.squad_position[]
-local function get_all_soldiers_in_squad(squad)
+local function get_active_soldiers_in_squad(squad)
     ---@param squad df.squad
     ---@param position df.squad_position
     ---@param unit df.unit
     ---@return boolean
     local function test(squad, position, unit)
-        return true
+        return dfhack.units.isActive(unit)
+    end
+
+    return get_filtered_soldiers_in_squad(squad, test)
+end
+
+
+local function get_inactive_soldiers_in_squad(squad)
+    ---@param squad df.squad
+    ---@param position df.squad_position
+    ---@param unit df.unit
+    ---@return boolean
+    local function test(squad, position, unit)
+        return not dfhack.units.isActive(unit)
     end
 
     return get_filtered_soldiers_in_squad(squad, test)
@@ -99,95 +124,122 @@ end
 
 
 --------------------------------------------------------------------------------------------------------
----@param spos df.squad_position
----@return (df.item.id|integer)[]  -- sorted
-local function get_squad_position_assigned_item_ids(spos)
-    local ids = {}  -- sorted
-    
-    local eq = spos.equipment
-    local uni = eq.uniform
-    local assi = eq.assigned_items
-    for k1, v1 in pairs(uni) do
-        for _, v2 in ipairs(v1) do
-            for _, id in ipairs(v2.assigned) do
-                utils.insert_sorted(ids, id)
-            end
-        end
+---@param squad_position  df.squad_position
+---@return (df.item.id|integer)[]  -- unsorted, not deduplicated, does not contain -1's.
+local function get_squad_position_assigned_item_ids(squad_position)
+    local ids = {}
+
+    local function add_id(id)
+	-- TODO maybe: check for duplicates here?  Gauntlets and boots could potentially duplicate.
+	if id ~= -1 then table.insert(ids, id); end
+    end
+
+    -- get all items out of the triply-nested structure
+    for _, squad_uniform_specs in pairs(squad_position.equipment.uniform) do
+	for _, squad_uniform_spec in ipairs(squad_uniform_specs) do
+	    for _, id in ipairs(squad_uniform_spec.assigned) do
+		add_id(id)
+	    end
+	end
     end
     for _, special in ipairs({"quiver", "backpack", "flask"}) do
-        local id = eq[special]
-        if id ~= -1 then
-            utils.insert_sorted(ids, id)
-        end
+	add_id(squad_position.equipment[special])
     end
-    local fix = false  -- override fixing while testing uniform-unstick
+
+    if not check_assigned_items then return ids; end
+
+    -- sanity-check and optionally fix .assigned_items
+    local assigned_items = squad_position.equipment.assigned_items
     local bad = false
-    local z1 = utils.clone(assi)
-    local z2 = utils.clone(assi)
-    table.sort(z2)
-    for i, _ in ipairs(z1) do
-        if z1[i] ~= z2[i] then
-            print("WARNING: .assigned_items not sorted%s", (fix) and "; fixing" or "")
-            bad = true
-            break
-        end
+    local ids2 = utils.clone(ids)
+    table.sort(ids2)  -- ignore the possibility of duplicates
+
+    repeat  -- runs once; this idiom allows break to work
+	-- TODO maybe: give a more informative warning (unit name, squad name, position number).
+	local warning = string.format("WARNING: squad position %s .assigned_items:", tostring(squad_position))
+	local fixing = (fix_items_assigned) and "; fixing" or ""
+
+	for i = 0, #assigned_items-2 do  -- verify sorted
+	    if not (assigned_items[i] < assigned_items[i+1]) then
+		bad = true
+		record("AI_UNSORTED")
+		printf("%s is not sorted%s", warning, fixing)
+		break
+	    end
+	end
+	if #assigned_items ~= #ids2 then  -- verify correct length
+	    bad = true
+	    record("AI_BADLENGTH")
+	    printf("%s length is not equal to proper length%s", warning, fixing)
+	    break
+	end
+	for i = 0, #assigned_items-1 do  -- verify correct contents
+	    if assigned_items[i] ~= ids2[i+1] then  -- comparing a 0-based C++ vector with a 1-based Lua list.
+		bad = true
+		record("AI_BADCONTENTS")
+		printf("%s contents do not match proper contents%s", warning, fixing)
+		break
+	    end
+	end
+    until true
+
+    if (bad) and (fix_items_assigned) then
+	assigned_items:resize(0)
+	assigned_items:assign(ids2)  -- auto-vivification is so cool.
     end
-    if #assi ~= #ids then 
-        printf("WARNING: .assigned_items length mismatch %d:%d %s", #assi, #ids,
-		(fix) and "; fixing" or "")
-        bad = true
-    else
-        for i,id in ipairs(ids) do
-            if z1[i] ~= id then
-                printf("WARNING: .assigned_items id mismatch%s", (fix) and "; fixing" or "")
-                bad = true
-                break
-            end
-        end
-    end
-    if (fix) and (bad) then
-        assi:resize(0)
-        for _, id in ipairs(ids) do
-            utils.insert_sorted(assi, id)
-        end
-    elseif (bad) then
-	printf("WARNING: .assigned_items vector was bad; NOT FIXED")
-    end
+
     return ids
 end
 
 
 --------------------------------------------------------------------------------------------------------
----@return (df.item.id|integer)[]  -- sorted
-local function collect_all_ids_in_uniform()
-    local ids_in_uniforms = {}  -- sorted
+--
+-- Does not return items assigned to units that are away on a mission.
+--
+--  TODO items assigned to units that are away on a mission may be in-play if they left without wearing them.
+--
+---@return (df.item.id|integer)[], (df.item.id|integer)[]
+--	item ids which are in uniforms	sorted, deduplicated;
+--	raw item ids in uniforms	unsorted, not deduplicated;
+--	raw item ids to ignore		unsorted, not deduplicated.
+local function collect_all_actually_assigned_items()
+    local raw_ids = {}	-- item ids from each .isActive() squad position, squad ammo, and hunter weapons/ammo.
+    local ignore = {}	-- item ids from not .isActive() squad positions; that is, units not in the fort.
+
+    function table_append(source, dest)
+	if not (type(source) == 'table' or source._kind == 'container') then error(); end
+	if type(dest) ~= 'table' then error(); end
+	local t = utils.clone(source)  -- coerce to Lua table
+	table.move(t, 1, #t, #dest+1, dest)
+    end
+
     for _, squad in ipairs(get_all_squads()) do
-        for i, spos in ipairs(squad.positions) do
-            local ids = get_squad_position_assigned_item_ids(spos)
-            for _, id in ipairs(ids) do
-                if not utils.insert_sorted(ids_in_uniforms, id) then
-                    printf("Warning: double id %d", id)
-                    -- don't try to fix; that's not this scripts job.
-                end
-            end
-        end
-        for _, id in ipairs(squad.ammo.ammo_items) do
-            if not utils.insert_sorted(ids_in_uniforms, id) then
-                printf("Warning: double id %d in squad ammo", id)
-            end
-        end
+	local _, positions = get_active_soldiers_in_squad(squad)
+	for i, spos in ipairs(positions) do
+	    table_append(get_squad_position_assigned_item_ids(spos), raw_ids)
+	end
+	table_append(squad.ammo.ammo_items, raw_ids)
+
+	local _, positions = get_inactive_soldiers_in_squad(squad)
+	for i, spos in ipairs(positions) do
+	    table_append(get_squad_position_assigned_item_ids(spos), ignore)
+	end
     end
-    for _, id in ipairs(plotinfo.equipment.work_weapons) do
-        if not utils.insert_sorted(ids_in_uniforms, id) then
-            printf("Warning: double id %d in hunter weapons", id)
-        end
+    table_append(plotinfo.equipment.work_weapons, raw_ids)
+    table_append(plotinfo.equipment.ammo_items, raw_ids)
+
+    -- deduplicate -- is there a better way?  utils.insert_sorted()?  But that's implemented in Lua too.
+    local ids_map = {}
+    local all_ids = {}
+    for _, id in ipairs(raw_ids) do
+	ids_map[id] = true
     end
-    for _, id in ipairs(plotinfo.equipment.ammo_items) do
-        if not utils.insert_sorted(ids_in_uniforms, id) then
-            printf("Warning: double id %d in hunter ammo", id)
-        end
+    for k, _ in pairs(ids_map) do
+	table.insert(all_ids, k)
     end
-    return ids_in_uniforms
+
+    table.sort(all_ids)
+    return all_ids, raw_ids
 end
 
 
@@ -198,30 +250,31 @@ local function verify_uniforms_un_assigned(ids)
     local equ = plotinfo.equipment.items_unassigned
     local IN_PLAY = world.items.other.IN_PLAY
     local gRD = dfhack.items.getReadableDescription
+
     for _, id in ipairs(ids) do
         local item = utils.binsearch(IN_PLAY, id, 'id')
         -- TODO refactor; there's duplicated code
         if item then
 	    if item.flags.in_building then
 		printf("WARNING! item %d %s is .in_building%s",
-		    id, gRD(item), (fix) and "; CAN'T FIX" or "")
+		    id, gRD(item), (fix_items_assigned) and "; CAN'T FIX" or "")
 	    end
             local type = df.item_type[item:getType()]
             local _, in_eqa, _ = utils.binsearch(eqa[type], id)
             local _, in_equ, _ = utils.binsearch(equ[type], id)
             if not in_eqa and in_equ then
                 printf("Warning: item %d %s is not in .items_assigned and is in .items_unassigned%s",
-                    id, gRD(item), (fix) and "; fixing" or "")
+                    id, gRD(item), (fix_items_assigned) and "; fixing" or "")
             elseif not in_eqa and item.flags.artifact then
                 -- nothing!  it turns out that pseudo-artifacts are not in eqa, and that's okay.
             elseif not in_eqa then
                 printf("Warning: item %d %s is not in .items_assigned%s",
-                    id, gRD(item), (fix) and "; fixing" or "")
+                    id, gRD(item), (fix_items_assigned) and "; fixing" or "")
             elseif in_equ then
                 printf("Warning: item %d %s is in .items_unassigned%s",
-                    id, gRD(item), (fix) and "; fixing" or "")
+                    id, gRD(item), (fix_items_assigned) and "; fixing" or "")
             end
-            if fix then
+            if fix_items_assigned then
                 utils.insert_sorted(eqa[type], id)
                 utils.erase_sorted(equ[type], id)
             end
@@ -238,17 +291,17 @@ local function verify_uniforms_un_assigned(ids)
             local _, in_equ, _ = utils.binsearch(equ[type], id)
             if in_eqa and in_equ then
                 printf("WARNING: item %d %s is not in fort but is in both .items_assigned and .items_unassigned%s",
-                    id, gRD(item), (fix) and "; fixing" or "")
+                    id, gRD(item), (fix_items_assigned) and "; fixing" or "")
             elseif in_eqa then
                 printf("WARNING: item %d %s is not in fort but is .items_assigned%s",
-                    id, gRD(item), (fix) and "; fixing" or "")
+                    id, gRD(item), (fix_items_assigned) and "; fixing" or "")
             elseif in_equ then
                 printf("WARNING: item %d %s is not in fort but is .items_unassigned%s",
-                    id, gRD(item), (fix) and "; fixing" or "")
+                    id, gRD(item), (fix_items_assigned) and "; fixing" or "")
             else
                 printf("Warning: item %d is not in fort", id)
             end
-            if fix then
+            if fix_items_assigned then
                 utils.erase_sorted(eqa[type], id)
                 utils.erase_sorted(equ[type], id)
             end
@@ -262,7 +315,9 @@ end
 ---@param ids (df.item.id|integer)[]  -- must be sorted
 local function verify_items_un_assigned(ids)
 
-    -- TODO these comments are old
+    -- TODO this needs rewritten and refactored for clarity.
+
+    -- TODO these comments are old and do not describe the current algorithm.
     -- okay, so now we need to walk .items_unassigned.* and .items.other.* at the same time,
     --   checking that, for every nonzero .items_unassigned.* vector,
     --   for every item in the matching .items.other.* vector : check that its item_id
@@ -301,7 +356,7 @@ local function verify_items_un_assigned(ids)
 	for _, id in ipairs(eqa[item_type]) do table.insert(teqa, id); end
 	for _, id in ipairs(teqa) do
 
-	    local fixing = (fix) and "; fixing" or ""
+	    local fixing = (fix_items_assigned) and "; fixing" or ""
 	    local desc = ""
 	    local item = utils.binsearch(IN_PLAY, id, 'id')
 	    if item then
@@ -315,29 +370,32 @@ local function verify_items_un_assigned(ids)
 	    if utils.binsearch(equ[item_type], id) then
 		printf("Warning: %s is in both .items_assigned and .items_unassigned%s",
 			desc, fixing)
-		if fix then
+		if fix_items_assigned then
 		    utils.erase_sorted(equ[item_type], id)
 		end
 	    end
 
-            if utils.binsearch(ids, id) then
-                -- good case.  nothing?
-            elseif (item) and item.flags.artifact then
+	    if utils.binsearch(ids, id) then
+		-- good case.  nothing?
+	    elseif (item) and item.flags.artifact then
 		-- grown attached to.  nothing?
+		-- TODO what are the indicators?  .artifact but not .artifact_mood,
+		--   .artifact but quality level is < 6.
 	    else
 		printf("Warning: %s is in .items_assigned but not in any uniform%s",
 			desc, fixing)
-		if fix then
+		if fix_items_assigned then
 		    utils.erase_sorted(eqa[item_type], id)
 		    utils.insert_sorted(equ[item_type], id)
 		end
 	    end
-        end
-        local tequ = {}
+	end
+
+	local tequ = {}
 	for _, id in ipairs(equ[item_type]) do table.insert(tequ, id); end
 	for _, id in ipairs(tequ) do
 
-	    local fixing = (fix) and "; fixing" or ""
+	    local fixing = (fix_items_assigned) and "; fixing" or ""
 	    local desc = ""
 	    local item = utils.binsearch(IN_PLAY, id, 'id')
 	    if item then
@@ -351,7 +409,7 @@ local function verify_items_un_assigned(ids)
 	    if utils.binsearch(ids, id) then
 		printf("Warning: %s is in .items_unassigned and is in a uniform%s",
 			desc, fixing)
-		if fix then
+		if fix_items_assigned then
 		    utils.erase_sorted(equ[item_type], id)
 		end
 	    end
@@ -360,13 +418,15 @@ local function verify_items_un_assigned(ids)
 end
 
 
-local ids = collect_all_ids_in_uniform()
-verify_uniforms_un_assigned(ids)
+local all_ids, raw_ids = collect_all_actually_assigned_items()
+-- TODO check for items that do not exist or are not IN_PLAY
+verify_uniforms_un_assigned(all_ids)
 -- TODO verify squad-level assignments (basically AMMO)
-verify_items_un_assigned(ids)
+verify_items_un_assigned(all_ids)
 
 
 --[=[
+DEAD
 local printed_header = false
 for _,v in ipairs(plotinfo.equipment.items_assigned) do
     local purge = {}
@@ -388,6 +448,7 @@ for _,v in ipairs(plotinfo.equipment.items_assigned) do
 end
 
 
+DEAD
 printed_header = false
 for _,v in ipairs(plotinfo.equipment.items_unassigned) do
     local purge = {}
@@ -408,4 +469,3 @@ for _,v in ipairs(plotinfo.equipment.items_unassigned) do
     end
 end
 --]=]
-
