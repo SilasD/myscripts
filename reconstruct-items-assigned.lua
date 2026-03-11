@@ -244,7 +244,7 @@ local function df_unit_find(unit_id)
 end
 --]=]
 
-
+--[===[
 -- test code.
 local c = 0
 for _, u in ipairs(df.global.world.units.active) do
@@ -265,6 +265,7 @@ for _, u in ipairs(df.global.world.units.active) do
     if c > 75 then break; end
 end
 do return; end
+--]===]
 
 
 ---@type table<df.squad.id, df.squad|boolean>  # always truthy.  boolean true maps to nil.
@@ -529,7 +530,7 @@ local function on_accept()
     print("and press the 'Update' button.")
 end
 
-do on_accept(); return; end
+--do on_accept(); return; end
 dialogs.showYesNoPrompt("Rebuild assigned items lists",
 ([[
 Experimental!
