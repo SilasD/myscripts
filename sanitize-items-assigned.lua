@@ -3,7 +3,7 @@
 -- to unoccupied positions' uniforms.
 
 local check_assigned_items = true	-- sanity-check squad_position.equipment.assigned_items ?
-local fix_items_assigned = ({...})[1] == 'fix'		-- TODO use real command-line parameters
+local fix_items_assigned = ({...})[1] == '--fix'	-- TODO use real command-line parameters
 
 local utils = require('utils')
 local world = df.global.world
@@ -418,6 +418,11 @@ local function verify_items_un_assigned(ids)
 end
 
 
+if fix_items_assigned then
+    print("trying to fix up the items_assigned and items_unassigned vectors.")
+else
+    print("analyzing only.  to attempt repairs, re-run with '--fix'.")
+end
 local all_ids, raw_ids = collect_all_actually_assigned_items()
 -- TODO check for items that do not exist or are not IN_PLAY
 verify_uniforms_un_assigned(all_ids)
