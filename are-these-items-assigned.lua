@@ -294,6 +294,7 @@ for _, item_id in ipairs(item_ids) do
     local artrec = df.artifact_record.find(artrec_id)
     local artname = (artrec) and (' ' .. dfhack.translation.translateName(artrec.name)) or ''
     local desc = (item) and (dfhack.items.getDescription(item, 0, true) .. artname) or "(no item?)"
+    desc = dfhack.df2utf(desc)
     local color = COLOR_RESET
 
     if (item.wear > 0) then  -- working on this case.
